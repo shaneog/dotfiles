@@ -29,5 +29,7 @@
   template = ~/.gitmessage
 [fetch]
   prune = true
+[credential]
+	helper = osxkeychain
 [include]
   path = ~/.gitconfig.user
