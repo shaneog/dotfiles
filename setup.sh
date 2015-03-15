@@ -16,3 +16,6 @@ for name in *; do
     fi
   fi
 done
+
+# Install vim plugins
+vim +PlugInstall +qall

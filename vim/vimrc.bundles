@@ -1,0 +1,29 @@
+" Plugins
+call plug#begin('~/.vim/bundle')
+Plug 'junegunn/seoul256.vim'
+Plug 'junegunn/vim-easy-align'
+Plug 'junegunn/vim-emoji'
+Plug 'junegunn/vim-xmark', { 'do': 'make' }
+Plug 'scrooloose/syntastic'
+Plug 'tpope/vim-sensible'
+Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-vinegar'
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-rails'
+Plug 'tpope/vim-endwise'
+Plug 'tpope/vim-unimpaired'
+Plug 'tpope/vim-repeat'
+Plug 'tpope/vim-surround'
+Plug 'vim-ruby/vim-ruby'
+Plug 'vim-scripts/ctags.vim'
+Plug 'airblade/vim-gitgutter'
+Plug 'bling/vim-airline'
+Plug 'ctrlpvim/ctrlp.vim'
+Plug 'kchmck/vim-coffee-script'
+Plug 'pangloss/vim-javascript'
+Plug 'elzr/vim-json'
+Plug 'editorconfig/editorconfig-vim'
+Plug 'kristijanhusak/vim-multiple-cursors'
+call plug#end()
+
+command! Reload :so test.vimrc
