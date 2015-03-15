@@ -5,7 +5,7 @@ git submodule update --init --recursive
 
 for name in *; do
   target="$HOME/.$name"
-  if [ "$name" != 'setup.sh' ]; then
+  if [ "$name" != 'setup.sh' ] && [ "$name" != 'README.md' ] && [ "$name" != 'LICENSE' ]; then
     echo "Creating $target"
     ln -s "$PWD/$name" "$target"
   fi
