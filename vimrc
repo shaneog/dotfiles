@@ -102,6 +102,9 @@ endif
 " Start scrolling three lines before the horizontal window border
 set scrolloff=3
 
+" Use $ to show changes
+set cpoptions+=$
+
 " Automatic commands
 if has("autocmd")
   " Enable file type detection
