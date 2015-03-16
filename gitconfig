@@ -37,3 +37,7 @@
 	helper = osxkeychain
 [include]
   path = ~/.gitconfig.user
+[filter "hawser"]
+	clean = git hawser clean %f
+	smudge = git hawser smudge %f
+	required = true
