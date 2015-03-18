@@ -134,7 +134,6 @@ autocmd VimResized * :wincmd =
 
 " Color scheme
 colo seoul256
-set background=dark
 " set 256 color mode
 set t_Co=256
 

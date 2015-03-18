@@ -1,6 +1,13 @@
 " Plugins
 call plug#begin('~/.vim/bundle')
+"  ----------------------------------------------------------------
+"  Colorschemes
+"  ----------------------------------------------------------------
 Plug 'junegunn/seoul256.vim'
+Plug 'croaky/vim-colors-github'
+Plug 'altercation/vim-colors-solarized'
+"  ----------------------------------------------------------------
+
 Plug 'junegunn/vim-easy-align'
 Plug 'junegunn/vim-emoji'
 Plug 'junegunn/vim-xmark', { 'do': 'make' }
