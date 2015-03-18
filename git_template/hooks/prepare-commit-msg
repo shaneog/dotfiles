@@ -1,0 +1,8 @@
+#!/bin/sh
+
+dir="`git rev-parse --git-dir`"
+local_hook="$dir"/hooks/prepare-commit-msg.local
+
+if [ -f "$local_hook" ]; then
+  . "$local_hook"
+fi
