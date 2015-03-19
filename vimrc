@@ -233,3 +233,8 @@ let g:Tlist_Ctags_Cmd="ctags --exclude='*.js'"
 
 " Treat <li> and <p> tags like the block tags they are
 let g:html_indent_tags = 'li\|p'
+
+" ================ Custom Settings ========================
+if filereadable(expand("~/.vim/settings.vim"))
+  so ~/.vim/settings.vim
+endif
