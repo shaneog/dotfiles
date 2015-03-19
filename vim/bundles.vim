@@ -40,6 +40,6 @@ Plug 'kristijanhusak/vim-multiple-cursors'
 Plug 'majutsushi/tagbar'
 Plug 'othree/html5.vim'
 Plug 'hail2u/vim-css3-syntax'
+Plug 'tomtom/tcomment_vim'
+Plug 'sheerun/vim-polyglot'
 call plug#end()
-
-command! Reload :so test.vimrc

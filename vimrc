@@ -234,6 +234,14 @@ let g:Tlist_Ctags_Cmd="ctags --exclude='*.js'"
 " Treat <li> and <p> tags like the block tags they are
 let g:html_indent_tags = 'li\|p'
 
+" Autoreload settings files
+augroup reload_vimrc " {
+    autocmd!
+    autocmd BufWritePost $MYVIMRC source $MYVIMRC
+    " Also auto reload our bundles file
+    autocmd BufWritePost ~/.vim/bundles.vim source ~/.vim/bundles.vim
+augroup END " }
+
 " ================ Custom Settings ========================
 if filereadable(expand("~/.vim/settings.vim"))
   so ~/.vim/settings.vim
