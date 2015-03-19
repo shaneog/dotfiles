@@ -230,9 +230,10 @@ let g:html_indent_tags = 'li\|p'
 " Autoreload settings files
 augroup reload_vimrc " {
     autocmd!
-    autocmd BufWritePost $MYVIMRC source $MYVIMRC
+    autocmd BufWritePost vimrc source $MYVIMRC
     " Also auto reload our bundles file
-    autocmd BufWritePost ~/.vim/bundles.vim source ~/.vim/bundles.vim PlugInstall
+    autocmd BufWritePost bundles.vim source $MYVIMRC 
+    autocmd BufWritePost bundles.vim PlugInstall
 augroup END " }
 
 " ================ Custom Settings ========================
