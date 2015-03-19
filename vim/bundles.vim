@@ -4,8 +4,8 @@ call plug#begin('~/.vim/bundle')
 "  Colorschemes
 "  ----------------------------------------------------------------
 Plug 'junegunn/seoul256.vim'
-Plug 'croaky/vim-colors-github'
 Plug 'altercation/vim-colors-solarized'
+Plug 'endel/vim-github-colorscheme'
 Plug 'modess/molokai'
 "  ----------------------------------------------------------------
 
@@ -28,6 +28,7 @@ Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-rake'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-sleuth'
 Plug 'ngmy/vim-rubocop'
 Plug 'vim-ruby/vim-ruby'
 Plug 'ludovicchabant/vim-gutentags'
