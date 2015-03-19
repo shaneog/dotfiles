@@ -6,6 +6,7 @@ call plug#begin('~/.vim/bundle')
 Plug 'junegunn/seoul256.vim'
 Plug 'croaky/vim-colors-github'
 Plug 'altercation/vim-colors-solarized'
+Plug 'modess/molokai'
 "  ----------------------------------------------------------------
 
 Plug 'junegunn/vim-easy-align'
@@ -25,6 +26,8 @@ Plug 'tpope/vim-surround'
 Plug 'tpope/vim-haml'
 Plug 'tpope/vim-bundler'
 Plug 'tpope/vim-rake'
+Plug 'tpope/vim-repeat'
+Plug 'tpope/vim-commentary'
 Plug 'ngmy/vim-rubocop'
 Plug 'vim-ruby/vim-ruby'
 Plug 'ludovicchabant/vim-gutentags'
@@ -40,6 +43,6 @@ Plug 'kristijanhusak/vim-multiple-cursors'
 Plug 'majutsushi/tagbar'
 Plug 'othree/html5.vim'
 Plug 'hail2u/vim-css3-syntax'
-Plug 'tomtom/tcomment_vim'
 Plug 'sheerun/vim-polyglot'
+
 call plug#end()
