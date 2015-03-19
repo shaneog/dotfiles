@@ -10,8 +10,8 @@ endif
 syntax enable
 
 " install plugins
-if filereadable(expand("~/.vim/vimrc.bundles"))
-  source ~/.vim/vimrc.bundles
+if filereadable(expand("~/.vim/bundles.vim"))
+  source ~/.vim/bundles.vim
 endif
 
 filetype plugin indent on
