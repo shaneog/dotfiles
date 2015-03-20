@@ -32,7 +32,7 @@ Plug 'tpope/vim-sleuth'
 Plug 'ngmy/vim-rubocop'
 Plug 'vim-ruby/vim-ruby'
 Plug 'ludovicchabant/vim-gutentags'
-Plug 'majutsushi/tagbar'
+Plug 'majutsushi/tagbar', { 'on': 'TagbarToggle' }
 Plug 'airblade/vim-gitgutter'
 Plug 'bling/vim-airline'
 Plug 'ctrlpvim/ctrlp.vim'
