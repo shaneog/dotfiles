@@ -43,6 +43,8 @@
 [include]
   path = ~/.gitconfig.user
 [filter "hawser"]
-	clean = git hawser clean %f
-	smudge = git hawser smudge %f
-	required = true
+  clean = git hawser clean %f
+  smudge = git hawser smudge %f
+  required = true
+[help]
+  autocorrect = 10
