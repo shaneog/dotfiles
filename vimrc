@@ -126,9 +126,12 @@ set nofoldenable
 autocmd VimResized * :wincmd =
 
 " Color scheme
-colo seoul256
+set background=dark
+colorscheme solarized
 " set 256 color mode
 set t_Co=256
+
+highlight Comment cterm=italic
 
 " Switch wrap off for everything
 set nowrap
