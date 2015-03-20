@@ -9,3 +9,6 @@ let g:airline#extensions#tabline#enabled = 1
 let g:airline#extensions#tabline#tab_nr_type = 1
 let g:airline#extensions#tabline#fnamecollapse = 1
 let g:airline#extensions#hunks#non_zero_only = 1
+
+" Use solarized theme
+let g:airline_theme = "solarized"
