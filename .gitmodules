@@ -4,3 +4,6 @@
 [submodule "fonts"]
 	path = fonts
 	url = https://github.com/powerline/fonts.git
+[submodule "tmux/tmux-colors-solarized"]
+	path = tmux/tmux-colors-solarized
+	url = https://github.com/seebi/tmux-colors-solarized.git
