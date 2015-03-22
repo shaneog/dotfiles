@@ -3,3 +3,4 @@ bundle
 backups/*
 swaps/*
 undo/*
+tags/*
