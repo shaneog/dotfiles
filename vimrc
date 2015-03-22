@@ -226,7 +226,7 @@ augroup reload_vimrc " {
     autocmd!
     autocmd BufWritePost vimrc source $MYVIMRC
     " Also auto reload our bundles file
-    autocmd BufWritePost bundles.vim source $MYVIMRC 
+    autocmd BufWritePost bundles.vim source $MYVIMRC
     autocmd BufWritePost bundles.vim PlugInstall
 augroup END " }
 
