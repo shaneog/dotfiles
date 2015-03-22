@@ -2,6 +2,9 @@ map <Leader>b :CtrlPBuffer<cr>
 let g:ctrlp_match_window_bottom   = 0
 let g:ctrlp_match_window_reversed = 0
 
+" Allow CtrlP to find/index dotfiles
+let g:ctrlp_show_hidden = 1
+
 " Use The Silver Searcher https://github.com/ggreer/the_silver_searcher
 if executable('ag')
   " Use Ag over Grep
