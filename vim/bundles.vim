@@ -7,8 +7,9 @@ Plug 'junegunn/seoul256.vim'
 Plug 'altercation/vim-colors-solarized'
 Plug 'endel/vim-github-colorscheme'
 Plug 'modess/molokai'
+Plug 'whatyouhide/vim-gotham'
 "  ----------------------------------------------------------------
-
+Plug 'tmux-plugins/vim-tmux'
 Plug 'junegunn/vim-easy-align'
 Plug 'junegunn/vim-emoji'
 Plug 'junegunn/vim-xmark', { 'do': 'make' }

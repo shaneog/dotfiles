@@ -19,6 +19,8 @@ on appIsRunning(appName)
   tell app "System Events" to (name of processes) contains appName
 end appIsRunning
 EOF)
-
-  echo '#[fg=colour137,bg=colour234]#[bg=colour137,fg=colour16,bold] ♫' $ITUNES_TRACK '#[nobold]-#[bold]' $ITUNES_ARTIST '#[fg=colour254,bg=colour137,nobold]'
+  # Solarized
+  # echo '#[fg=colour137,bg=colour234]#[bg=colour137,fg=colour16,bold] ♫' $ITUNES_TRACK '#[nobold]::#[bold]' $ITUNES_ARTIST '#[fg=colour254,bg=colour137,nobold]'
+  # Gotham
+  echo '#[fg=colour11,bg=colour8]#[bg=colour11,fg=colour14,bold] ♫' $ITUNES_TRACK '#[nobold]::#[bold]' $ITUNES_ARTIST '#[fg=colour10,bg=colour11,nobold]'
 fi

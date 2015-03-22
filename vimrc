@@ -127,7 +127,7 @@ autocmd VimResized * :wincmd =
 
 " Color scheme
 set background=dark
-colorscheme solarized
+colorscheme gotham
 " set 256 color mode
 set t_Co=256
 
