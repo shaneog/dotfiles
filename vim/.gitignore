@@ -1,6 +1,4 @@
 bundle
 .netrwhist
-backups/*
-swaps/*
 undo/*
-tags/*
+tmp/*

@@ -1,3 +1,11 @@
+" ##############################################################################
+" ### Author : Shane O'Grady <shane@ogrady.ie>                               ###
+" ##############################################################################
+" ### Vim Configuration                                                      ###
+" ### Date created : Sunday 22 March 2015 04:12 UTC                          ###
+" ##############################################################################
+
+
 " Use Vim settings, rather then Vi settings (much better!).
 " This must be first, because it changes other options as a side effect.
 if has('vim_starting')
@@ -39,14 +47,17 @@ set binary
 set noeol
 
 " Centralize backups, swapfiles and undo history
-silent !mkdir ~/.vim/backups > /dev/null 2>&1
-silent !mkdir ~/.vim/swaps > /dev/null 2>&1
+silent !mkdir ~/.vim/tmp > /dev/null 2>&1
 silent !mkdir ~/.vim/undo > /dev/null 2>&1
-set backupdir=~/.vim/backups
-set directory=~/.vim/swaps
+set undodir=~/.vim/undo
+set directory=~/.vim/tmp  " Set temp directory (don't litter local dir with swp/tmp files)
+set nobackup              " Get rid of backups
+set nowb                  " Get rid of backups on write
+set noswapfile            " Get rid of swp files
 if exists("&undodir")
-  set undodir=~/.vim/undo
-  set undofile
+  set undofile          " Persistent undo
+  set undolevels=500
+  set undoreload=500
 endif
 
 "Store lots of :cmdline history
@@ -127,9 +138,11 @@ autocmd VimResized * :wincmd =
 
 " Color scheme
 set background=dark
-colorscheme gotham
+silent! colorscheme gotham
 " set 256 color mode
-set t_Co=256
+if $TERM == 'xterm-256color' || 'screen-256color'
+  set t_Co=256
+endif
 
 highlight Comment cterm=italic
 
@@ -180,46 +193,48 @@ inoremap <S-Tab> <c-n>
 nnoremap <leader><leader> <c-^>
 
 " Get off my lawn
-"nnoremap <Left> :echoe "Use h"<CR>
-"nnoremap <Right> :echoe "Use l"<CR>
-"nnoremap <Up> :echoe "Use k"<CR>
-"nnoremap <Down> :echoe "Use j"<CR>
+nnoremap <Left> :echoe "Use h"<CR>
+nnoremap <Right> :echoe "Use l"<CR>
+nnoremap <Up> :echoe "Use k"<CR>
+nnoremap <Down> :echoe "Use j"<CR>
 
 " Scroll the viewport faster
 nnoremap <C-e> 3<C-e>
 nnoremap <C-y> 3<C-y>
 
-" vim-rspec mappings
-nnoremap <Leader>t :call RunCurrentSpecFile()<CR>
-nnoremap <Leader>s :call RunNearestSpec()<CR>
-nnoremap <Leader>l :call RunLastSpec()<CR>
-
 " Run commands that require an interactive shell
 nnoremap <Leader>r :RunInInteractiveShell<space>
 
+" ============================================================================================================
+" Filetype specific settings
+" ============================================================================================================
+"{{{
+autocmd FileType php setlocal tabstop=2 shiftwidth=2 softtabstop=2 textwidth=110
+autocmd FileType ruby setlocal tabstop=2 shiftwidth=2 softtabstop=2 textwidth=110
+autocmd FileType coffee,javascript setlocal tabstop=2 shiftwidth=2 softtabstop=2 textwidth=110
+autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4 textwidth=110
+autocmd FileType html,htmldjango,xhtml,haml setlocal tabstop=2 shiftwidth=2 softtabstop=2 textwidth=0
+autocmd FileType sass,scss,css setlocal tabstop=2 shiftwidth=2 softtabstop=2 textwidth=110
+autocmd FileType snippets setlocal tabstop=4 shiftwidth=4 softtabstop=4 textwidth=110
+autocmd FileType vim setlocal keywordprg=:help tabstop=2 shiftwidth=2 softtabstop=2 textwidth=110
 
-" Index ctags from any project, including those outside Rails
-map <Leader>ct :!ctags -R .<CR>
-
-" --------------------
-" File Type Settings
-" --------------------
 " md is markdown
 autocmd BufRead,BufNewFile *.md set filetype=markdown
 autocmd BufRead,BufNewFile *.md set spell
-" extra rails.vim help
-autocmd User Rails silent! Rnavcommand decorator      app/decorators            -glob=**/* -suffix=_decorator.rb
-autocmd User Rails silent! Rnavcommand observer       app/observers             -glob=**/* -suffix=_observer.rb
-autocmd User Rails silent! Rnavcommand feature        features                  -glob=**/* -suffix=.feature
-autocmd User Rails silent! Rnavcommand job            app/jobs                  -glob=**/* -suffix=_job.rb
-autocmd User Rails silent! Rnavcommand mediator       app/mediators             -glob=**/* -suffix=_mediator.rb
-autocmd User Rails silent! Rnavcommand stepdefinition features/step_definitions -glob=**/* -suffix=_steps.rb
-
-" Exclude Javascript files in :Rtags via rails.vim due to warnings when parsing
-let g:Tlist_Ctags_Cmd="ctags --exclude='*.js'"
+"}}}
 
 " Treat <li> and <p> tags like the block tags they are
 let g:html_indent_tags = 'li\|p'
+
+" ============================================================================================================
+" Custom scripts and autocommands
+" ============================================================================================================
+"{{{
+" Close vim if the last open window is nerdtree
+autocmd BufEnter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
+
+" Remove trailing whitespaces automatically before save
+autocmd BufWritePre * :%s/\s\+$//e
 
 " Autoreload settings files
 augroup reload_vimrc " {
@@ -229,8 +244,13 @@ augroup reload_vimrc " {
     autocmd BufWritePost bundles.vim source $MYVIMRC
     autocmd BufWritePost bundles.vim PlugInstall
 augroup END " }
+"}}}
 
-" ================ Custom Settings ========================
+" ============================================================================================================
+" Plugin specific settings
+" ============================================================================================================
+"{{{
 if filereadable(expand("~/.vim/settings.vim"))
-  so ~/.vim/settings.vim
+  source ~/.vim/settings.vim
 endif
+"}}}
