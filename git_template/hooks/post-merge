@@ -2,4 +2,7 @@
 
 dir="`git rev-parse --git-dir`"
 local_hook="$dir"/hooks/post-merge.local
-[ -f "$local_hook" ] && . "$local_hook"
+
+if [ -f "$local_hook" ]; then
+  . "$local_hook"
+fi

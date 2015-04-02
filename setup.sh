@@ -18,4 +18,4 @@ for name in *; do
 done
 
 # Install vim plugins
-vim +PlugInstall! +qall
+vim +PlugInstall +qall
