@@ -94,7 +94,8 @@ Plug 'tpope/vim-vinegar'
 Plug 'tpope/vim-fugitive'
 " Git changes showed on line numbers
 Plug 'airblade/vim-gitgutter'
-
+" Gitk for vim
+Plug 'gregsexton/gitv', { 'on':  'Gitv' }
 
 " ------------------------------------------------------------------------------
 " Text insertion/manipulation
