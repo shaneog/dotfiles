@@ -7,3 +7,6 @@
 [submodule "tmux/tmux-colors-solarized"]
 	path = tmux/tmux-colors-solarized
 	url = https://github.com/seebi/tmux-colors-solarized.git
+[submodule "Menlo-for-Powerline"]
+	path = Menlo-for-Powerline
+	url = https://github.com/abertsch/Menlo-for-Powerline.git
