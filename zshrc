@@ -17,3 +17,6 @@ export PATH=/Applications/Postgres.app/Contents/Versions/9.4/bin:$PATH
 
 # Go
 export PATH=$PATH:/usr/local/opt/go/libexec/bin
+
+# Travis CLI
+[ -f $HOME/.travis/travis.sh ] && source $HOME/.travis/travis.sh
