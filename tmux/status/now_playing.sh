@@ -1,34 +1,44 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
+# Requires both iTunes and Spotify applications to be installed
 NOW_PLAYING=$(osascript <<EOF
-set spotify_state to false
-set itunes_state to false
+  set spotify_state to missing value
+  set itunes_state to missing value
 
-if is_app_running("Spotify") then
-  tell application "Spotify" to set spotify_state to (player state as text)
-end if
-if is_app_running("iTunes") then
-  tell application "iTunes" to set itunes_state to (player state as text)
-end if
+  set track_name to missing value
+  set artist_name to missing value
 
-if spotify_state is equal to "playing" then
-  tell application "Spotify"
-    set track_name to name of current track
-    set artist_name to artist of current track
+  if application "Spotify" is running then
+    tell application "Spotify"
+      set spotify_state to (player state as text)
+    end tell
+  end if
+
+  if application "iTunes" is running then
+    tell application "iTunes"
+      set itunes_state to (player state as text)
+    end tell
+  end if
+
+  if spotify_state is equal to "playing" then
+    tell application "Spotify"
+      set track_name to name of current track as text
+      set artist_name to artist of current track as text
+    end tell
+  end if
+
+  if itunes_state is equal to "playing" then
+    tell application "iTunes"
+      set track_name to name of current track as text
+      set artist_name to artist of current track as text
+    end tell
+  end if
+
+  if track_name is equal to missing value then
+    return ""
+  else
     return "♫ " & track_name & " #[nobold]::#[bold] " & artist_name
-  end tell
-else if itunes_state is equal to "playing" then
-  tell application "iTunes"
-    set track_name to name of current track
-    set artist_name to artist of current track
-    return "♫ " & track_name & " #[nobold]::#[bold] " & artist_name
-  end tell
-else
-  return ""
-end if
-
-on is_app_running(app_name)
-  tell application "System Events" to (name of processes) contains app_name
-end is_app_running
+  end if
 EOF)
 
 echo $NOW_PLAYING
