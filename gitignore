@@ -28,9 +28,9 @@ Desktop.ini
 # ----------------------------------------------------------------------------------------------
 # Ignore tags created by etags, ctags, gtags (GNU global) and cscope
 TAGS
-!TAGS/
+#!TAGS/
 tags
-!tags/
+#!tags/
 gtags.files
 GTAGS
 GRTAGS
@@ -64,8 +64,8 @@ Session.vim
 # Rails     taken from: https://github.com/github/gitignore/blob/master/Rails.gitignore
 # ----------------------------------------------------------------------------------------------
 ## Environment normalisation:
-/.bundle
-/vendor/bundle
+.bundle
+vendor/bundle
 
 # Archives  taken from: https://github.com/github/gitignore/blob/master/Global/Archives.gitignore
 # -----------------------------------------------------------------------------------------------
