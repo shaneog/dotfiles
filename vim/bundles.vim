@@ -146,7 +146,8 @@ Plug 'whatyouhide/vim-gotham'
 Plug 'modess/molokai'
 " Seoul 256
 Plug 'junegunn/seoul256.vim'
-
+" Papercolor
+Plug 'NLKNguyen/papercolor-theme'
 
 " ------------------------------------------------------------------------------
 " Dependencies
