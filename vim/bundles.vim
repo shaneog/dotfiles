@@ -78,6 +78,15 @@ Plug 'othree/tern_for_vim_coffee', { 'for': ['javascript', 'coffee']}
 Plug 'othree/javascript-libraries-syntax.vim', { 'for': ['javascript', 'coffee'] }
 
 
+" -----------------------------------------------------
+" Hcl (Hashicorp Configuration Language)
+" -----------------------------------------------------
+
+" Hcl language highlight
+Plug 'hashivim/vim-hashicorp-tools'
+" Hcl language autoformat
+Plug 'fatih/vim-hclfmt'
+
 " ------------------------------------------------------------------------------
 " Files/code navigation/management plugins
 " ------------------------------------------------------------------------------
