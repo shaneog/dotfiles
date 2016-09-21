@@ -39,3 +39,6 @@ source "${HOME}/google-cloud-sdk/completion.zsh.inc"
 # Go
 export GOPATH=~/.go
 export PATH=$PATH:$HOME/.go/bin
+
+# Python
+source /usr/local/bin/virtualenvwrapper.sh
