@@ -13,7 +13,7 @@ fi
 eval "$(hub alias -s)"
 
 # Postgres App
-export PATH=/Applications/Postgres.app/Contents/Versions/9.4/bin:$PATH
+export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH
 
 # Go
 export PATH=$PATH:/usr/local/opt/go/libexec/bin
