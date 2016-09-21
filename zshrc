@@ -24,10 +24,6 @@ export PATH=$PATH:/usr/local/opt/go/libexec/bin
 # Android Platform
 export PATH=$PATH:$HOME/Library/Android/sdk/platform-tools
 
-# Use nvm because NodeJS is now releasing so rapidly
-export NVM_DIR=~/.nvm
-source $(brew --prefix nvm)/nvm.sh
-
 # fzf shell bindings + completion
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
