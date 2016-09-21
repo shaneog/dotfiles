@@ -5,6 +5,7 @@
 .LSOverride
 # Icon must end with two \r
 Icon
+
 # Thumbnails
 ._*
 # Files that might appear in the root of a volume
@@ -66,6 +67,7 @@ Session.vim
 ## Environment normalisation:
 .bundle
 vendor/bundle
+gemfiles/vendor/bundle
 
 # Archives  taken from: https://github.com/github/gitignore/blob/master/Global/Archives.gitignore
 # -----------------------------------------------------------------------------------------------
@@ -94,3 +96,20 @@ vendor/bundle
 *.msi
 *.msm
 *.msp
+
+# Chef stuff
+.kitchen/*
+
+# Byebug
+.byebug_history
+
+# Android Studio
+.idea/
+.gradle/
+
+# Sublime Text projects
+*.sublime-project
+*.sublime-workspace
+
+# Npm
+npm-debug.log
