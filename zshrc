@@ -30,10 +30,6 @@ export PATH=$PATH:$HOME/Library/Android/sdk/platform-tools
 # custom scripts
 export PATH=$PATH:$HOME/.bin
 
-# Docker environment vars
-if [ "$(docker-machine status default)" == "Running" ]; then
-  eval "$(docker-machine env default)"
-fi
 # The next line updates PATH for the Google Cloud SDK.
 source '/Users/shane/google-cloud-sdk/path.zsh.inc'
 
