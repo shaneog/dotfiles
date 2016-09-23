@@ -42,3 +42,8 @@ done
 
 # Install vim plugins
 vim +PlugInstall +qall
+
+# use homebrew's zsh
+if [ $OSX ]
+  sudo dscl . -create /Users/$USER UserShell /usr/local/bin/zsh
+fi
