@@ -1,0 +1,18 @@
+# Do not kill connection if route is down temporarily.
+TCPKeepAlive no
+
+# Allow ten minutes down time before giving up the connection.
+ServerAliveCountMax 30
+ServerAliveInterval 20
+
+# Conserve bandwith. (Compression is off by default.)
+Compression yes
+
+Host *
+    SendEnv LS_COLORS
+    AddKeysToAgent yes
+    ControlMaster auto
+    ControlPath /tmp/ssh-%r@%h:%p.socket
+    NoHostAuthenticationForLocalhost yes
+    StrictHostKeyChecking ask
+    VerifyHostKeyDNS ask
