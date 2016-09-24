@@ -40,3 +40,6 @@ BULLETTRAIN_TIME_SHOW=false
 # Google Cloud SDK.
 source "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
 source "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
+
+# Tmux
+alias tmux="tmux -f ${HOME}/.config/tmux/tmux.conf"
