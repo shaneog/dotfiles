@@ -1,5 +1,5 @@
 [init]
-  templatedir = ~/.git_template
+  templatedir = ~/.config/git/template
 [push]
   default = current
 [color]
@@ -28,7 +28,7 @@
   local = !sh -c 'git log origin/$(git current-branch)..HEAD' -
   cleanup = !sh -c 'git branch --merged master | grep -v \"\\* master\" | xargs -n 1 git branch -d' -
 [core]
-  excludesfile = ~/.gitignore
+  excludesfile = ~/.config/git/ignore
   autocrlf = input
 	editor = vim
 [format]
@@ -36,7 +36,7 @@
 [merge]
   ff = only
 [commit]
-  template = ~/.gitmessage
+  template = ~/.config/git/message
 [fetch]
   prune = true
 [credential]
