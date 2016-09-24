@@ -47,3 +47,8 @@ vim +PlugInstall +qall
 if [ $OSX ]
   sudo dscl . -create /Users/$USER UserShell /usr/local/bin/zsh
 fi
+
+# macOS customisations
+if [ $OSX ]
+  source ./macos
+fi
