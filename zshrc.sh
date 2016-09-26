@@ -9,8 +9,8 @@ source ~/.zplug/init.zsh
 
 # Make sure to use double quotes to prevent shell expansion
 zplug "zsh-users/zsh-completions"
-zplug "zsh-users/zsh-history-substring-search"
 zplug "zsh-users/zsh-syntax-highlighting", nice:10
+zplug "zsh-users/zsh-history-substring-search", nice:12
 
 # Prezto modules
 zplug 'modules/environment', from:prezto
@@ -26,8 +26,6 @@ zplug 'modules/git', from:prezto
 zplug 'modules/osx', from:prezto
 zplug 'modules/ruby', from:prezto
 zplug 'modules/rails', from:prezto
-zplug 'modules/syntax-highlighting', from:prezto
-zplug 'modules/history-substring-search', from:prezto
 zplug 'modules/tmux', from:prezto
 zplug 'modules/prompt', from:prezto
 
@@ -39,12 +37,6 @@ alias tmux="tmux -f ${HOME}/.config/tmux/tmux.conf"
 zstyle ':prezto:*:*' color 'yes'
 zstyle ':prezto:module:editor' dot-expansion 'yes'
 zstyle ':prezto:module:prompt' theme 'sorin'
-zstyle ':prezto:module:syntax-highlighting' highlighters \
-  'main' \
-  'brackets' \
-  'pattern' \
-  'cursor' \
-  'root'
 zstyle ':prezto:module:terminal' auto-title 'yes'
 zstyle ':prezto:module:tmux:auto-start' local 'yes'
 zstyle ':prezto:module:tmux:auto-start' remote 'yes'
@@ -57,6 +49,12 @@ if ! zplug check --verbose; then
 fi
 
 zplug load
+
+ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern cursor root)
+# zsh-history-substring-search
+zmodload zsh/terminfo
+bindkey "$terminfo[kcuu1]" history-substring-search-up
+bindkey "$terminfo[kcud1]" history-substring-search-down
 
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
