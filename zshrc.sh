@@ -1,3 +1,7 @@
+# Language
+export LANG='en_US.UTF-8'
+export LC_ALL='en_US.UTF-8'
+
 # Check if zplug is installed
 if [[ ! -d ~/.zplug ]]; then
   git clone --depth 1 --branch prezto https://github.com/zplug/zplug ~/.zplug
@@ -50,15 +54,32 @@ fi
 
 zplug load
 
+# Environment
+export EDITOR='vim'
+export VISUAL='vim'
+export PAGER='less'
+
+# Default less options
+# Mouse-wheel scrolling has been disabled by -X (disable screen clearing).
+export LESS='-F -g -i -M -R -S -w -X -z-4'
+
+
 ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern cursor root)
 # zsh-history-substring-search
-zmodload zsh/terminfo
-bindkey "$terminfo[kcuu1]" history-substring-search-up
-bindkey "$terminfo[kcud1]" history-substring-search-down
+if zplug check "zsh-users/zsh-history-substring-search"; then
+  zmodload zsh/terminfo
+  [ -n "${terminfo[kcuu1]}" ] && bindkey "${terminfo[kcuu1]}" history-substring-search-up
+  [ -n "${terminfo[kcud1]}" ] && bindkey "${terminfo[kcud1]}" history-substring-search-down
+  bindkey -M emacs '^P' history-substring-search-up
+  bindkey -M emacs '^N' history-substring-search-down
+  bindkey -M vicmd 'k' history-substring-search-up
+  bindkey -M vicmd 'j' history-substring-search-down
+fi
+
 
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 # Google Cloud SDK.
-source "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
-source "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
+source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
+source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
