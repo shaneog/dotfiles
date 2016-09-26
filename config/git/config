@@ -37,6 +37,7 @@
   ff = only
 [commit]
   template = ~/.config/git/message
+	gpgsign = true
 [fetch]
   prune = true
 [credential]
