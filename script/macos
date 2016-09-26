@@ -401,26 +401,6 @@ defaults write com.google.Chrome PMPrintingExpandedStateForPrint2 -bool true
 
 
 ###############################################################################
-# Moom.app                                                                    #
-###############################################################################
-
-# Run as a faceless application
-defaults write com.manytricks.Moom "Application Mode" -float 2
-
-# Don’t show the preferences window on start
-defaults write com.manytricks.Moom "Stealth Mode" -bool true
-
-# Enable automatic updates
-defaults write com.manytricks.Moom SUEnableAutomaticChecks -bool true
-
-# Keyboard shortcut - CMD+SHIFT+x
-defaults write com.manytricks.Moom "Keyboard Controls Grid" -bool true
-defaults write com.manytricks.Moom "Keyboard Controls" -dict Identifier "Keyboard Controls" "Key Code" 7 "Modifier Flags" 1179658 "Visual Representation" "\\U21e7\\U2318X"
-defaults write com.manytricks.Moom "Dismiss After Filling" -bool true
-defaults write com.manytricks.Moom "Dismiss After Moving" -bool true
-
-
-###############################################################################
 # Sublime Text                                                                #
 ###############################################################################
 
@@ -434,7 +414,7 @@ cp -r ./settings/Preferences.sublime-settings ~/Library/Application\ Support/Sub
 
 for app in "Activity Monitor" "Calendar" "Contacts" "cfprefsd" \
   "Dock" "Finder" "Google Chrome" "Mail" "Messages" \
-  "Photos" "Safari" "Moom" "SystemUIServer" "Terminal"; do
+  "Photos" "Safari" "SystemUIServer" "Terminal"; do
   killall "${app}" &> /dev/null
 done
 echo "Done. Note that some of these changes require a logout/restart to take effect."
