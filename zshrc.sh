@@ -26,6 +26,10 @@ zplug "junegunn/fzf", \
   as:command, \
   use:"bin/fzf-tmux"
 
+# Tips for unused aliases
+zplug "djui/alias-tips"
+export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡  Try: "
+
 # Prezto modules
 zplug 'modules/environment', from:prezto
 zplug 'modules/terminal', from:prezto
