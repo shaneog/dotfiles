@@ -15,6 +15,16 @@ source ~/.zplug/init.zsh
 zplug "zsh-users/zsh-completions"
 zplug "zsh-users/zsh-syntax-highlighting", nice:10
 zplug "zsh-users/zsh-history-substring-search", nice:12
+zplug "junegunn/fzf-bin", \
+  as:command, \
+  from:gh-r, \
+  rename-to:fzf, \
+  use:"*darwin*amd64*"
+zplug "junegunn/fzf", \
+  use:"shell/*.zsh"
+zplug "junegunn/fzf", \
+  as:command, \
+  use:"bin/fzf-tmux"
 
 # Prezto modules
 zplug 'modules/environment', from:prezto
@@ -75,10 +85,6 @@ if zplug check "zsh-users/zsh-history-substring-search"; then
   bindkey -M vicmd 'k' history-substring-search-up
   bindkey -M vicmd 'j' history-substring-search-down
 fi
-
-
-# fzf
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 # Google Cloud SDK.
 source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
