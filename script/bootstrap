@@ -1,4 +1,0 @@
-#!/bin/sh
-
-# Get our git submodules, recursively
-git submodule update --init --recursive
