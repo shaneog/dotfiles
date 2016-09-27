@@ -93,3 +93,8 @@ fi
 # Google Cloud SDK.
 source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
 source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
+
+# Go
+GOROOT="$(brew --prefix)/opt/go/libexec/bin"
+export GOPATH="$HOME/.go"
+export PATH=$PATH:$GOROOT:$GOPATH/bin
