@@ -98,3 +98,8 @@ source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/compl
 GOROOT="$(brew --prefix)/opt/go/libexec/bin"
 export GOPATH="$HOME/.go"
 export PATH=$PATH:$GOROOT:$GOPATH/bin
+
+# Postgres.app
+if [[ -d /Applications/Postgres.app ]]; then
+  export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
+fi
