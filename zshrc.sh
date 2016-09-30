@@ -91,8 +91,9 @@ if zplug check "zsh-users/zsh-history-substring-search"; then
 fi
 
 # Google Cloud SDK.
-source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
-source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
+if [[ -x "$(command -v gcloud)" ]]; then
+  source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
+fi
 
 # Kubernetes
 if [[ -x "$(command -v kubectl)" ]]; then
