@@ -94,6 +94,11 @@ fi
 source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
 source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
 
+# Kubernetes
+if [[ -x "$(command -v kubectl)" ]]; then
+  source <(kubectl completion zsh)
+fi
+
 # Go
 GOROOT="$(brew --prefix)/opt/go/libexec/bin"
 export GOPATH="$HOME/.go"
