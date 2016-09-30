@@ -103,3 +103,6 @@ export PATH=$PATH:$GOROOT:$GOPATH/bin
 if [[ -d /Applications/Postgres.app ]]; then
   export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
 fi
+
+# Fix for https://openradar.appspot.com/27348363
+ssh-add -A 2>/dev/null
