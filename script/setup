@@ -45,10 +45,12 @@ vim +PlugInstall +qall
 
 # use homebrew's zsh
 if [ $OSX ]
+then
   sudo dscl . -create /Users/$USER UserShell /usr/local/bin/zsh
 fi
 
 # macOS customisations
 if [ $OSX ]
+then
   source ./macos
 fi
