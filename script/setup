@@ -52,5 +52,6 @@ fi
 # macOS customisations
 if [ $OSX ]
 then
-  source ./macos
+  source "$DOTFILESDIRREL/macos"
 fi
+
