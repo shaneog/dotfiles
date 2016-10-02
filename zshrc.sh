@@ -115,3 +115,8 @@ fi
 
 # Fix for https://openradar.appspot.com/27348363
 ssh-add -A 2>/dev/null
+
+# Java environments
+if [[ -x "$(command -v jenv)" ]]; then
+  export JENV_ROOT=/usr/local/var/jenv
+fi
