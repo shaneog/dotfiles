@@ -2,6 +2,9 @@
 export LANG='en_US.UTF-8'
 export LC_ALL='en_US.UTF-8'
 
+# XDG
+export XDG_CONFIG_HOME="$HOME/.config/"
+
 # Check if zplug is installed
 if [[ ! -d ~/.zplug ]]; then
   git clone --depth 1 --branch prezto https://github.com/zplug/zplug ~/.zplug
