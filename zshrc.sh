@@ -95,6 +95,7 @@ fi
 
 # Google Cloud SDK.
 if [[ -x "$(command -v gcloud)" ]]; then
+  source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
   source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
 fi
 
@@ -119,4 +120,6 @@ ssh-add -A 2>/dev/null
 # Java environments
 if [[ -x "$(command -v jenv)" ]]; then
   export JENV_ROOT=/usr/local/var/jenv
+  eval "$(jenv init -)"
 fi
+
