@@ -16,3 +16,7 @@ Host *
     NoHostAuthenticationForLocalhost yes
     StrictHostKeyChecking ask
     VerifyHostKeyDNS ask
+
+Host 104.196.*.*
+    IdentityFile ~/.ssh/google_compute_engine
+
