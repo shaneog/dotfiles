@@ -11,6 +11,7 @@ Compression yes
 Host *
     SendEnv LS_COLORS
     AddKeysToAgent yes
+    UseKeychain yes
     ControlMaster auto
     ControlPath /tmp/ssh-%r@%h:%p.socket
     NoHostAuthenticationForLocalhost yes
