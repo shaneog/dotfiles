@@ -113,3 +113,6 @@ gemfiles/vendor/bundle
 
 # Npm
 npm-debug.log
+
+# Yarn
+yarn-error.log
