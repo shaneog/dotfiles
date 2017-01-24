@@ -5,6 +5,12 @@
       "selected": true,
       "simple_modifications": {
         "caps_lock": "left_control"
+      },
+      "standalone_keys": {
+        "left_control": "escape"
+      },
+      "virtual_hid_keyboard": {
+        "keyboard_type": "ansi"
       }
     }
   ]
