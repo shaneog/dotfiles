@@ -14,18 +14,18 @@
 [core]
   excludesfile = ~/.config/git/ignore
   autocrlf = input
-	editor = nvim
+  editor = nvim
 [format]
   pretty = format:%C(blue)%ad%Creset %C(yellow)%h%C(green)%d%Creset %C(blue)%s %C(magenta) [%an]%Creset
 [merge]
   ff = only
 [commit]
   template = ~/.config/git/message
-	gpgsign = true
+  gpgsign = true
 [fetch]
   prune = true
 [credential]
-	helper = osxkeychain
+  helper = osxkeychain
 [include]
   path = ~/.gitconfig-user
 [filter "hawser"]
@@ -35,14 +35,14 @@
 [help]
   autocorrect = 10
 [filter "lfs"]
-	clean = git lfs clean %f
-	smudge = git lfs smudge %f
-	required = true
+  clean = git lfs clean %f
+  smudge = git lfs smudge %f
+  required = true
 [hub]
-	protocol = https
+  protocol = https
 [difftool "sourcetree"]
-	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-	path =
+  cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+  path =
 [mergetool "sourcetree"]
-	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
-	trustExitCode = true
+  cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+  trustExitCode = true
