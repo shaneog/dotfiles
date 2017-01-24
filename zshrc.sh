@@ -7,17 +7,18 @@ export XDG_CONFIG_HOME="$HOME/.config/"
 
 # Check if zplug is installed
 if [[ ! -d ~/.zplug ]]; then
-  git clone --depth 1 --branch prezto https://github.com/zplug/zplug ~/.zplug
+  git clone --depth 1 https://github.com/zplug/zplug ~/.zplug
   source ~/.zplug/init.zsh && zplug update --self
 fi
 
 # Essential
 source ~/.zplug/init.zsh
+export _ZPLUG_PREZTO="zsh-users/prezto" # see https://github.com/zplug/zplug/issues/360
 
 # Make sure to use double quotes to prevent shell expansion
 zplug "zsh-users/zsh-completions"
-zplug "zsh-users/zsh-syntax-highlighting", nice:10
-zplug "zsh-users/zsh-history-substring-search", nice:12
+zplug "zsh-users/zsh-syntax-highlighting", defer:2
+zplug "zsh-users/zsh-history-substring-search", defer:3
 zplug "junegunn/fzf-bin", \
   as:command, \
   from:gh-r, \
@@ -62,7 +63,7 @@ zstyle ':prezto:module:terminal' auto-title 'yes'
 zstyle ':prezto:module:tmux:auto-start' local 'yes'
 zstyle ':prezto:module:tmux:auto-start' remote 'yes'
 zstyle ':prezto:module:tmux:iterm' integrate 'no'
-
+zstyle ':prezto:module:ruby:chruby' auto-switch 'yes'
 
 # Install packages that have not been installed yet
 if ! zplug check --verbose; then
