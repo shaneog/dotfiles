@@ -63,8 +63,6 @@ zstyle ':prezto:*:*' color 'yes'
 zstyle ':prezto:module:editor' dot-expansion 'yes'
 zstyle ':prezto:module:prompt' theme 'sorin'
 zstyle ':prezto:module:terminal' auto-title 'yes'
-zstyle ':prezto:module:tmux:auto-start' local 'yes'
-zstyle ':prezto:module:tmux:auto-start' remote 'yes'
 zstyle ':prezto:module:tmux:iterm' integrate 'no'
 zstyle ':prezto:module:ruby:chruby' auto-switch 'yes'
 
@@ -139,3 +137,16 @@ fi
 
 # Local bin directory
 export PATH=$HOME/.bin:$PATH
+
+
+# Automatically launch a tmux session
+if [[ -z "$TMUX" ]]
+then
+  ID="`tmux ls | grep -vm1 attached | cut -d: -f1`"
+  if [[ -z "$ID" ]]
+  then
+    tmux new-session
+  else
+    tmux attach-session -t "$ID"
+  fi
+fi
