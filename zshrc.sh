@@ -94,6 +94,11 @@ if zplug check "zsh-users/zsh-history-substring-search"; then
   bindkey -M vicmd 'j' history-substring-search-down
 fi
 
+# Use a local zshrc, if exists
+if [[ -f "$HOME/zshrc.local" ]]; then
+  source "$HOME/zshrc.local"
+fi
+
 # Google Cloud SDK.
 if [[ -x "$(command -v gcloud)" ]]; then
   source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
