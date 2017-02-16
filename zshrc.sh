@@ -8,11 +8,14 @@ export XDG_CONFIG_HOME="$HOME/.config/"
 # Check if zplug is installed
 if [[ ! -d ~/.zplug ]]; then
   git clone --depth 1 https://github.com/zplug/zplug ~/.zplug
-  source ~/.zplug/init.zsh && zplug update --self
+  source ~/.zplug/init.zsh
 fi
 
 # Essential
 source ~/.zplug/init.zsh
+# Let zplug manage zplug
+zplug 'zplug/zplug', hook-build:'zplug --self-manage'
+
 export _ZPLUG_PREZTO="zsh-users/prezto" # see https://github.com/zplug/zplug/issues/360
 
 # Make sure to use double quotes to prevent shell expansion
