@@ -9,6 +9,15 @@ To install, use [strap](https://github.com/MikeMcQuaid/strap).
 ```sh
 STRAP_GIT_NAME=<name> STRAP_GIT_EMAIL=<email> STRAP_GITHUB_USER=<github_user> strap.sh
 ```
+
+### Keybase/GPG
+
+To import a PGP key from Keybase.io:
+
+```sh
+keybase pgp export --secret | gpg --allow-secret-key-import --import
+```
+
 ### Screenshots
 
 #### Gotham Theme
