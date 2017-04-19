@@ -138,6 +138,8 @@ fi
 # Local bin directory
 export PATH=$HOME/.bin:$PATH
 
+# Yarn bin
+export PATH="$HOME/.yarn/bin:$PATH"
 
 # Automatically launch a tmux session
 if [[ -z "$TMUX" ]]
