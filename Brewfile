@@ -22,6 +22,7 @@ brew 'jq'
 
 # CLI apps
 brew 'awscli'
+brew 'diff-so-fancy'
 cask 'google-cloud-sdk'
 brew 'heroku-toolbelt'
 brew 'git'
