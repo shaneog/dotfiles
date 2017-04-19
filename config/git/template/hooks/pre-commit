@@ -1,8 +1,0 @@
-#!/bin/sh
-
-dir="`git rev-parse --git-dir`"
-local_hook="$dir"/hooks/pre-commit.local
-
-if [ -f "$local_hook" ]; then
-  . "$local_hook"
-fi
