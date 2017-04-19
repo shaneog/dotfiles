@@ -1,22 +1,80 @@
 [push]
   default = current
+  followTags = true
 [color]
   ui = auto
 [alias]
   st = status
+  undo = reset --soft HEAD^
 
-  lg1 = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
-  lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
-  lg = !"git lg1"
-  cleanup = !sh -c 'git branch --merged master | grep -v \"\\* master\" | xargs -n 1 git branch -d' -
+  lg = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
+
+  prune = fetch --prune
+  stash-all = stash save --include-untracked
+
+  patch = !git --no-pager diff --no-color
+
+  ### MAINTENANCE ALIASES ###
+
+  # pruner: prune everything that is unreachable now.
+  #
+  # This command takes a long time to run, perhaps even overnight.
+  #
+  # This is useful for removing unreachable objects from all places.
+  #
+  # By [CodeGnome](http://www.codegnome.com/)
+  #
+  pruner = !"git prune --expire=now; git reflog expire --expire-unreachable=now --rewrite --all"
+
+  # repacker: repack a repo the way Linus recommends.
+  #
+  # This command takes a long time to run, perhaps even overnight.
+  #
+  # It does the equivalent of "git gc --aggressive"
+  # but done *properly*,  which is to do something like:
+  #
+  #     git repack -a -d --depth=250 --window=250
+  #
+  # The depth setting is about how deep the delta chains can be;
+  # make them longer for old history - it's worth the space overhead.
+  #
+  # The window setting is about how big an object window we want
+  # each delta candidate to scan.
+  #
+  # And here, you might well want to add the "-f" flag (which is
+  # the "drop all old deltas", since you now are actually trying
+  # to make sure that this one actually finds good candidates.
+  #
+  # And then it's going to take forever and a day (ie a "do it overnight"
+  # thing). But the end result is that everybody downstream from that
+  # repository will get much better packs, without having to spend any effort
+  # on it themselves.
+  #
+  # http://metalinguist.wordpress.com/2007/12/06/the-woes-of-git-gc-aggressive-and-how-git-deltas-work/
+  #
+  # We also add the --window-memory limit of 1 gig, which helps protect
+  # us from a window that has very large objects such as binary blobs.
+  #
+  repacker = repack -a -d -f --depth=300 --window=300 --window-memory=1g
+
+  # Do everything we can to optimize the repository.
+  #
+  # This command takes a long time to run, perhaps even overnight.
+  #
+  # Currently, this command simply calls `git pruner` and `git repacker`.
+  # There's a step that may be unnecessarying, calling `git prune-pack`.
+  #
+  optimize = !"git pruner; git repacker; git prune-packed"
 [core]
   excludesfile = ~/.config/git/ignore
   autocrlf = input
   editor = nvim
+	pager = diff-so-fancy | less --tabs=4 -RFX
 [format]
   pretty = format:%C(blue)%ad%Creset %C(yellow)%h%C(green)%d%Creset %C(blue)%s %C(magenta) [%an]%Creset
 [merge]
   ff = only
+	conflictStyle = diff3
 [commit]
   template = ~/.config/git/message
   gpgsign = true
@@ -45,3 +103,22 @@
 [mergetool "sourcetree"]
   cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
   trustExitCode = true
+[stash]
+	showPatch = true
+[rebase]
+	autostash = true
+[log]
+	decorate = full
+[pull]
+	ff = only
+[transfer]
+	fsckobjects = true
+[color "diff-highlight"]
+	oldNormal = red bold
+	oldHighlight = red bold 52
+	newNormal = green bold
+	newHighlight = green bold 22
+[color "status"]
+  added = green
+  changed = yellow bold
+  untracked = red bold
