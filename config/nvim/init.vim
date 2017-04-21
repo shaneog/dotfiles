@@ -13,21 +13,32 @@ if !filereadable(expand('~/.config/nvim/autoload/plug.vim'))
   autocmd VimEnter * PlugInstall | source $MYVIMRC
 endif
 
-call plug#begin('~/.config/nvim/plugged')
-
-  " Plugins {
-  Plug '$HOME/.zplug/bin/fzf' | Plug 'junegunn/fzf.vim'
-  Plug 'vim-airline/vim-airline'
-  " }
-
-call plug#end()
+if filereadable(expand("~/.config/nvim/plugs.vim"))
+  source ~/.config/nvim/plugs.vim
+endif
 
 if has('autocmd')
   filetype plugin indent on
 endif
+
 if has('syntax') && !exists('g:syntax_on')
   syntax enable
 endif
 
 " Map the leader key to [space]
 let mapleader="\<SPACE>"
+
+" Color scheme
+set background=dark
+silent! colorscheme gotham
+
+" Enable line numbers
+set relativenumber
+set number
+
+" ============================================================================================================
+" Plugin specific settings
+" ============================================================================================================
+if filereadable(expand("~/.config/nvim/settings.vim"))
+  source ~/.config/nvim/settings.vim
+endif
