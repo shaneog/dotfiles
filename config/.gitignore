@@ -1,5 +1,12 @@
-*
-!nvim
-!tmux
+/*
+/*/
+
+!nvim/
+nvim/autoload
+nvim/plugged
+
+!tmux/
+tmux/plugins
+
 !git
 !karabiner
