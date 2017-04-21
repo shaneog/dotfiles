@@ -26,12 +26,12 @@ zplug "junegunn/fzf-bin", \
   as:command, \
   from:gh-r, \
   rename-to:fzf, \
-  use:"*darwin*amd64*"
-zplug "junegunn/fzf", \
-  use:"shell/*.zsh"
+  use:"*${(L)$(uname -s)}*amd64*"
 zplug "junegunn/fzf", \
   as:command, \
   use:"bin/fzf-tmux"
+zplug "junegunn/fzf", \
+  use:"shell/*.zsh"
 
 # Tips for unused aliases
 zplug "djui/alias-tips"
@@ -72,6 +72,9 @@ if ! zplug check --verbose; then
 fi
 
 zplug load
+
+# Add zplug bin directory to PATH
+export PATH=$HOME/.zplug/bin:$PATH
 
 # Environment
 export EDITOR='nvim'
