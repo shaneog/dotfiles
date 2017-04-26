@@ -57,6 +57,8 @@ call plug#begin('~/.config/nvim/plugged')
   Plug '$HOME/.zplug/repos/junegunn/fzf' | Plug 'junegunn/fzf.vim'
   " MRU list for fzf
   Plug 'tweekmonster/fzf-filemru'
+  " Faster search using ripgrep
+  Plug 'jremmen/vim-ripgrep'
 
 
   " ------------------------------------------------------------------------------

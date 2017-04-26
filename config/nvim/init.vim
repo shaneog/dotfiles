@@ -36,6 +36,9 @@ silent! colorscheme gotham
 set relativenumber
 set number
 
+" Use ripgrep as vimgrep
+set grepprg=rg\ --vimgrep
+
 " ============================================================================================================
 " Plugin specific settings
 " ============================================================================================================
