@@ -6,6 +6,8 @@ brew 'n'
 brew 'ruby-install'
 brew 'chruby'
 brew 'golang'
+brew 'python'
+brew 'python3'
 
 # Docker
 cask 'docker'

@@ -39,6 +39,10 @@ set number
 " Use ripgrep as vimgrep
 set grepprg=rg\ --vimgrep
 
+" Python
+let g:python_host_prog = '/usr/local/bin/python'
+let g:python3_host_prog = '/usr/local/bin/python3'
+
 " ============================================================================================================
 " Plugin specific settings
 " ============================================================================================================
