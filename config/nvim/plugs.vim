@@ -7,6 +7,8 @@ call plug#begin('~/.config/nvim/plugged')
 
   " EditorConfig support (http://editorconfig.org)
   Plug 'editorconfig/editorconfig-vim'
+  " Adds repeat functionality for some plugins
+  Plug 'tpope/vim-repeat'
 
 
   " ------------------------------------------------------------------------------
@@ -77,6 +79,9 @@ call plug#begin('~/.config/nvim/plugged')
   Plug 'junegunn/vim-easy-align'
   " Surround (cs"')
   Plug 'tpope/vim-surround'
+  " Match pairs of things
+  Plug 'tpope/vim-unimpaired'
+  
 
 
   " ------------------------------------------------------------------------------
