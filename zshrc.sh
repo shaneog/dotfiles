@@ -185,3 +185,7 @@ function rm_known_host() {
     sed -i '' "/$1/d" "$HOME/.ssh/known_hosts" 
   fi
 }
+
+# Check external IP from command line
+alias checkip='curl "http://checkip.amazonaws.com"' 
+
