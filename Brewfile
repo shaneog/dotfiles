@@ -1,5 +1,6 @@
 tap 'caskroom/fonts'
 tap 'neovim/neovim'
+tap 'ahmetb/kubectx'
 
 # System
 brew 'n'
@@ -11,6 +12,9 @@ brew 'python3'
 
 # Docker
 cask 'docker'
+
+# Kubernetes
+brew 'kubectx'
 
 # Shells/CLI
 brew 'zsh'
