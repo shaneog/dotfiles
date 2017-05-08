@@ -21,7 +21,8 @@ call plug#begin('~/.config/nvim/plugged')
   Plug 'tpope/vim-commentary', { 'on': '<Plug>Commentary' }
   " ALE - Asynchronous Lint Engine
   Plug 'w0rp/ale', { 'on': 'ALEEnable', 'for': ['go', 'ruby', 'sh'] }
-
+  " Jsonnet support
+  Plug 'google/vim-jsonnet'
 
   " -----------------------------------------------------
   " Go
