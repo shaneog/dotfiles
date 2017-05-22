@@ -23,6 +23,8 @@ call plug#begin('~/.config/nvim/plugged')
   Plug 'w0rp/ale', { 'on': 'ALEEnable', 'for': ['go', 'ruby', 'sh'] }
   " Jsonnet support
   Plug 'google/vim-jsonnet'
+  " nginx syntax and warnings
+  Plug 'chr4/nginx.vim'
 
   " -----------------------------------------------------
   " Go
