@@ -97,6 +97,9 @@ cask 'keybase'
 cask 'viscosity'
 cask 'little-snitch'
 cask 'micro-snitch'
+cask 'knockknock'
+cask 'blockblock'
+cask 'ransomwhere'
 
 # Java
 brew 'jenv'
