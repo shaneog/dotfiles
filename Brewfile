@@ -73,6 +73,7 @@ cask 'expandrive'
 cask 'flux'
 cask 'google-drive'
 cask 'hazel'
+cask 'inssider'
 cask 'istat-menus'
 # cask 'karabiner-elements' # Placeholder
 cask 'keepingyouawake'
