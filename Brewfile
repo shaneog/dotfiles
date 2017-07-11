@@ -1,6 +1,5 @@
 tap 'caskroom/fonts'
 tap 'neovim/neovim'
-tap 'ahmetb/kubectx'
 
 # System
 brew 'n'
