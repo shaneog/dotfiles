@@ -92,7 +92,7 @@ cask 'querious'
 # Security
 cask 'cloak'
 cask 'gpgtools'
-brew 'keybase'
+cask 'keybase'
 cask 'viscosity'
 
 # Java
