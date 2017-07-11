@@ -94,6 +94,8 @@ cask 'cloak'
 cask 'gpgtools'
 cask 'keybase'
 cask 'viscosity'
+cask 'little-snitch'
+cask 'micro-snitch'
 
 # Java
 brew 'jenv'
