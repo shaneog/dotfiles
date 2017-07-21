@@ -102,6 +102,7 @@ cask 'micro-snitch'
 cask 'knockknock'
 cask 'blockblock'
 cask 'ransomwhere'
+cask 'nordvpn'
 
 # Java
 brew 'jenv'
