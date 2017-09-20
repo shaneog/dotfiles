@@ -93,7 +93,7 @@ cask 'postico'
 cask 'querious'
 
 # Security
-cask 'cloak'
+cask 'encryptme'
 cask 'gpgtools'
 cask 'keybase'
 cask 'viscosity'
