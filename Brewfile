@@ -42,7 +42,6 @@ brew 'mackup'
 # Communication
 cask 'skype'
 cask 'slack'
-cask 'whatsapp'
 
 # Editors & IDEs
 brew 'neovim'
