@@ -81,6 +81,7 @@ cask 'kindle'
 cask 'microsoft-office'
 cask 'sourcetree'
 cask 'spectacle'
+cask 'steam'
 cask 'transmit'
 cask 'vlc'
 
