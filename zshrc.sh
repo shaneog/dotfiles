@@ -99,8 +99,8 @@ if zplug check "zsh-users/zsh-history-substring-search"; then
 fi
 
 # Use a local zshrc, if exists
-if [[ -f "$HOME/zshrc.local" ]]; then
-  source "$HOME/zshrc.local"
+if [[ -f "$HOME/.zshrc.local" ]]; then
+  source "$HOME/.zshrc.local"
 fi
 
 # Ignore gitignore with fzf
