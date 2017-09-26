@@ -77,7 +77,7 @@ cask 'google-backup-and-sync'
 cask 'hazel'
 cask 'inssider'
 cask 'istat-menus'
-# cask 'karabiner-elements' # Placeholder
+cask 'karabiner-elements' 
 cask 'keepingyouawake'
 cask 'kindle'
 cask 'microsoft-office'
