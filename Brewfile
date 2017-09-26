@@ -84,6 +84,7 @@ cask 'microsoft-office'
 cask 'sourcetree'
 cask 'spectacle'
 cask 'steam'
+cask 'transmission'
 cask 'transmit'
 cask 'vlc'
 
