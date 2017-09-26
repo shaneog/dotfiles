@@ -38,6 +38,7 @@ brew 'wget'
 brew 'shellcheck'
 brew 'mas' # CLI for Mac App Store
 brew 'mackup'
+brew 'yarn'
 
 # Communication
 cask 'skype'
