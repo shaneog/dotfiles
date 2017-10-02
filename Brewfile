@@ -11,6 +11,7 @@ brew 'python3'
 
 # Docker
 cask 'docker'
+brew 'docker-machine-driver-xhyve'
 
 # Kubernetes
 brew 'kubectx'
