@@ -189,3 +189,7 @@ function rm_known_host() {
 # Check external IP from command line
 alias checkip='curl "http://checkip.amazonaws.com"' 
 
+# Use only noevim
+alias vim='nvim'
+alias vi='vim'
+
