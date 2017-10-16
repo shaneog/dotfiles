@@ -32,6 +32,7 @@ zplug "junegunn/fzf", \
   use:"bin/fzf-tmux"
 zplug "junegunn/fzf", \
   use:"shell/*.zsh"
+zplug "zchee/go-zsh-completions"
 
 # Tips for unused aliases
 zplug "djui/alias-tips"
