@@ -149,7 +149,7 @@ export PATH=$HOME/.bin:$PATH
 export PATH="$HOME/.yarn/bin:$PATH"
 
 # Automatically launch a tmux session
-if [[ -z "$TMUX" ]] then
+if [[ -z "$TMUX" ]]; then
   tmux_session="$USER"
 
   if tmux has-session -t $tmux_session 2>/dev/null; then
