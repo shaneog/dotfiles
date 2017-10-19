@@ -153,10 +153,10 @@ export PATH="$HOME/.yarn/bin:$PATH"
 if [[ -z "$TMUX" ]]; then
   tmux_session="$USER"
 
-  if tmux has-session -t $tmux_session 2>/dev/null; then
-    tmux attach-session -t $tmux_session
+  if tmux has-session -t "$tmux_session" 2>/dev/null; then
+    tmux attach-session -t "$tmux_session"
   else
-    tmux new-session -s $tmux_session
+    tmux new-session -s "$tmux_session"
   fi
 
   # if ! tmux has-session -t "$tmux_session" 2> /dev/null; then
