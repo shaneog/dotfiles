@@ -25,7 +25,6 @@ brew 'zsh-completions'
 brew 'tmux'
 brew 'reattach-to-user-namespace'
 brew 'ripgrep'
-brew 'the_silver_searcher'
 brew 'jq'
 
 # CLI apps
