@@ -50,10 +50,10 @@ then
 fi
 
 # macOS customisations
-if [ $OSX ]
-then
-  source "$DOTFILESDIRREL/macos"
-fi
+# if [ $OSX ]
+# then
+  # source "$DOTFILESDIRREL/macos"
+# fi
 
 # Mackup
 if [ $OSX ]
