@@ -36,6 +36,10 @@ zplug "zchee/go-zsh-completions"
 zplug "djui/alias-tips"
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡  Try: "
 
+# Docker completions
+zplug "docker/cli", use:contrib/completion/zsh
+zplug "docker/compose", use:contrib/completion/zsh
+
 # Prezto modules
 zplug 'modules/environment', from:prezto
 zplug 'modules/terminal', from:prezto
