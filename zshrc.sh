@@ -16,8 +16,6 @@ source ~/.zplug/init.zsh
 # Let zplug manage zplug
 zplug 'zplug/zplug', hook-build:'zplug --self-manage'
 
-export _ZPLUG_PREZTO="zsh-users/prezto" # see https://github.com/zplug/zplug/issues/360
-
 # Make sure to use double quotes to prevent shell expansion
 zplug "zsh-users/zsh-completions"
 zplug "zsh-users/zsh-syntax-highlighting", defer:2
