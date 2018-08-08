@@ -179,20 +179,18 @@ if [[ -z "$TMUX" ]]; then
   # exec tmux new-session -t "$tmux_session"
 fi
 
-
-# Allow removal of IP addresses from the SSH known_hosts file. This is useful for 
+# Allow removal of IP addresses from the SSH known_hosts file. This is useful for
 # rapidly changing cloud servers which may receive a previously seen IP.
 function rm_known_host() {
   if [ -n "$1" ]
   then
-    sed -i '' "/$1/d" "$HOME/.ssh/known_hosts" 
+    sed -i'' "/$1/d" "$HOME/.ssh/known_hosts"
   fi
 }
 
 # Check external IP from command line
-alias checkip='curl "http://checkip.amazonaws.com"' 
+alias checkip='curl "http://checkip.amazonaws.com"'
 
 # Use only noevim
 alias vim='nvim'
 alias vi='vim'
-
