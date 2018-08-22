@@ -198,3 +198,6 @@ alias checkip='curl "http://checkip.amazonaws.com"'
 # Use only noevim
 alias vim='nvim'
 alias vi='vim'
+
+# GnuPG fix
+export GPG_TTY=$(tty)
