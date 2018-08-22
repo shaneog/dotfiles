@@ -122,9 +122,11 @@ if [[ -x "$(command -v kubectl)" ]]; then
 fi
 
 # Go
-GOROOT="$(brew --prefix)/opt/go/libexec/bin"
-export GOPATH="$HOME/.go"
-export PATH=$PATH:$GOROOT:$GOPATH/bin
+if [[ -x "$(command -v go)" ]]; then
+  GOROOT="$(brew --prefix)/opt/go/libexec/bin"
+  export GOPATH="$HOME/.go"
+  export PATH=$PATH:$GOROOT:$GOPATH/bin
+fi
 
 # Postgres.app
 if [[ -d /Applications/Postgres.app ]]; then
@@ -149,7 +151,9 @@ fi
 export PATH=$HOME/.bin:$PATH
 
 # Yarn bin
-export PATH="$HOME/.yarn/bin:$PATH"
+if [[ -x "$(command -v yarn)" ]]; then
+  export PATH="$HOME/.yarn/bin:$PATH"
+fi
 
 # Automatically launch a tmux session
 if [[ -z "$TMUX" ]]; then
