@@ -157,7 +157,7 @@ fi
 
 # Automatically launch a tmux session
 if [[ -z "$TMUX" ]]; then
-  tmux_session="$USER"
+  tmux_session="$(echo $USER | tr -d '.')"
 
   if tmux has-session -t "$tmux_session" 2>/dev/null; then
     tmux attach-session -t "$tmux_session"
