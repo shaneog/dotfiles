@@ -59,7 +59,6 @@ zplug 'modules/osx', from:prezto
 zplug 'modules/ruby', from:prezto
 zplug 'modules/rails', from:prezto
 zplug 'modules/tmux', from:prezto
-zplug 'modules/prompt', from:prezto
 
 # Tmux
 alias tmux="tmux -f ${HOME}/.config/tmux/tmux.conf"
@@ -68,10 +67,22 @@ alias tmux="tmux -f ${HOME}/.config/tmux/tmux.conf"
 # Prezto configuration options
 zstyle ':prezto:*:*' color 'yes'
 zstyle ':prezto:module:editor' dot-expansion 'yes'
-zstyle ':prezto:module:prompt' theme 'sorin'
 zstyle ':prezto:module:terminal' auto-title 'yes'
 zstyle ':prezto:module:tmux:iterm' integrate 'no'
 zstyle ':prezto:module:ruby:chruby' auto-switch 'yes'
+
+# Spaceship
+zplug 'denysdovhan/spaceship-prompt', \
+  use:spaceship.zsh, \
+  from:github, \
+  as:theme
+
+export SPACESHIP_GIT_STATUS_PREFIX=" "
+export SPACESHIP_GIT_STATUS_SUFFIX=""
+export SPACESHIP_GIT_STATUS_ADDED="%F{yellow}•%F{red}"
+export SPACESHIP_GIT_STATUS_UNTRACKED="%F{blue}•%F{red}"
+export SPACESHIP_GIT_STATUS_DELETED="%F{red}•%F{red}"
+export SPACESHIP_GIT_STATUS_MODIFIED="%F{green}•%F{green}"
 
 # Install packages that have not been installed yet
 if ! zplug check --verbose; then
