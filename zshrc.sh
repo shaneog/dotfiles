@@ -31,6 +31,10 @@ zplug "junegunn/fzf", \
 zplug "junegunn/fzf", \
   use:"shell/*.zsh"
 zplug "zchee/go-zsh-completions"
+zplug "zsh-users/zsh-autosuggestions", \
+  use:"zsh-autosuggestions.zsh"
+
+export ZSH_AUTOSUGGEST_USE_ASYNC=1
 
 # Tips for unused aliases
 zplug "djui/alias-tips"
