@@ -210,7 +210,10 @@ fi
 function rm_known_host() {
   if [ -n "$1" ]
   then
-    sed -i'' "/$1/d" "$HOME/.ssh/known_hosts"
+    sed -i '' "/$1/d" "$HOME/.ssh/known_hosts"
+    if [ -f "$HOME/.ssh/known_hosts2" ]; then
+      sed -i '' "/$1/d" "$HOME/.ssh/known_hosts2"
+    fi
   fi
 }
 
