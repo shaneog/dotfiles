@@ -92,6 +92,12 @@ fi
 
 zplug load
 
+# set autoload path
+fpath=($HOME/.zsh "${fpath[@]}")
+
+# autoload homemade functions
+autoload -U kp
+
 # Add zplug bin directory to PATH
 export PATH=$HOME/.zplug/bin:$PATH
 
