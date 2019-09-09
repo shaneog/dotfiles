@@ -18,6 +18,18 @@ To import a PGP key from Keybase.io:
 keybase pgp export --secret | gpg --allow-secret-key-import --import
 ```
 
+### Local Overrides
+
+The following files allow for local overrides:
+
+| File Path | Local Override File Path |
+| ------------- | ------------- |
+| .config/git/config  | .gitconfig-user |
+| .ssh/config  | .ssh/config-local  |
+| .zshrc  | .zshrc.local  |
+| .bashrc  | .bashrc.local  |
+
+
 ### Screenshots
 
 #### Gotham Theme
