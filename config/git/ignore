@@ -116,3 +116,7 @@ npm-debug.log
 
 # Yarn
 yarn-error.log
+
+# Resilio Sync
+Icon
+.sync/
