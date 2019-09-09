@@ -51,6 +51,7 @@ zplug 'modules/editor', from:prezto
 zplug 'modules/history', from:prezto
 zplug 'modules/directory', from:prezto
 zplug 'modules/spectrum', from:prezto
+zplug 'modules/gnu-utility', from:prezto
 zplug 'modules/utility', from:prezto
 zplug 'modules/completion', from:prezto
 zplug 'modules/homebrew', from:prezto
