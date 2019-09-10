@@ -1,18 +1,11 @@
-# Language
-export LANG='en_US.UTF-8'
-export LC_ALL='en_US.UTF-8'
-
-# XDG
-export XDG_CONFIG_HOME="$HOME/.config/"
-
 # Check if zplug is installed
-if [[ ! -d ~/.zplug ]]; then
-  git clone --depth 1 https://github.com/zplug/zplug ~/.zplug
-  source ~/.zplug/init.zsh
+if [[ ! -d $HOME/.zplug ]]; then
+  git clone --depth 1 https://github.com/zplug/zplug $HOME/.zplug
+  source $HOME/.zplug/init.zsh
 fi
 
 # Essential
-source ~/.zplug/init.zsh
+source $HOME/.zplug/init.zsh
 # Let zplug manage zplug
 zplug 'zplug/zplug', hook-build:'zplug --self-manage'
 
@@ -93,7 +86,7 @@ fi
 zplug load
 
 # set autoload path
-fpath=($HOME/.zsh "${fpath[@]}")
+fpath=($ZDOTDIR/lib "${fpath[@]}")
 
 # autoload homemade functions
 autoload -U kp

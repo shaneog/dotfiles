@@ -10,3 +10,7 @@ tmux/plugins
 
 !git
 !karabiner
+
+!zsh/
+zsh/.zcompdump*
+zsh/.zhistory
