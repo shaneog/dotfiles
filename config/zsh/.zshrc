@@ -127,8 +127,8 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
 # Google Cloud SDK.
 if [[ -x "$(command -v gcloud)" ]]; then
-  source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
-  source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
+  source "$(gcloud info --format='value(installation.sdk_root)')/path.zsh.inc"
+  source "$(gcloud info --format='value(installation.sdk_root)')/completion.zsh.inc"
 fi
 
 # Kubernetes
