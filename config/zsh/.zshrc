@@ -170,6 +170,11 @@ if [[ -x "$(command -v yarn)" ]]; then
   export PATH="$HOME/.yarn/bin:$PATH"
 fi
 
+# n - NodeJS version manager
+if [[ -x "$(command -v n)" ]]; then
+  export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
+fi
+
 # Automatically launch a tmux session
 if [[ -z "$TMUX" ]]; then
   tmux_session="$(echo $USER | tr -d '.')"
@@ -219,5 +224,3 @@ alias vi='vim'
 
 # GnuPG fix
 export GPG_TTY=$(tty)
-
-export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
