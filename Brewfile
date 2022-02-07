@@ -1,21 +1,22 @@
-tap 'caskroom/fonts'
+tap 'homebrew/cask-fonts'
 tap 'neovim/neovim'
 
 # System
-brew 'n'
-brew 'ruby-install'
-brew 'chruby'
-brew 'golang'
-brew 'python'
-brew 'python3'
+brew 'nodenv'
+brew 'node-build'
+# brew 'ruby-install'
+# brew 'chruby'
+# brew 'golang'
+# brew 'python'
+# brew 'python3'
 
 # Docker
-cask 'docker'
-brew 'docker-machine-driver-xhyve'
-cask 'vmware-fusion'
+# cask 'docker'
+# brew 'docker-machine-driver-xhyve'
+# cask 'vmware-fusion'
 
 # Kubernetes
-brew 'kubectx'
+# brew 'kubectx'
 
 # Shells/CLI
 brew 'zsh'
@@ -30,96 +31,96 @@ brew 'jq'
 # CLI apps
 brew 'awscli'
 brew 'diff-so-fancy'
-cask 'google-cloud-sdk'
-brew 'heroku-toolbelt'
+# cask 'google-cloud-sdk'
+# brew 'heroku-toolbelt'
 brew 'git'
-brew 'hub'
+# brew 'hub'
 brew 'curl'
 brew 'wget'
 brew 'shellcheck'
 brew 'mas' # CLI for Mac App Store
 brew 'mackup'
-brew 'yarn'
+# brew 'yarn'
 
 # Communication
-cask 'skype'
-cask 'slack'
+# cask 'skype'
+# cask 'slack'
 
 # Editors & IDEs
 brew 'neovim'
 brew 'vim'
-cask 'sublime-text'
+# cask 'sublime-text'
 cask 'visual-studio-code'
 
 # Music
 cask 'spotify'
 
 # Web
-cask 'google-chrome'
+# cask 'google-chrome'
 
 # DevOps
-brew 'packer'
-brew 'terraform'
+# brew 'packer'
+# brew 'terraform'
 
 # Other Apps
 cask '1password'
-cask 'a-better-finder-rename'
+# cask 'a-better-finder-rename'
 cask 'alfred'
-cask 'arq'
+# cask 'arq'
 cask 'bartender'
 cask 'bettertouchtool'
-cask 'calibre'
-cask 'carbon-copy-cloner'
+# cask 'calibre'
+# cask 'carbon-copy-cloner'
 cask 'dropbox'
-cask 'expandrive'
-cask 'flux'
-cask 'google-backup-and-sync'
+# cask 'expandrive'
+# cask 'flux'
+# cask 'google-backup-and-sync'
 cask 'hazel'
 cask 'inssider'
 cask 'istat-menus'
 cask 'karabiner-elements' 
 cask 'keepingyouawake'
-cask 'kindle'
-cask 'microsoft-office'
+# cask 'kindle'
+# cask 'microsoft-office'
 cask 'sourcetree'
 cask 'spectacle'
-cask 'steam'
+# cask 'steam'
 cask 'the-unarchiver'
-cask 'transmission'
+# cask 'transmission'
 cask 'transmit'
-cask 'vlc'
+# cask 'vlc'
 
 # Databases
-cask 'postgres'
+# cask 'postgres'
 
 # Database GUI
-cask 'postico'
-cask 'querious'
+# cask 'postico'
+# cask 'querious'
 
 # Security
-cask 'encryptme'
-cask 'gpgtools'
-cask 'keybase'
-cask 'viscosity'
-cask 'little-snitch'
+# cask 'encryptme'
+# cask 'gpgtools'
+# cask 'keybase'
+# cask 'viscosity'
+# cask 'little-snitch'
 cask 'micro-snitch'
 cask 'knockknock'
 cask 'blockblock'
 cask 'ransomwhere'
-cask 'nordvpn'
+# cask 'nordvpn'
 
 # Java
-brew 'jenv'
-cask 'java'
+# brew 'jenv'
+# cask 'java'
 
 # Fonts
 cask 'font-menlo-for-powerline'
 cask 'font-source-code-pro-for-powerline'
 
 # Mac App Store apps
-mas 'Annotate', id: 918207447
-mas 'DaisyDisk', id: 411643860
-mas 'Gemini', id: 463541543
-mas 'Media Inspector', id: 419975242
-mas 'Parcel', id: 639968404
-mas 'Microsoft Remote Desktop', id: 715768417
+# mas 'Annotate', id: 918207447
+# mas 'DaisyDisk', id: 411643860
+# mas 'Gemini', id: 463541543
+# mas 'Media Inspector', id: 419975242
+# mas 'Parcel', id: 639968404
+# mas 'Microsoft Remote Desktop', id: 715768417
