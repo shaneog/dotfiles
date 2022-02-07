@@ -54,10 +54,3 @@ fi
 # then
   # source "$DOTFILESDIRREL/macos"
 # fi
-
-# Mackup
-if [ $OSX ]
-then
-  true
-  # mackup restore
-fi
