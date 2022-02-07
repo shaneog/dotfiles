@@ -47,7 +47,6 @@ brew 'mas' # CLI for Mac App Store
 
 # Editors & IDEs
 brew 'neovim'
-brew 'vim'
 # cask 'sublime-text'
 cask 'visual-studio-code'
 
