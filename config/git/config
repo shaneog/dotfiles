@@ -13,15 +13,17 @@
   master-cleanse = !git master-cleanse-local; git master-cleanse-remote
 
   # Delete all local branches that have been merged into the local master branch.
-  master-cleanse-local = "!git checkout master && git branch --merged | xargs git branch --delete"
+  #master-cleanse-local = "!git checkout master && git branch --merged | xargs git branch --delete"
 
   # Delete all remote branches that have been merged into the remote master branch.
-  master-cleanse-remote = !"git branch --remotes --merged origin/master | sed 's# *origin/##' | grep -v '^master$' xargs -I% git push origin :% 2>&1 | grep --colour=never 'deleted'"
+  #master-cleanse-remote = !"git branch --remotes --merged origin/master | sed 's# *origin/##' | grep -v '^master$' xargs -I% git push origin :% 2>&1 | grep --colour=never 'deleted'"
 
-  prune = fetch --prune
   stash-all = stash save --include-untracked
 
   patch = !git --no-pager diff --no-color
+
+  # Delete remote branches that have been merged to master, excluding release (v[numeric]) branches
+  delete-merged-on-origin = !"git branch --all --merged remotes/origin/master | grep --invert-match master | grep --invert-match HEAD | grep 'remotes/origin/' | cut -d '/' -f 3- | grep --invert-match -E '^v[0-9]+' | xargs -n 1 git push --no-verify --delete origin"
 
   ### MAINTENANCE ALIASES ###
 
@@ -71,11 +73,11 @@
   # This command takes a long time to run, perhaps even overnight.
   #
   # Currently, this command simply calls `git pruner` and `git repacker`.
-  # There's a step that may be unnecessarying, calling `git prune-pack`.
+  # There's a step that may be unnecessarying, calling `git prune-packed`.
   #
   optimize = !"git pruner; git repacker; git prune-packed"
 [core]
-  excludesfile = ~/.config/git/ignore
+	excludesfile = /Users/shane.ogrady/.config/git/ignore
   autocrlf = input
   editor = nvim
 	pager = diff-so-fancy | less --tabs=4 -RFX
@@ -106,11 +108,11 @@
 [hub]
   protocol = https
 [difftool "sourcetree"]
-  cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-  path =
+	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+	path = 
 [mergetool "sourcetree"]
-  cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
-  trustExitCode = true
+	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+	trustExitCode = true
 [stash]
 	showPatch = true
 [rebase]
@@ -130,3 +132,5 @@
   added = green
   changed = yellow bold
   untracked = red bold
+[init]
+	defaultBranch = main
