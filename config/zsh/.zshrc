@@ -41,8 +41,8 @@ zplug "docker/compose", use:contrib/completion/zsh
 zplug 'modules/environment', from:prezto
 zplug 'modules/terminal', from:prezto
 zplug 'modules/editor', from:prezto
-zplug 'modules/history', from:prezto
 zplug 'modules/directory', from:prezto
+zplug 'modules/history', from:prezto
 zplug 'modules/spectrum', from:prezto
 zplug 'modules/gnu-utility', from:prezto
 zplug 'modules/utility', from:prezto
@@ -94,6 +94,15 @@ autoload -U kp
 # Add zplug bin directory to PATH
 export PATH=$HOME/.zplug/bin:$PATH
 
+# History options
+[ "$HISTSIZE" -lt 50000 ] && HISTSIZE=50000
+[ "$SAVEHIST" -lt 100000 ] && SAVEHIST=100000
+
+## History command configuration
+setopt INC_APPEND_HISTORY     # append into history file
+setopt HIST_REDUCE_BLANKS     ## Delete empty lines from history file
+setopt HIST_NO_STORE          ## Do not add history and fc commands to the history
+
 # Environment
 export EDITOR='nvim'
 export VISUAL='nvim'
@@ -114,11 +123,6 @@ if zplug check "zsh-users/zsh-history-substring-search"; then
   bindkey -M emacs '^N' history-substring-search-down
   bindkey -M vicmd 'k' history-substring-search-up
   bindkey -M vicmd 'j' history-substring-search-down
-fi
-
-# Use a local zshrc, if exists
-if [[ -f "$HOME/.zshrc.local" ]]; then
-  source "$HOME/.zshrc.local"
 fi
 
 # Ignore gitignore with fzf
@@ -150,6 +154,10 @@ fi
 
 # Python pyenv
 if [[ -x "$(command -v pyenv)" ]]; then
+  export PYENV_ROOT="$HOME/.pyenv"
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init --path)"
+
   eval "$(pyenv init -)"
 fi
 
@@ -175,8 +183,18 @@ if [[ -x "$(command -v n)" ]]; then
   export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
 fi
 
-# Automatically launch a tmux session
-if [[ -z "$TMUX" ]]; then
+# nodenv - NodeJS version manager
+if [[ -x "$(command -v nodenv)" ]]; then
+  eval "$(nodenv init -)"  
+fi
+
+# sdkman - Java SDK manager
+if [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
+  source "$HOME/.sdkman/bin/sdkman-init.sh"
+fi
+
+# Automatically launch a tmux session, unless TMUX is already set or TERM_PROGRAM is set to vscode
+if [[ -z "$TMUX" ]] && [[ "$TERM_PROGRAM" != "vscode" ]]; then
   case $- in *i*)
     tmux_session="$(echo $USER | tr -d '.')"
 
@@ -209,3 +227,10 @@ alias vi='vim'
 
 # GnuPG fix
 export GPG_TTY=$(tty)
+
+# Use a local zshrc, if exists
+if [[ -f "$HOME/.zshrc.local" ]]; then
+  source "$HOME/.zshrc.local"
+fi
+
+alias rm_node_modules="find . -name 'node_modules' -type d -prune -print -exec rm -rf '{}' \;"
