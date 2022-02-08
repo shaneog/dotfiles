@@ -4,121 +4,39 @@ tap 'neovim/neovim'
 # System
 brew 'nodenv'
 brew 'node-build'
-# brew 'ruby-install'
-# brew 'chruby'
-# brew 'golang'
-# brew 'python'
-# brew 'python3'
+brew 'pyenv'
 
-# Docker
-# cask 'docker'
-# brew 'docker-machine-driver-xhyve'
-# cask 'vmware-fusion'
-
-# Kubernetes
-# brew 'kubectx'
-
-# Shells/CLI
+# Shell
 brew 'zsh'
 brew 'zsh-completions'
 
-# Terminal Tools
-brew 'tmux'
+# CLI/Term Tools
+brew 'curl'
+brew 'diff-so-fancy'
+brew 'git'
+brew 'jq'
+brew 'neovim'
 brew 'reattach-to-user-namespace'
 brew 'ripgrep'
-brew 'jq'
-
-# CLI apps
-brew 'awscli'
-brew 'diff-so-fancy'
-# cask 'google-cloud-sdk'
-# brew 'heroku-toolbelt'
-brew 'git'
-# brew 'hub'
-brew 'curl'
+brew 'tmux'
 brew 'wget'
-brew 'shellcheck'
-brew 'mas' # CLI for Mac App Store
-# brew 'yarn'
+brew 'yq'
 
-# Communication
-# cask 'skype'
-# cask 'slack'
-
-# Editors & IDEs
-brew 'neovim'
-# cask 'sublime-text'
-cask 'visual-studio-code'
-
-# Music
-cask 'spotify'
-
-# Web
-# cask 'google-chrome'
-
-# DevOps
-# brew 'packer'
-# brew 'terraform'
-
-# Other Apps
-cask '1password'
-# cask 'a-better-finder-rename'
+# Apps
+# cask '1password'
 cask 'alfred'
-# cask 'arq'
 cask 'bartender'
-cask 'bettertouchtool'
-# cask 'calibre'
-# cask 'carbon-copy-cloner'
-cask 'dropbox'
-# cask 'expandrive'
-# cask 'flux'
-# cask 'google-backup-and-sync'
+cask 'docker'
+cask 'gpg-suite-no-mail'
 cask 'hazel'
-cask 'inssider'
 cask 'istat-menus'
 cask 'karabiner-elements' 
 cask 'keepingyouawake'
-# cask 'kindle'
-# cask 'microsoft-office'
-cask 'sourcetree'
-cask 'spectacle'
-# cask 'steam'
-cask 'the-unarchiver'
-# cask 'transmission'
-cask 'transmit'
-# cask 'vlc'
-
-# Databases
-# cask 'postgres'
-
-# Database GUI
-# cask 'postico'
-# cask 'querious'
-
-# Security
-# cask 'encryptme'
-# cask 'gpgtools'
-# cask 'keybase'
-# cask 'viscosity'
-# cask 'little-snitch'
+cask 'maestral'
 cask 'micro-snitch'
-cask 'knockknock'
-cask 'blockblock'
-cask 'ransomwhere'
-# cask 'nordvpn'
-
-# Java
-# brew 'jenv'
-# cask 'java'
+cask 'rectangle'
+cask 'the-unarchiver'
+cask 'visual-studio-code'
 
 # Fonts
 cask 'font-menlo-for-powerline'
-cask 'font-source-code-pro-for-powerline'
-
-# Mac App Store apps
-# mas 'Annotate', id: 918207447
-# mas 'DaisyDisk', id: 411643860
-# mas 'Gemini', id: 463541543
-# mas 'Media Inspector', id: 419975242
-# mas 'Parcel', id: 639968404
-# mas 'Microsoft Remote Desktop', id: 715768417
