@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Install neovim plugins
+nvim +PlugInstall +qall

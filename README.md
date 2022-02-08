@@ -4,10 +4,10 @@ These are my dotfiles. There are many others like them, but these ones are mine.
 
 ### Installation
 
-To install, use [strap](https://github.com/MikeMcQuaid/strap).
+To install, run the following command:
 
 ```sh
-STRAP_GIT_NAME=<name> STRAP_GIT_EMAIL=<email> STRAP_GITHUB_USER=<github_user> strap.sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/shaneog/dotfiles/HEAD/script/bootstrap)"
 ```
 
 ### Keybase/GPG

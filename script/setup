@@ -1,34 +1,28 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Install all dotfiles into the home directory
-# Copied from/inspired by https://github.com/MikeMcQuaid/dotfiles/blob/master/script/setup
 
-DOTFILESDIRREL=$(dirname $0)
-cd $DOTFILESDIRREL/..
+DOTFILESDIRREL="$(dirname "$0")"
+cd "$DOTFILESDIRREL"/.. || exit
 DOTFILESDIR=$(pwd -P)
 
-[ $(uname -s) = "Darwin" ] && export OSX=1 && export UNIX=1
-[ $(uname -s) = "Linux" ] && export LINUX=1 && export UNIX=1
+[ "$(uname -s)" = "Darwin" ] && export OSX=1 && export UNIX=1
+[ "$(uname -s)" = "Linux" ] && export LINUX=1 && export UNIX=1
 
 for DOTFILE in *; do
   HOMEFILE="$HOME/.$DOTFILE"
-  [ -d $DOTFILE ] && DOTFILE="$DOTFILE/"
+  [ -d "$DOTFILE" ] && DOTFILE="$DOTFILE/"
   DIRFILE="$DOTFILESDIR/$DOTFILE"
 
-  echo $DOTFILE | egrep -q '(^script/$|\.txt$|\.md$)' && continue
+  # shellcheck disable=SC2196
+  echo "$DOTFILE" | egrep -q '(^script/$|\.txt$|\.md$)' && continue
 
-  # Don't install some files unless you're also called Shane.
-  if echo $USER | grep -vq 'shane'
-  then
-    echo $DOTFILE | grep -q 'gitconfig-user' && continue
-    echo $DOTFILE | grep -q 'ssh' && continue
-  fi
-
-  echo $DOTFILE | grep -q '\.sh' \
-    && HOMEFILE="$HOME/.$(echo $DOTFILE | sed -e 's/\.sh//')"
+  # shellcheck disable=SC2001
+  echo "$DOTFILE" | grep -q '\.sh' \
+    && HOMEFILE="$HOME/.$(echo "$DOTFILE" | sed -e 's/\.sh//')"
 
   if [ $UNIX ]
   then
-    if [ -L "$HOMEFILE" ] && ! [ -d $DOTFILE ]
+    if [ -L "$HOMEFILE" ] && ! [ -d "$DOTFILE" ]
     then
       ln -sfv "$DIRFILE" "$HOMEFILE"
     else
@@ -39,18 +33,3 @@ for DOTFILE in *; do
     cp -rv "$DIRFILE" "$HOMEFILE"
   fi
 done
-
-# Install vim plugins
-vim +PlugInstall +qall
-
-# use homebrew's zsh
-if [ $OSX ]
-then
-  sudo dscl . -create /Users/$USER UserShell /usr/local/bin/zsh
-fi
-
-# macOS customisations
-# if [ $OSX ]
-# then
-  # source "$DOTFILESDIRREL/macos"
-# fi

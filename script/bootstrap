@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# Bootstraps a new system
+set -e
+
+[[ "$1" = "--debug" || -o xtrace ]] && DEBUG="1"
+
+sudo_askpass() {
+  if [ -n "$SUDO_ASKPASS" ]; then
+    sudo --askpass "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+cleanup() {
+  set +e
+  sudo_askpass rm -rf "$SUDO_ASKPASS" "$SUDO_ASKPASS_DIR"
+  sudo --reset-timestamp
+}
+
+trap "cleanup" EXIT
+
+if [ -n "$DEBUG" ]; then
+  set -x
+else
+  QUIET_FLAG="-q"
+  Q="$QUIET_FLAG"
+fi
+
+# We want to always prompt for sudo password at least once rather than doing
+# root stuff unexpectedly.
+sudo --reset-timestamp
+
+# functions for turning off debug for use when handling the user password
+clear_debug() {
+  set +x
+}
+
+reset_debug() {
+  if [ -n "$DEBUG" ]; then
+    set -x
+  fi
+}
+
+# Initialise (or reinitialise) sudo to save unhelpful prompts later.
+sudo_init() {
+  local SUDO_PASSWORD SUDO_PASSWORD_SCRIPT
+
+  if ! sudo --validate --non-interactive &>/dev/null; then
+    while true; do
+      read -rsp "--> Enter your password (for sudo access):" SUDO_PASSWORD
+      echo
+      if sudo --validate --stdin 2>/dev/null <<<"$SUDO_PASSWORD"; then
+        break
+      fi
+
+      unset SUDO_PASSWORD
+      echo "!!! Wrong password!" >&2
+    done
+
+    clear_debug
+    SUDO_PASSWORD_SCRIPT="$(cat <<BASH
+#!/bin/bash
+echo "$SUDO_PASSWORD"
+BASH
+)"
+    unset SUDO_PASSWORD
+    SUDO_ASKPASS_DIR="$(mktemp -d)"
+    SUDO_ASKPASS="$(mktemp "$SUDO_ASKPASS_DIR"/bootstrap-askpass-XXXXXXXX)"
+    chmod 700 "$SUDO_ASKPASS_DIR" "$SUDO_ASKPASS"
+    bash -c "cat > '$SUDO_ASKPASS'" <<<"$SUDO_PASSWORD_SCRIPT"
+    unset SUDO_PASSWORD_SCRIPT
+    reset_debug
+
+    export SUDO_ASKPASS
+  fi
+}
+
+sudo_refresh() {
+  clear_debug
+  if [ -n "$SUDO_ASKPASS" ]; then
+    sudo --askpass --validate
+  else
+    sudo_init
+  fi
+  reset_debug
+}
+
+abort() { echo "!!! $*" >&2; exit 1; }
+log()   { sudo_refresh; echo "--> $*"; }
+logn()  { sudo_refresh; printf -- "--> %s " "$*"; }
+logk()  { echo "OK"; }
+
+# Given a list of scripts in the dotfiles repo, run the first one that exists
+run_dotfile_scripts() {
+  if [ -d ~/.dotfiles ]; then
+    (
+      cd ~/.dotfiles
+      for i in "$@"; do
+        if [ -f "$i" ] && [ -x "$i" ]; then
+          log "Running dotfiles $i:"
+          if [ -z "$DEBUG" ]; then
+            "$i" 2>/dev/null
+          else
+            "$i"
+          fi
+          break
+        fi
+      done
+    )
+  fi
+}
+
+[ "$USER" = "root" ] && abort "Run bootstrap as yourself, not root."
+groups | grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
+
+# Prevent sleeping during script execution, as long as the machine is on AC power
+caffeinate -s -w $$ &
+
+# Install Homebrew
+log "Installing Homebrew:"
+NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+[ -d "/opt/homebrew" ] && eval "$(/opt/homebrew/bin/brew shellenv)"
+logk
+
+# Setup dotfiles
+GITHUB_USER="${GITHUB_USER:-shaneog}"
+if [ -n "$GITHUB_USER" ]; then
+  DOTFILES_URL="https://github.com/$GITHUB_USER/dotfiles"
+
+  if git ls-remote "$DOTFILES_URL" &>/dev/null; then
+    log "Fetching $GITHUB_USER/dotfiles from GitHub:"
+    if [ ! -d "$HOME/.dotfiles" ]; then
+      log "Cloning to ~/.dotfiles:"
+      git clone "$Q" "$DOTFILES_URL" ~/.dotfiles
+    else
+      (
+        cd ~/.dotfiles
+        git pull "$Q" --rebase --autostash
+      )
+    fi
+    run_dotfile_scripts script/setup
+    run_dotfile_scripts script/macos
+    logk
+  fi
+fi
+
+# Install from local Brewfile
+if [ -f "$HOME/.Brewfile" ]; then
+  log "Installing from user Brewfile:"
+  brew bundle check --global || brew bundle --global
+  logk
+fi
+
+# Run post-install dotfiles script
+run_dotfile_scripts script/after-setup
+
+log "Your system is now bootstrapped!"
