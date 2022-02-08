@@ -1,2 +1,19 @@
 ssh/*
 !ssh/config
+
+# /config
+config/*
+config/*/
+
+!config/nvim/
+config/nvim/autoload
+config/nvim/plugged
+
+!config/tmux/
+config/tmux/plugins
+
+!config/git
+!config/karabiner
+
+!config/zsh/
+config/zsh/.zsh_sessions/
