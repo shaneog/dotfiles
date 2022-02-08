@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # curl wrapper returning timing information.
 #
 # curl format adapted from
@@ -8,8 +6,6 @@
 # Example usage:
 #   $ curlt http://www.apple.com
 #   $ time curlt http://www.apple.com -v
-
-set -e
 
 curl_format='{
   "time_namelookup":      %{time_namelookup},

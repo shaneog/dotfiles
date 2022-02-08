@@ -1,0 +1,10 @@
+# Allow removal of IP addresses from the SSH known_hosts file. This is useful for
+# rapidly changing cloud servers which may receive a previously seen IP.
+
+if [ -n "$1" ]
+then
+  sed -i '' "/$1/d" "$HOME/.ssh/known_hosts"
+  if [ -f "$HOME/.ssh/known_hosts2" ]; then
+    sed -i '' "/$1/d" "$HOME/.ssh/known_hosts2"
+  fi
+fi

@@ -1,10 +1,18 @@
+# amd64 or arm64
+ARCH=$(uname -m)
+[ $ARCH = "x86_64" ] && ARCH="amd64"
+
+# Set HISTFILE location
+[ ! -d "${XDG_DATA_HOME}/zsh" ] && mkdir "${XDG_DATA_HOME}/zsh"
+export HISTFILE=$XDG_DATA_HOME/zsh/zhistory
+
 # Check if zplug is installed
 if [[ ! -d $HOME/.zplug ]]; then
-  git clone --depth 1 https://github.com/zplug/zplug $HOME/.zplug
+  git clone -q --depth 1 https://github.com/zplug/zplug $HOME/.zplug
   source $HOME/.zplug/init.zsh
 fi
 
-# Essential
+# zplug
 source $HOME/.zplug/init.zsh
 # Let zplug manage zplug
 zplug 'zplug/zplug', hook-build:'zplug --self-manage'
@@ -13,11 +21,11 @@ zplug 'zplug/zplug', hook-build:'zplug --self-manage'
 zplug "zsh-users/zsh-completions"
 zplug "zsh-users/zsh-syntax-highlighting", defer:2
 zplug "zsh-users/zsh-history-substring-search", defer:3
-zplug "junegunn/fzf-bin", \
+zplug "junegunn/fzf", \
   as:command, \
   from:gh-r, \
   rename-to:fzf, \
-  use:"*${(L)$(uname -s)}*amd64*"
+  use:"*${(L)$(uname -s)}*${ARCH}*"
 zplug "junegunn/fzf", \
   as:command, \
   use:"bin/fzf-tmux"
@@ -34,8 +42,7 @@ zplug "djui/alias-tips"
 export ZSH_PLUGINS_ALIAS_TIPS_TEXT="💡  Try: "
 
 # Docker completions
-zplug "docker/cli", use:contrib/completion/zsh
-zplug "docker/compose", use:contrib/completion/zsh
+zplug "greymd/docker-zsh-completion"
 
 # Prezto modules
 zplug 'modules/environment', from:prezto
@@ -50,20 +57,13 @@ zplug 'modules/completion', from:prezto
 zplug 'modules/homebrew', from:prezto
 zplug 'modules/git', from:prezto
 zplug 'modules/osx', from:prezto
-zplug 'modules/ruby', from:prezto
-zplug 'modules/rails', from:prezto
 zplug 'modules/tmux', from:prezto
-
-# Tmux
-alias tmux="tmux -f ${HOME}/.config/tmux/tmux.conf"
-
 
 # Prezto configuration options
 zstyle ':prezto:*:*' color 'yes'
 zstyle ':prezto:module:editor' dot-expansion 'yes'
 zstyle ':prezto:module:terminal' auto-title 'yes'
 zstyle ':prezto:module:tmux:iterm' integrate 'no'
-zstyle ':prezto:module:ruby:chruby' auto-switch 'yes'
 
 # Spaceship
 zplug 'denysdovhan/spaceship-prompt', \
@@ -88,13 +88,13 @@ zplug load
 # set autoload path
 fpath=($ZDOTDIR/lib "${fpath[@]}")
 
-# autoload homemade functions
-autoload -U kp
+# autoload all homemade functions
+autoload -Uz $fpath[1]/*(.:t)
 
 # Add zplug bin directory to PATH
 export PATH=$HOME/.zplug/bin:$PATH
 
-# History options
+# History options (must come after prezto modules/history)
 [ "$HISTSIZE" -lt 50000 ] && HISTSIZE=50000
 [ "$SAVEHIST" -lt 100000 ] && SAVEHIST=100000
 
@@ -112,7 +112,6 @@ export PAGER='less'
 # Mouse-wheel scrolling has been disabled by -X (disable screen clearing).
 export LESS='-F -g -i -M -R -S -w -X -z-4'
 
-
 ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern cursor root)
 # zsh-history-substring-search
 if zplug check "zsh-users/zsh-history-substring-search"; then
@@ -129,58 +128,24 @@ fi
 export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow -g "!{.git,node_modules}/*" 2> /dev/null'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
-# Google Cloud SDK.
-if [[ -x "$(command -v gcloud)" ]]; then
-  source "$(gcloud info --format='value(installation.sdk_root)')/path.zsh.inc"
-  source "$(gcloud info --format='value(installation.sdk_root)')/completion.zsh.inc"
-fi
+# Fix for https://openradar.appspot.com/27348363
+ssh-add -A 2>/dev/null
 
-# Kubernetes
-if [[ -x "$(command -v kubectl)" ]]; then
-  source <(kubectl completion zsh)
-fi
+# GnuPG fix
+export GPG_TTY=$(tty)
 
-# Go
-if [[ -x "$(command -v go)" ]]; then
-  GOROOT="$(brew --prefix)/opt/go/libexec/bin"
-  export GOPATH="$HOME/.go"
-  export PATH=$PATH:$GOROOT:$GOPATH/bin
-fi
-
-# Postgres.app
-if [[ -d /Applications/Postgres.app ]]; then
-  export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin
-fi
+###
+# Utilities
+###
 
 # Python pyenv
+# Set the root outside the if to handle the install stage
+export PYENV_ROOT="$XDG_DATA_HOME/pyenv"
 if [[ -x "$(command -v pyenv)" ]]; then
-  export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
   eval "$(pyenv init --path)"
 
   eval "$(pyenv init -)"
-fi
-
-# Fix for https://openradar.appspot.com/27348363
-ssh-add -A 2>/dev/null
-
-# Java environments
-if [[ -x "$(command -v jenv)" ]]; then
-  export JENV_ROOT=/usr/local/var/jenv
-  eval "$(jenv init -)"
-fi
-
-# Local bin directory
-export PATH=$HOME/.bin:$PATH
-
-# Yarn bin
-if [[ -x "$(command -v yarn)" ]]; then
-  export PATH="$HOME/.yarn/bin:$PATH"
-fi
-
-# n - NodeJS version manager
-if [[ -x "$(command -v n)" ]]; then
-  export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"
 fi
 
 # nodenv - NodeJS version manager
@@ -188,10 +153,26 @@ if [[ -x "$(command -v nodenv)" ]]; then
   eval "$(nodenv init -)"  
 fi
 
-# sdkman - Java SDK manager
-if [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
-  source "$HOME/.sdkman/bin/sdkman-init.sh"
-fi
+###
+# Aliases
+###
+
+# Tmux
+alias tmux="tmux -f ${XDG_CONFIG_HOME}/tmux/tmux.conf"
+
+# Check external IP from command line
+alias checkip='curl "http://checkip.amazonaws.com"'
+
+# Use only neovim
+alias vim='nvim'
+alias vi='nvim'
+
+# Recursively delete node_modules directories
+alias rm_node_modules="find . -name 'node_modules' -type d -prune -print -exec rm -rf '{}' \;"
+
+###
+# 
+###
 
 # Automatically launch a tmux session, unless TMUX is already set or TERM_PROGRAM is set to vscode
 if [[ -z "$TMUX" ]] && [[ "$TERM_PROGRAM" != "vscode" ]]; then
@@ -206,31 +187,7 @@ if [[ -z "$TMUX" ]] && [[ "$TERM_PROGRAM" != "vscode" ]]; then
   esac
 fi
 
-# Allow removal of IP addresses from the SSH known_hosts file. This is useful for
-# rapidly changing cloud servers which may receive a previously seen IP.
-function rm_known_host() {
-  if [ -n "$1" ]
-  then
-    sed -i '' "/$1/d" "$HOME/.ssh/known_hosts"
-    if [ -f "$HOME/.ssh/known_hosts2" ]; then
-      sed -i '' "/$1/d" "$HOME/.ssh/known_hosts2"
-    fi
-  fi
-}
-
-# Check external IP from command line
-alias checkip='curl "http://checkip.amazonaws.com"'
-
-# Use only noevim
-alias vim='nvim'
-alias vi='vim'
-
-# GnuPG fix
-export GPG_TTY=$(tty)
-
 # Use a local zshrc, if exists
 if [[ -f "$HOME/.zshrc.local" ]]; then
   source "$HOME/.zshrc.local"
 fi
-
-alias rm_node_modules="find . -name 'node_modules' -type d -prune -print -exec rm -rf '{}' \;"
