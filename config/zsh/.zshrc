@@ -174,6 +174,9 @@ alias rm_node_modules="find . -name 'node_modules' -type d -prune -print -exec r
 # 
 ###
 
+# Opt-out of homebrew analytics
+export HOMEBREW_NO_ANALYTICS=1
+
 # Automatically launch a tmux session, unless TMUX is already set or TERM_PROGRAM is set to vscode
 if [[ -z "$TMUX" ]] && [[ "$TERM_PROGRAM" != "vscode" ]]; then
   case $- in *i*)
