@@ -153,6 +153,8 @@ export NODENV_ROOT="$XDG_DATA_HOME/nodenv"
 if [[ -x "$(command -v nodenv)" ]]; then
   eval "$(nodenv init -)"  
 fi
+# Use XDG_DATA_HOME for npm cache
+export NPM_CONFIG_CACHE="$XDG_DATA_HOME/npm"
 
 ###
 # Aliases
