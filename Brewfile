@@ -13,6 +13,7 @@ brew 'zsh-completions'
 # CLI/Term Tools
 brew 'curl'
 brew 'diff-so-fancy'
+brew 'gh'
 brew 'git'
 brew 'gnupg'
 brew 'jq'
