@@ -149,6 +149,7 @@ if [[ -x "$(command -v pyenv)" ]]; then
 fi
 
 # nodenv - NodeJS version manager
+export NODENV_ROOT="$XDG_DATA_HOME/nodenv"
 if [[ -x "$(command -v nodenv)" ]]; then
   eval "$(nodenv init -)"  
 fi
