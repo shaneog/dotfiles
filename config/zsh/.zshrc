@@ -186,7 +186,10 @@ if [[ -z "$TMUX" ]] && [[ "$TERM_PROGRAM" != "vscode" ]]; then
     tmux_session="$(echo $USER | tr -d '.')"
 
     if tmux has-session -t "$tmux_session" 2>/dev/null; then
-      tmux attach-session -t "$tmux_session"
+      # only attach if no other client connected
+      if [ "$(tmux list-clients | wc -l)" -eq "0" ]; then
+        tmux attach-session -t "$tmux_session"
+      fi
     else
       tmux new-session -s "$tmux_session"
     fi
