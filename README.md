@@ -30,6 +30,8 @@ The following files allow for local overrides:
 | .bashrc  | .bashrc.local  |
 
 
+To ignore local changes to already committed files such as `.ssh/config-local`, use `git update-index --skip-worktree <file>`.
+
 ### Screenshots
 
 #### Gotham Theme
