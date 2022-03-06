@@ -1,8 +1,8 @@
 # Do not kill connection if route is down temporarily.
 TCPKeepAlive no
 
-# Allow ten minutes down time before giving up the connection.
-ServerAliveCountMax 30
+# Allow 5 minutes down time before giving up the connection.
+ServerAliveCountMax 10
 ServerAliveInterval 30
 
 # Conserve bandwith. (Compression is off by default.)
