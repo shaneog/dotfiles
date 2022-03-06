@@ -1,5 +1,26 @@
-# Set homebrew shellenv for M1 Macs
-[ -d "/opt/homebrew" ] && eval "$(/opt/homebrew/bin/brew shellenv)"
+#
+# Executes commands at login before zshrc.
 
-# Disable zsh_sessions since we use tmux restore
-export SHELL_SESSIONS_DISABLE=1
+# Set locale correctly
+if [[ -z "$LANG" ]]; then
+    export LANG='en_US.UTF-8'
+    export LANGUAGE=en_US.UTF-8
+fi
+
+export LC_COLLATE=en_US.UTF-8
+export LC_CTYPE=en_US.UTF-8
+export LC_MESSAGES=en_US.UTF-8
+export LC_MONETARY=en_US.UTF-8
+export LC_NUMERIC=en_US.UTF-8
+export LC_TIME=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export LESSCHARSET=utf-8
+
+# Ensure path arrays do not contain duplicates.
+typeset -gU cdpath fpath path
+
+# Zsh search path for executables
+path=(
+  /usr/local/{bin,sbin}
+  $path
+)

@@ -33,3 +33,6 @@ for DOTFILE in *; do
     cp -rv "$DIRFILE" "$HOMEFILE"
   fi
 done
+
+# Symlink .zshenv
+ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"

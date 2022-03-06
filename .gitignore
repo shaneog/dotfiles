@@ -16,4 +16,4 @@ config/tmux/plugins
 !config/karabiner
 
 !config/zsh/
-config/zsh/.zsh_sessions/
+config/zsh/**/*.zwc*
