@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 
+zinit snippet PZTM::tmux
+
 alias tmux="tmux -f ${XDG_CONFIG_HOME}/tmux/tmux.conf"
 
 # Automatically launch a tmux session, unless TMUX is already set or TERM_PROGRAM is set to vscode

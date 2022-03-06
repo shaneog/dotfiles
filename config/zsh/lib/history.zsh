@@ -1,12 +1,31 @@
 #!/usr/bin/env zsh
 
-[ ! -d "${XDG_DATA_HOME}/zsh" ] && mkdir "${XDG_DATA_HOME}/zsh"
+##
+# Plugins
+##
+zstyle ":history-search-multi-word" page-size "11"
+zinit ice wait"1" lucid
+zinit load zdharma-continuum/history-search-multi-word
 
-export HISTFILE=$XDG_DATA_HOME/zsh/zhistory
-export HISTSIZE=50000
-export SAVEHIST=100000
+zinit load zsh-users/zsh-history-substring-search
+  zmodload zsh/terminfo
+  [ -n "${terminfo[kcuu1]}" ] && bindkey "${terminfo[kcuu1]}" history-substring-search-up
+  [ -n "${terminfo[kcud1]}" ] && bindkey "${terminfo[kcud1]}" history-substring-search-down
+  bindkey -M emacs '^P' history-substring-search-up
+  bindkey -M emacs '^N' history-substring-search-down
+  bindkey -M vicmd 'k' history-substring-search-up
+  bindkey -M vicmd 'j' history-substring-search-down
 
-# History command configuration
+##
+# Configuration
+##
+HISTFILE=$XDG_DATA_HOME/zsh/zhistory
+HISTSIZE=50000
+SAVEHIST=100000
+
+# Ignore certain commands
+HISTIGNORE="&:ls:[bf]g:exit:reset:clear:cd:cd ..:cd..:..:zh"
+
 setopt BANG_HIST                # Treat the '!' character specially during expansion.
 setopt EXTENDED_HISTORY         # Write the history file in the ':start:elapsed;command' format.
 setopt INC_APPEND_HISTORY       # write after each command

@@ -3,18 +3,19 @@
 
 # Set locale correctly
 if [[ -z "$LANG" ]]; then
-    export LANG='en_US.UTF-8'
-    export LANGUAGE=en_US.UTF-8
+  LANG='en_US.UTF-8'
+  LANGUAGE=$LANG
 fi
 
-export LC_COLLATE=en_US.UTF-8
-export LC_CTYPE=en_US.UTF-8
-export LC_MESSAGES=en_US.UTF-8
-export LC_MONETARY=en_US.UTF-8
-export LC_NUMERIC=en_US.UTF-8
-export LC_TIME=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-export LESSCHARSET=utf-8
+LC_COLLATE=$LANG
+LC_CTYPE=$LANG
+LC_MESSAGES=$LANG
+LC_MONETARY=$LANG
+LC_NUMERIC=$LANG
+LC_TIME=$LANG
+LC_ALL=$LANG
+
+LESSCHARSET=utf-8
 
 # Ensure path arrays do not contain duplicates.
 typeset -gU cdpath fpath path

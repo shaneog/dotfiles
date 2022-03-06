@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
-# Profiling
-zmodload zsh/zprof
+# Profiling: enable when required
+# zmodload zsh/zprof
 
 # https://blog.patshead.com/2011/04/improve-your-oh-my-zsh-startup-time-maybe.html
 skip_global_compinit=1
@@ -14,20 +14,30 @@ if [[ ( "$SHLVL" -eq 1 && ! -o LOGIN ) && -s "${ZDOTDIR:-$HOME}/.zprofile" ]]; t
 fi
 
 # See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-export XDG_CONFIG_HOME=$HOME/.config
-export XDG_CACHE_HOME=$HOME/.cache
-export XDG_DATA_HOME=$HOME/.local/share
+XDG_CONFIG_HOME=$HOME/.config
+XDG_CACHE_HOME=$HOME/.cache
+XDG_DATA_HOME=$HOME/.local/share
 
 # zsh config
-export ZDOTDIR=$XDG_CONFIG_HOME/zsh
-export ZSH_CACHE_DIR=$XDG_CACHE_HOME/zsh
-export ZSH_COMPDUMP=$ZSH_CACHE_DIR/zcompdump
+ZDOTDIR=$XDG_CONFIG_HOME/zsh
+ZSH_CACHE_DIR=$XDG_CACHE_HOME/zsh
+ZSH_COMPDUMP=$ZSH_CACHE_DIR/zcompdump
 
-# Set homebrew shellenv for M1 Macs
-[ -d "/opt/homebrew" ] && eval "$(/opt/homebrew/bin/brew shellenv)"
+# Ensure the zsh data diretory exists
+[ ! -d "${XDG_DATA_HOME}/zsh" ] && mkdir -p "${XDG_DATA_HOME}/zsh"
 
 # Ensure we have sbin in our PATH
-export PATH=$PATH:/usr/sbin:/sbin
+PATH=$PATH:/usr/sbin:/sbin
 
-# Disable zsh_sessions since we use tmux restore
-export SHELL_SESSIONS_DISABLE=1
+# Set homebrew shellenv
+if [ -d "/opt/homebrew" ]; then
+  HOMEBREW_PREFIX="/opt/homebrew";
+  HOMEBREW_CELLAR="/opt/homebrew/Cellar";
+  HOMEBREW_REPOSITORY="/opt/homebrew";
+  PATH="/opt/homebrew/bin:/opt/homebrew/sbin${PATH+:$PATH}";
+  MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
+  INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
+fi
+
+# Disable zsh_sessions
+SHELL_SESSIONS_DISABLE=1

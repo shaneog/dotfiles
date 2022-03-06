@@ -1,4 +1,6 @@
 #!/usr/bin/env zsh
 
+zinit snippet PZTM::homebrew
+
 # Opt-out of homebrew analytics
-export HOMEBREW_NO_ANALYTICS=1
+HOMEBREW_NO_ANALYTICS=1

@@ -1,30 +1,29 @@
 #!/usr/bin/env zsh
 
+##
 # Zinit
-#
+##
 declare -A ZINIT
 ZINIT[ZINIT_HOME]="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit"
 ZINIT[ZCOMPDUMP_PATH]=$ZSH_COMPDUMP
 # Check for and install if necessary
 if [[ ! -d $ZINIT[ZINIT_HOME] ]]; then
+  echo "Installing zinit..."
   mkdir -p "$(dirname $ZINIT[ZINIT_HOME])"
-  git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT[ZINIT_HOME]"
+  git clone -q https://github.com/zdharma-continuum/zinit.git "$ZINIT[ZINIT_HOME]"
 fi
 # Bootstrap zinit
 source "${ZINIT[ZINIT_HOME]}/zinit.zsh"
 
-# http://zshwiki.org/home/config/prompt
-# enable colors and predefined variables
-autoload -Uz colors && colors
-
-# Load plugins
-source "$ZDOTDIR/init/plugins.zsh"
-
+##
 # Set up autoloaded functions
+##
 fpath=($ZDOTDIR/autoload "${fpath[@]}")
 autoload -Uz $fpath[1]/*(.:t)
 
+##
 # Load custom scripts
+##
 custom_lib=${ZDOTDIR}/lib
 if [[ -d "$custom_lib" ]]; then
    for file in $custom_lib/*.zsh; do
