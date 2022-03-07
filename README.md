@@ -48,6 +48,10 @@ Benchmark Details:
 - Terminal.app
 - command: `for i in $(seq 1 10); do /usr/bin/time zsh -i -c exit; done`
 
+References:
+- https://htr3n.github.io/2018/07/faster-zsh/
+- https://carlosbecker.com/posts/speeding-up-zsh/
+
 ### Factory Fresh Install
 
 No dotfiles.
@@ -100,4 +104,23 @@ Results:
         0.25 real         0.07 user         0.06 sys
         0.23 real         0.07 user         0.06 sys
         0.22 real         0.07 user         0.06 sys
+```
+
+## Refactored Setup
+
+Migrated from [`Spaceship`](https://spaceship-prompt.sh/) to [`Starship`](https://starship.rs/).
+
+Configured and enabled [`nodenv`](https://github.com/nodenv/nodenv) and [`pyenv`](https://github.com/pyenv/pyenv).
+
+```
+        0.69 real         0.34 user         0.15 sys
+        0.66 real         0.33 user         0.14 sys
+        0.66 real         0.33 user         0.14 sys
+        0.64 real         0.33 user         0.15 sys
+        0.65 real         0.33 user         0.15 sys
+        0.70 real         0.33 user         0.14 sys
+        0.66 real         0.34 user         0.15 sys
+        0.68 real         0.34 user         0.15 sys
+        0.67 real         0.34 user         0.15 sys
+        0.69 real         0.34 user         0.15 sys
 ```
