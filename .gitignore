@@ -1,19 +1,29 @@
+# ssh
 ssh/*
 !ssh/config
 
-# /config
+# config
 config/*
 config/*/
 
+# Starship
+!config/starship.toml
+
+# neovim
 !config/nvim/
 config/nvim/autoload
 config/nvim/plugged
 
+# tmux
 !config/tmux/
 config/tmux/plugins
 
+# git
 !config/git
+
+# karabiner
 !config/karabiner
 
+# zsh
 !config/zsh/
 config/zsh/**/*.zwc*
