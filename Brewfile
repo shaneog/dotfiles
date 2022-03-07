@@ -43,3 +43,7 @@ cask 'visual-studio-code'
 
 # Fonts
 cask 'font-menlo-for-powerline'
+# https://www.nerdfonts.com/
+cask 'font-fira-code-nerd-font'
+cask 'font-fira-mono-nerd-font'
+cask 'font-meslo-lg-nerd-font'
