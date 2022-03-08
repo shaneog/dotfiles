@@ -18,7 +18,6 @@ autoload -Uz colors && colors
 ##
 # Prezto
 ##
-zinit snippet PZT::modules/helper/init.zsh
 
 # Prezto Settings
 zstyle ':prezto:*:*' color 'yes'
@@ -29,12 +28,13 @@ zstyle ':prezto:module:utility' correct 'no'
 zstyle ':prezto:module:utility' safe-ops 'no'
 
 # Prezto modules
-zinit snippet PZTM::environment
-zinit snippet PZTM::terminal
-zinit snippet PZTM::editor
-zinit snippet PZTM::directory
-zinit snippet PZTM::spectrum
-zinit snippet PZTM::gnu-utility
+zinit wait lucid for \
+  PZTM::environment \
+  PZTM::terminal \
+  PZTM::editor \
+  PZTM::directory \
+  PZTM::spectrum \
+  PZTM::gnu-utility
 zinit ice svn; zinit snippet PZTM::utility
 zinit ice svn blockf \
   atclone"git clone -q --recursive https://github.com/zsh-users/zsh-completions.git external"
