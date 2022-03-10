@@ -4,6 +4,7 @@ add_newline = false
 # Replace the "❯" symbol in the prompt with "➜"
 [character] # The name of the module we are configuring is "character"
 success_symbol = "[➜](green)" # The "success_symbol" segment is being set to "➜" with the color "green"
+error_symbol = "[➜](red)" # The "error_symbol" segment is being set to "➜" with the color "red"
 
 [git_status]
 format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"

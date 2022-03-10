@@ -124,3 +124,20 @@ Configured and enabled [`nodenv`](https://github.com/nodenv/nodenv) and [`pyenv`
         0.67 real         0.34 user         0.15 sys
         0.69 real         0.34 user         0.15 sys
 ```
+
+### Using `zinit light`
+
+Removing any turbo mode, which was causing random `zsh` crashes.
+
+```
+        0.74 real         0.37 user         0.17 sys
+        0.71 real         0.36 user         0.16 sys
+        0.70 real         0.36 user         0.16 sys
+        0.74 real         0.37 user         0.17 sys
+        0.74 real         0.36 user         0.16 sys
+        0.76 real         0.36 user         0.16 sys
+        0.70 real         0.37 user         0.17 sys
+        0.74 real         0.37 user         0.17 sys
+        0.73 real         0.36 user         0.16 sys
+        0.74 real         0.36 user         0.16 sys
+```

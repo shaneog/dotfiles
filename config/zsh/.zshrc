@@ -15,6 +15,10 @@ fi
 # Bootstrap zinit
 source "${ZINIT[ZINIT_HOME]}/zinit.zsh"
 
+# Load all the auto-completions, has to be done before any compdefs
+autoload -Uz _zinit
+(( ${+_comps} )) && _comps[zinit]=_zinit
+
 ##
 # Set up autoloaded functions
 ##
@@ -26,8 +30,8 @@ autoload -Uz $fpath[1]/*(.:t)
 ##
 custom_lib=${ZDOTDIR}/lib
 if [[ -d "$custom_lib" ]]; then
-   for file in $custom_lib/*.zsh; do
-      source $file
+  for file in $custom_lib/*.zsh; do
+    source $file
    done
 fi
 unset custom_lib

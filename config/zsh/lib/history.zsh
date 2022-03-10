@@ -3,11 +3,8 @@
 ##
 # Plugins
 ##
-zstyle ":history-search-multi-word" page-size "11"
-zinit ice wait"1" lucid
-zinit load zdharma-continuum/history-search-multi-word
 
-zinit load zsh-users/zsh-history-substring-search
+zinit light zsh-users/zsh-history-substring-search
   zmodload zsh/terminfo
   [ -n "${terminfo[kcuu1]}" ] && bindkey "${terminfo[kcuu1]}" history-substring-search-up
   [ -n "${terminfo[kcud1]}" ] && bindkey "${terminfo[kcud1]}" history-substring-search-down
