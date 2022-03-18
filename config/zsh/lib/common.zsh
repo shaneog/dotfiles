@@ -53,7 +53,7 @@ PAGER="less"
 LESS="-F -g -i -M -R -S -w -X -z-4"
 
 # Fix for https://openradar.appspot.com/27348363
-ssh-add -A 2>/dev/null
+ssh-add --apple-load-keychain 2>/dev/null
 
 # GnuPG fix
 GPG_TTY=$(tty)
