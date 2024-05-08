@@ -31,9 +31,9 @@ zinit for \
   PZTM::directory \
   PZTM::spectrum \
   PZTM::gnu-utility
-zinit ice svn; zinit snippet PZTM::utility
-zinit ice svn blockf \
-  atclone"git clone -q --recursive https://github.com/zsh-users/zsh-completions.git external"
+zinit snippet PZTM::utility
+zinit ice blockf \
+  atclone"git clone -q --depth=1 https://github.com/zsh-users/zsh-completions.git external"
 zinit snippet PZTM::completion
 
 ##
