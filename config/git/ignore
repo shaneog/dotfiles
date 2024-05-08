@@ -182,3 +182,6 @@ yarn-error.log
 # Visual Studio Code
 .vscode/
 
+# yalc
+.yalc
+yalc.lock
