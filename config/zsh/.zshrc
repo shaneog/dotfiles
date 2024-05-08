@@ -48,6 +48,8 @@ else
   compinit -C -d "$ZSH_COMPDUMP";
 fi
 
+zinit cdreplay -q
+
 # Use a local zshrc, if exists
 if [[ -f "$HOME/.zshrc.local" ]]; then
   source "$HOME/.zshrc.local"
