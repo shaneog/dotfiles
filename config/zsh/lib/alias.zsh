@@ -1,10 +1,8 @@
 #!/usr/bin/env zsh
 
 # Show tips for configured aliases
-zinit ice from"gh-r" as"program"
-zinit light sei40kr/fast-alias-tips-bin
-
-zinit light sei40kr/zsh-fast-alias-tips
+zinit ice from"gh-r" as"program" bpick"*arm64*"
+zinit light decayofmind/zsh-fast-alias-tips
 
 # Check external IP from command line
 alias checkip='curl "http://checkip.amazonaws.com"'
