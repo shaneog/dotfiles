@@ -5,6 +5,7 @@ tap 'neovim/neovim'
 brew 'nodenv'
 brew 'node-build'
 brew 'pyenv'
+brew 'pyenv-virtualenv'
 
 # Shell
 brew 'zsh'
