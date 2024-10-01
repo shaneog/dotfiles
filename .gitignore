@@ -21,6 +21,9 @@ config/tmux/plugins
 # git
 !config/git
 
+# homebrew
+!config/homebrew
+
 # karabiner
 !config/karabiner
 

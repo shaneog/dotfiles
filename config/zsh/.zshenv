@@ -29,15 +29,5 @@ ZSH_COMPDUMP=$ZSH_CACHE_DIR/zcompdump
 # Ensure we have sbin in our PATH
 PATH=$PATH:/usr/sbin:/sbin
 
-# Set homebrew shellenv
-if [ -d "/opt/homebrew" ]; then
-  HOMEBREW_PREFIX="/opt/homebrew";
-  HOMEBREW_CELLAR="/opt/homebrew/Cellar";
-  HOMEBREW_REPOSITORY="/opt/homebrew";
-  PATH="/opt/homebrew/bin:/opt/homebrew/sbin${PATH+:$PATH}";
-  MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
-  INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
-fi
-
 # Disable zsh_sessions
 SHELL_SESSIONS_DISABLE=1
