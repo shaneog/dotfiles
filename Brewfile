@@ -1,4 +1,3 @@
-tap 'homebrew/cask-fonts'
 tap 'neovim/neovim'
 
 # System
