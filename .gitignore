@@ -21,6 +21,9 @@ config/tmux/plugins
 # git
 !config/git
 
+# github
+!config/gh
+
 # homebrew
 !config/homebrew
 
