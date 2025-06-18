@@ -22,10 +22,10 @@ if [[ -x "$(command -v nodenv)" ]]; then
     fi
 
     case "$command" in
-    rehash|shell)
-      eval "$(nodenv "sh-$command" "$@")";;
-    *)
-      command nodenv "$command" "$@";;
+      rehash|shell)
+        eval "$(nodenv "sh-$command" "$@")" ;;
+      *)
+        command nodenv "$command" "$@" ;;
     esac
   }
 fi

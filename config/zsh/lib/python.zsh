@@ -18,12 +18,12 @@ if [[ -x "$(command -v pyenv)" ]]; then
     fi
 
     case "$command" in
-    activate|deactivate|rehash|shell)
-      eval "$(pyenv "sh-$command" "$@")"
-      ;;
-    *)
-      command pyenv "$command" "$@"
-      ;;
+      activate|deactivate|rehash|shell)
+        eval "$(pyenv "sh-$command" "$@")"
+        ;;
+      *)
+        command pyenv "$command" "$@"
+        ;;
     esac
   }
 fi

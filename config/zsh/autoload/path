@@ -7,4 +7,4 @@ echo $PATH | tr ":" "\n" | \
     sub(\"/opt\",   \"$fg_no_bold[cyan]/opt$reset_color\"); \
     sub(\"/sbin\",  \"$fg_no_bold[magenta]/sbin$reset_color\"); \
     sub(\"/local\", \"$fg_no_bold[yellow]/local$reset_color\"); \
-    print }"
+  print }"
