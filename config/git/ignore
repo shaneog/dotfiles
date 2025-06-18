@@ -78,7 +78,7 @@ cscope.po.out
 # ----------------------------------------------------------------------------------------------
 # Swap
 [._]*.s[a-v][a-z]
-!*.svg  # comment out if you don't need vector files
+!*.svg # comment out if you don't need vector files
 [._]*.sw[a-p]
 [._]s[a-rt-v][a-z]
 [._]ss[a-gi-z]
@@ -95,7 +95,6 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
-
 
 # Vagrant   taken from: https://github.com/github/gitignore/blob/master/Global/Vagrant.gitignore
 # ----------------------------------------------------------------------------------------------
@@ -177,7 +176,6 @@ yarn-error.log
 
 # Resilio Sync
 .sync/
-
 
 # Visual Studio Code
 .vscode/

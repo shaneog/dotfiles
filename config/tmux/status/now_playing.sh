@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Requires both iTunes and Spotify applications to be installed
-NOW_PLAYING=$(osascript <<EOF
+NOW_PLAYING=$(
+  osascript <<EOF
   set spotify_state to missing value
   set itunes_state to missing value
 
@@ -39,6 +40,7 @@ NOW_PLAYING=$(osascript <<EOF
   else
     return "♫ " & track_name & " #[nobold]::#[bold] " & artist_name
   end if
-EOF)
+EOF
+)
 
 echo $NOW_PLAYING
