@@ -36,3 +36,9 @@ done
 
 # Symlink .zshenv
 ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
+
+# Set up ssh/config-local, if it doesn't exist
+if [ ! -f "$HOME/.ssh/config-local" ]; then
+  echo "# Machine specific SSH config file" > "$HOME/.ssh/config-local"
+fi
+
