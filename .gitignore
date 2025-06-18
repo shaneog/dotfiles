@@ -32,4 +32,5 @@ config/tmux/plugins
 
 # zsh
 !config/zsh/
+config/zsh/.zcompdump
 config/zsh/**/*.zwc*
