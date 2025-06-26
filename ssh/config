@@ -17,5 +17,8 @@ Host *
     NoHostAuthenticationForLocalhost yes
     StrictHostKeyChecking ask
     VerifyHostKeyDNS ask
+    # Deal with flaky connections
+    ServerAliveInterval 20
+    TCPKeepAlive no
 
 Include ~/.ssh/config-local
