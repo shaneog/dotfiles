@@ -16,3 +16,6 @@ alias rm_node_modules="find . -name 'node_modules' -type d -prune -print -exec r
 
 # remove compiled scripts
 alias rm_zcompile="find . -name '*.zwc*' -type f -delete"
+
+# Randomize the MAC address of the Wi-Fi interface
+alias randommac='sudo /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport en0 -z && sudo ifconfig en0 ether $(openssl rand -hex 6 | sed "s/../&:/g; s/:$//")'
