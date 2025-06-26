@@ -11,11 +11,11 @@ brew 'zsh'
 brew 'zsh-completions'
 
 # CLI/Term Tools
+brew '1password-cli'
 brew 'curl'
 brew 'diff-so-fancy'
 brew 'gh'
 brew 'git'
-brew 'gnupg'
 brew 'gping'
 brew 'jq'
 brew 'neovim'
