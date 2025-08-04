@@ -12,7 +12,6 @@ export NODE_BUILD_DEFINITIONS="/opt/homebrew/opt/node-build-update-defs/share/no
 if [[ -x "$(command -v nodenv)" ]]; then
   export PATH="$NODENV_ROOT/shims:${PATH}"
   export NODENV_SHELL=zsh
-  source '/opt/homebrew/opt/nodenv/completions/nodenv.zsh'
   command nodenv rehash 2>/dev/null
   nodenv() {
     local command
@@ -22,10 +21,10 @@ if [[ -x "$(command -v nodenv)" ]]; then
     fi
 
     case "$command" in
-      rehash|shell)
-        eval "$(nodenv "sh-$command" "$@")" ;;
-      *)
-        command nodenv "$command" "$@" ;;
+    rehash|shell)
+      eval "$(nodenv "sh-$command" "$@")";;
+    *)
+      command nodenv "$command" "$@";;
     esac
   }
 fi
