@@ -111,3 +111,48 @@ STUB
     'print "AWS=${_comps[aws]:-MISSING}"'
   echo "$output" | grep -q "AWS=_bash_complete"
 }
+
+@test "a real login shell leaves no build artefacts beside the config" {
+  # .zlogin runs for real here, with no opt-out, against a copy of the config so
+  # that a regression cannot write into the repo working tree.
+  local cfg home
+  cfg="$(mktemp -d)/config"; mkdir -p "$cfg"
+  cp -R "$REPO/config/zsh" "$cfg/zsh"
+  cp -R "$REPO/config/tmux" "$cfg/tmux"
+  find "$cfg" -name '*.zwc*' -delete
+  home="$(mktemp -d)"; guard_home "$home"
+  ln -s "$cfg" "$home/.config"
+  ln -s "$cfg/zsh/.zshenv" "$home/.zshenv"
+  mkdir -p "$home/.cache" "$home/.local/share"
+  [ -d "$REAL_HOME/.local/share/zinit" ] \
+    && ln -s "$REAL_HOME/.local/share/zinit" "$home/.local/share/zinit"
+
+  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+    USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 \
+    "$ZSH_BIN" -lic 'true' >/dev/null 2>&1
+  sleep 1   # .zlogin forks its work
+
+  local artefacts; artefacts="$(find "$cfg" -name '*.zwc*')"
+  local dump_compiled=no
+  [ -s "$home/.cache/zsh/zcompdump.zwc" ] && dump_compiled=yes
+  rm -rf "$home" "$(dirname "$cfg")"
+
+  [ -z "$artefacts" ] || { echo "startup compiled sources: $artefacts"; return 1; }
+  [ "$dump_compiled" = yes ] || { echo "completion dump was not compiled"; return 1; }
+}
+
+@test "a login shell caches the completion dump" {
+  # The dump's directory is not created by anything else, and the regenerate
+  # branch in .zshrc only fires for a dump that already exists -- so without an
+  # unconditional mkdir the dump is never written and every shell re-runs
+  # compinit. Measured 572ms versus 231ms, so this is the single most expensive
+  # thing that can regress here.
+  local home; home="$(make_home)"
+  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+    USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
+    "$ZSH_BIN" -lic 'true' >/dev/null 2>&1
+  local cached=no
+  [ -s "$home/.cache/zsh/zcompdump" ] && cached=yes
+  guard_home "$home" && rm -rf "$home"
+  [ "$cached" = yes ] || { echo "completion dump was not cached"; return 1; }
+}

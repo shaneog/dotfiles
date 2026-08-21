@@ -66,8 +66,11 @@ unset custom_lib
 # https://carlosbecker.com/posts/speeding-up-zsh
 # see glob details here: https://gist.github.com/ctechols/ca1035271ad134841284
 autoload -Uz compinit
+# Unconditionally: the branch below only regenerates a dump that already exists,
+# so without this the directory is never created, the dump is never written, and
+# every shell pays for a full compinit.
+mkdir -p "$ZSH_COMPDUMP:h"
 if [[ -n ${ZSH_COMPDUMP}(#qN.mh+20) ]]; then
-  mkdir -p "$ZSH_COMPDUMP:h"
   compinit -i -d "$ZSH_COMPDUMP";
   # Keep $ZSH_COMPDUMP younger than cache time even if it isn't regenerated.
   touch "$ZSH_COMPDUMP"
