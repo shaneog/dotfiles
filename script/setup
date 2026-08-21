@@ -14,7 +14,7 @@ for DOTFILE in *; do
   DIRFILE="$DOTFILESDIR/$DOTFILE"
 
   # shellcheck disable=SC2196
-  echo "$DOTFILE" | egrep -q '(^script/$|\.txt$|\.md$)' && continue
+  echo "$DOTFILE" | egrep -q '(^script/$|^test/$|^Makefile$|\.txt$|\.md$)' && continue
 
   # shellcheck disable=SC2001
   echo "$DOTFILE" | grep -q '\.sh' \
