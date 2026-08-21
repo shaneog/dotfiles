@@ -1,0 +1,73 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: static checks
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install tooling
+        run: brew install bats-core shellcheck jq tmux
+      - name: Lint and parse every config
+        run: bats --print-output-on-failure test/static
+
+  unit:
+    name: unit (${{ matrix.zsh }} zsh)
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - zsh: system
+            path: /bin/zsh
+          - zsh: homebrew
+            path: /opt/homebrew/bin/zsh
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install tooling
+        run: |
+          brew install bats-core
+          if [ "${{ matrix.zsh }}" = "homebrew" ]; then brew install zsh; fi
+      - name: Pin the zsh under test
+        run: |
+          "${{ matrix.path }}" --version
+          mkdir -p "$RUNNER_TEMP/bin"
+          ln -sf "${{ matrix.path }}" "$RUNNER_TEMP/bin/zsh"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Guard matrix and autoloaded functions
+        run: bats --print-output-on-failure test/unit
+
+  integration:
+    name: integration
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install tooling
+        run: brew install bats-core
+
+      # The plugin set is defined by the zsh libs, so key the cache on them.
+      - name: Restore plugin cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/zinit
+          key: zinit-${{ runner.os }}-${{ hashFiles('config/zsh/lib/*.zsh', 'config/zsh/.zshrc') }}
+          restore-keys: zinit-${{ runner.os }}-
+
+      # Populates ~/.local/share/zinit, which make_home links into each fake
+      # $HOME. ZDOTDIR points at the repo, so $HOME is left untouched.
+      - name: Warm the plugin cache
+        run: ZDOTDIR="$PWD/config/zsh" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 zsh -lic 'true'
+
+      # Startup timing is too noisy on shared runners to gate on.
+      - name: Layering and setup behaviour
+        run: SKIP_PERF=1 bats --print-output-on-failure test/integration
