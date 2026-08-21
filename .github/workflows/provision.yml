@@ -35,9 +35,14 @@ jobs:
           echo "HOME_UNDER_TEST=$HOME_UNDER_TEST" >> "$GITHUB_ENV"
           mkdir -p "$HOME_UNDER_TEST/.config/some-other-tool"
           echo "keep me" > "$HOME_UNDER_TEST/.config/some-other-tool/state"
+          # Valid shell, because the shell actually sources these; the export
+          # doubles as proof further down that the base layer is honoured.
           for f in .profile .bashrc .zprofile .zshrc; do
-            echo "MANAGED $f" > "$HOME_UNDER_TEST/$f"
+            printf '# MANAGED %s\nexport MANAGED_SENTINEL=%s\n' "$f" "$f" \
+              > "$HOME_UNDER_TEST/$f"
           done
+          ( cd "$HOME_UNDER_TEST" && shasum .profile .bashrc .zprofile .zshrc \
+              > "$RUNNER_TEMP/managed.sha" )
 
       - name: Run script/setup
         run: HOME="$HOME_UNDER_TEST" ./script/setup
@@ -51,11 +56,7 @@ jobs:
           [ "$HOME_UNDER_TEST/.Brewfile" -ef "$PWD/Brewfile" ]
 
       - name: An externally managed shell setup is left alone
-        run: |
-          for f in .profile .bashrc .zprofile .zshrc; do
-            [ "$(cat "$HOME_UNDER_TEST/$f")" = "MANAGED $f" ] || {
-              echo "setup modified $f"; exit 1; }
-          done
+        run: ( cd "$HOME_UNDER_TEST" && shasum -c "$RUNNER_TEMP/managed.sha" )
 
       - name: Pre-existing files are backed up, not destroyed
         run: |
@@ -105,6 +106,11 @@ jobs:
             | tee shell.out
           grep -q "starship=1 direnv=1 fzf=1 dump=yes" shell.out || {
             echo "a first shell did not end up fully wired"; exit 1; }
+          # the externally managed files are layered under ours, so their
+          # exports must survive into the final environment
+          HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
+            zsh -lic 'print "base=$MANAGED_SENTINEL"' | grep -q "base=.zshrc" || {
+              echo "the managed base layer was not sourced"; exit 1; }
 
   brewfile:
     name: Brewfile resolves
@@ -143,19 +149,29 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
-      - name: Install into a home first
+      # The repo has to live at ~/.dotfiles, as it does on a real machine: the
+      # symlinks then point inside it, so removing it leaves them broken, which
+      # is what remove's find-and-delete relies on. A symlink to the workspace
+      # would leave every other link intact and the teardown looking successful.
+      - name: Install from a real ~/.dotfiles
         run: |
           HOME_UNDER_TEST="$RUNNER_TEMP/home"
           echo "HOME_UNDER_TEST=$HOME_UNDER_TEST" >> "$GITHUB_ENV"
           mkdir -p "$HOME_UNDER_TEST"
-          HOME="$HOME_UNDER_TEST" ./script/setup
-          ln -s "$PWD" "$HOME_UNDER_TEST/.dotfiles"
+          cp -R "$PWD" "$HOME_UNDER_TEST/.dotfiles"
+          ( cd "$HOME_UNDER_TEST/.dotfiles" && HOME="$HOME_UNDER_TEST" ./script/setup )
+          [ "$HOME_UNDER_TEST/.zshenv" -ef "$HOME_UNDER_TEST/.dotfiles/config/zsh/.zshenv" ]
       # It asks for confirmation, so without input it would no-op and pass
       # vacuously. It also uninstalls Homebrew, hence its own job.
       - name: Run it
-        run: yes | HOME="$HOME_UNDER_TEST" ./script/remove || true
-      - name: The dotfiles are gone
+        run: |
+          cd "$HOME_UNDER_TEST/.dotfiles"
+          yes | HOME="$HOME_UNDER_TEST" ./script/remove || true
+      - name: The dotfiles and their dangling links are gone
         run: |
           set -x
           [ ! -e "$HOME_UNDER_TEST/.dotfiles" ]
-          [ ! -L "$HOME_UNDER_TEST/.zshenv" ]
+          for link in .zshenv .config .ssh .Brewfile; do
+            [ ! -L "$HOME_UNDER_TEST/$link" ] || {
+              echo "$link survived as a dangling link"; exit 1; }
+          done
