@@ -151,3 +151,61 @@ STUB
   sleep 1
   [ "$(find "$BATS_TEST_TMPDIR/zdot" -name '*.zwc*' | wc -l | tr -d ' ')" -eq 0 ]
 }
+
+# --- environment ------------------------------------------------------------
+
+@test "common: exports the editor and pager environment" {
+  run probe_lib common.zsh '' 'print "${(t)EDITOR} ${(t)VISUAL} ${(t)PAGER} ${(t)LESS}"'
+  [ "$output" = "scalar-export scalar-export scalar-export scalar-export" ]
+}
+
+@test "common: VISUAL follows EDITOR rather than itself" {
+  run probe_lib common.zsh '' 'print "$EDITOR/$VISUAL"'
+  [ "$output" = "nvim/nvim" ]
+}
+
+# --- prompt under a dumb terminal -------------------------------------------
+
+@test "prompt: leaves a dumb terminal alone" {
+  probe_lib prompt.zsh '' ':' TERM=dumb
+  [ ! -s "$ZINIT_LOG" ]
+}
+
+@test "prompt: still loads starship on a capable terminal" {
+  probe_lib prompt.zsh '' ':' TERM=xterm-256color
+  grep -q starship "$ZINIT_LOG"
+}
+
+# --- 1password agent --------------------------------------------------------
+
+# The lib tests for a live socket at a fixed path, so create a real one.
+# macOS caps unix socket paths at 104 bytes and bats' tmpdir is too deep for
+# the Group Containers path, hence the short home.
+make_1p_socket() {
+  FAKE_HOME="$(mktemp -d /tmp/dotfiles-t.XXXX)"
+  local dir="$FAKE_HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t"
+  mkdir -p "$dir"
+  python3 -c "import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1])" "$dir/agent.sock"
+}
+
+teardown() {
+  case "$FAKE_HOME" in /tmp/dotfiles-t.*) rm -rf "$FAKE_HOME" ;; esac
+}
+
+@test "1password: takes over SSH_AUTH_SOCK in a local shell" {
+  make_1p_socket
+  run probe_lib 1password.zsh '' 'print "$SSH_AUTH_SOCK"'
+  [[ "$output" == *"2BUA8C4S2C.com.1password/t/agent.sock" ]]
+}
+
+@test "1password: leaves a forwarded agent alone inside an ssh session" {
+  make_1p_socket
+  run probe_lib 1password.zsh '' 'print "${SSH_AUTH_SOCK:-unset}"' \
+    SSH_CONNECTION="10.0.0.1 22 10.0.0.2 22" SSH_AUTH_SOCK=/tmp/forwarded-agent
+  [ "$output" = "/tmp/forwarded-agent" ]
+}
+
+@test "1password: no-op when the agent is not enabled" {
+  run probe_lib 1password.zsh '' 'print "${SSH_AUTH_SOCK:-unset}"'
+  [ "$output" = "unset" ]
+}
