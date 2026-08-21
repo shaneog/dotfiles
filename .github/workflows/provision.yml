@@ -1,0 +1,161 @@
+name: provision
+
+# The scripts that set up a machine are the ones with the widest blast radius and
+# the least coverage: they only ever run on a fresh Mac, so their bugs hide until
+# the next new machine. GitHub's macOS runners are disposable VMs, so they can be
+# exercised for real here.
+#
+# Not run on push: minutes are cheap but not free, and none of this is affected
+# by a typical change.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays, early
+
+concurrency:
+  group: provision-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: setup into a used home, then a first shell
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install what the Brewfile provides for the shell
+        run: brew install direnv fzf starship
+
+      # A real home that has already been lived in: an externally managed shell
+      # setup, and other tools' files under ~/.config.
+      - name: Seed a used home
+        run: |
+          HOME_UNDER_TEST="$RUNNER_TEMP/home"
+          echo "HOME_UNDER_TEST=$HOME_UNDER_TEST" >> "$GITHUB_ENV"
+          mkdir -p "$HOME_UNDER_TEST/.config/some-other-tool"
+          echo "keep me" > "$HOME_UNDER_TEST/.config/some-other-tool/state"
+          for f in .profile .bashrc .zprofile .zshrc; do
+            echo "MANAGED $f" > "$HOME_UNDER_TEST/$f"
+          done
+
+      - name: Run script/setup
+        run: HOME="$HOME_UNDER_TEST" ./script/setup
+
+      - name: The links point into the repo
+        run: |
+          set -x
+          [ -L "$HOME_UNDER_TEST/.zshenv" ]
+          [ "$HOME_UNDER_TEST/.zshenv" -ef "$PWD/config/zsh/.zshenv" ]
+          [ "$HOME_UNDER_TEST/.config" -ef "$PWD/config" ]
+          [ "$HOME_UNDER_TEST/.Brewfile" -ef "$PWD/Brewfile" ]
+
+      - name: An externally managed shell setup is left alone
+        run: |
+          for f in .profile .bashrc .zprofile .zshrc; do
+            [ "$(cat "$HOME_UNDER_TEST/$f")" = "MANAGED $f" ] || {
+              echo "setup modified $f"; exit 1; }
+          done
+
+      - name: Pre-existing files are backed up, not destroyed
+        run: |
+          rescued="$(cat "$HOME_UNDER_TEST"/.config.bak.*/some-other-tool/state)"
+          [ "$rescued" = "keep me" ] || { echo "content was destroyed"; exit 1; }
+
+      - name: Repo scaffolding stays out of home
+        run: |
+          for f in .test .Makefile .script .github; do
+            [ ! -e "$HOME_UNDER_TEST/$f" ] || { echo "setup linked $f"; exit 1; }
+          done
+
+      - name: Running it again changes nothing
+        run: |
+          snapshot() {
+            for f in "$HOME_UNDER_TEST"/.*; do
+              case "${f##*/}" in .|..) continue ;; esac
+              if [ -L "$f" ]; then echo "${f##*/} -> $(readlink "$f")"
+              elif [ -d "$f" ]; then echo "${f##*/} (dir)"
+              else echo "${f##*/} (file)"; fi
+            done | sort
+          }
+          before="$(snapshot)"
+          HOME="$HOME_UNDER_TEST" ./script/setup
+          after="$(snapshot)"
+          [ "$before" = "$after" ] || { diff <(echo "$before") <(echo "$after"); exit 1; }
+
+      # The real prize: a first interactive shell on a machine that has never had
+      # one. This installs every plugin and runs every clone hook, which is where
+      # the fzf and direnv hook bugs were hiding.
+      - name: A first login shell installs cleanly
+        run: |
+          HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
+            zsh -lic 'true' 2>first.err || { echo "first shell failed"; cat first.err; exit 1; }
+          if grep -iE "permission denied|returned with 1[0-9][0-9]" first.err; then
+            echo "an install hook failed"; exit 1
+          fi
+
+      - name: A second login shell is silent and has its integrations
+        run: |
+          HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
+            zsh -lic 'true' 2>second.err
+          noise="$(grep -v "can't change option: zle" second.err | grep '[[:alpha:]]' || true)"
+          [ -z "$noise" ] || { echo "unexpected stderr: $noise"; exit 1; }
+          HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
+            zsh -lic 'print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"' \
+            | tee shell.out
+          grep -q "starship=1 direnv=1 fzf=1 dump=yes" shell.out || {
+            echo "a first shell did not end up fully wired"; exit 1; }
+
+  brewfile:
+    name: Brewfile resolves
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      # Casks are gigabytes and several need a GUI, so validate everything but
+      # only install the formulae.
+      - name: Every entry resolves
+        run: brew bundle check --file Brewfile --verbose || true
+      - name: Formulae install
+        run: |
+          grep -E "^(tap|brew) " Brewfile > Brewfile.formulae
+          brew bundle install --file Brewfile.formulae --no-upgrade
+
+  macos-defaults:
+    name: script/macos applies
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run it
+        run: ./script/macos || true    # individual settings may not apply headless
+      - name: The settings it claims to set are set
+        run: |
+          set -x
+          [ "$(defaults read NSGlobalDomain AppleInterfaceStyle)" = "Dark" ]
+          [ "$(defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode)" = "1" ]
+          [ "$(defaults read com.apple.dock tilesize)" = "48" ]
+          [ "$(defaults read com.apple.dock orientation)" = "right" ]
+
+  remove:
+    name: script/remove tears down
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install into a home first
+        run: |
+          HOME_UNDER_TEST="$RUNNER_TEMP/home"
+          echo "HOME_UNDER_TEST=$HOME_UNDER_TEST" >> "$GITHUB_ENV"
+          mkdir -p "$HOME_UNDER_TEST"
+          HOME="$HOME_UNDER_TEST" ./script/setup
+          ln -s "$PWD" "$HOME_UNDER_TEST/.dotfiles"
+      # It asks for confirmation, so without input it would no-op and pass
+      # vacuously. It also uninstalls Homebrew, hence its own job.
+      - name: Run it
+        run: yes | HOME="$HOME_UNDER_TEST" ./script/remove || true
+      - name: The dotfiles are gone
+        run: |
+          set -x
+          [ ! -e "$HOME_UNDER_TEST/.dotfiles" ]
+          [ ! -L "$HOME_UNDER_TEST/.zshenv" ]
