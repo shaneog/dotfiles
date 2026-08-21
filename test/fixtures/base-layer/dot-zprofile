@@ -1,0 +1,6 @@
+# Fixture: impersonates a managed profile that owns ~/.zprofile.
+export BASE_LAYER_PROFILE_RAN=1
+export HOMEBREW_PREFIX=/opt/homebrew
+export PIP_CONFIG_FILE=/base/pip.conf
+export WORKON_HOME=/base/virtualenvs
+path=(/base/profile-bin $path)

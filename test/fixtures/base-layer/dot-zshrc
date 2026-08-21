@@ -1,0 +1,29 @@
+# Fixture: impersonates a managed rc file that owns ~/.zshrc.
+export BASE_LAYER_RC_RAN=1
+export NVM_DIR="$HOME/.nvm"
+
+# Wraps the node toolchain in functions, as nvm-style lazy loading does
+nvm()  { print "base-nvm"; }
+node() { print "base-node"; }
+npm()  { print "base-npm"; }
+pnpm() { print "base-pnpm"; }
+
+# Preloaded shell enhancements
+sdk() { print "base-sdk"; }
+_zsh_highlight() { : }
+_zsh_autosuggest_start() { : }
+
+# Runs its own compinit, then registers a bash-style completion on top
+autoload -Uz compinit bashcompinit
+compinit -i -d "$HOME/.zcmpdump"
+bashcompinit
+(( $+commands[aws_completer] )) && complete -C "$commands[aws_completer]" aws
+
+path=(/base/rc-bin $path)
+
+# Preloads a prompt, as a managed setup's shell enhancements do
+autoload -Uz add-zsh-hook promptinit
+prompt_pure_precmd()  { : }
+prompt_pure_preexec() { : }
+add-zsh-hook precmd prompt_pure_precmd
+add-zsh-hook preexec prompt_pure_preexec
