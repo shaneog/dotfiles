@@ -1,3 +1,8 @@
+# Machine-specific overrides go first: ssh keeps the first value it sees for
+# each keyword, so an include below this point could only add settings, never
+# override them.
+Include ~/.ssh/config-local
+
 # Do not kill connection if route is down temporarily.
 TCPKeepAlive no
 
@@ -17,8 +22,3 @@ Host *
     NoHostAuthenticationForLocalhost yes
     StrictHostKeyChecking ask
     VerifyHostKeyDNS ask
-    # Deal with flaky connections
-    ServerAliveInterval 20
-    TCPKeepAlive no
-
-Include ~/.ssh/config-local
