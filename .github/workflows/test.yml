@@ -73,7 +73,10 @@ jobs:
           # Second run must be quiet: the tests assert startup is silent, so a
           # still-downloading cache would surface as a confusing test failure.
           warm 2>/tmp/warm.err || true
-          if grep -q '[[:alpha:]]' /tmp/warm.err; then
+          # Same filter the tests use: ZLE cannot initialise without a
+          # controlling terminal, so that warning is harness noise.
+          if grep -v "can't change option: zle" /tmp/warm.err \
+               | grep -q '[[:alpha:]]'; then
             echo "plugin cache did not settle; startup still writes to stderr:"
             cat /tmp/warm.err
             exit 1
