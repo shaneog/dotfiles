@@ -1,0 +1,5 @@
+# Public keys trusted to sign commits and tags in this repo, for
+# gpg.ssh.allowedSignersFile. Public keys only — safe to track.
+# namespaces="git" limits each key to git signing, since the same key is also
+# used for SSH authentication.
+shaneog@users.noreply.github.com namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSZSZW9CdT/YpedBtYe8PnTVOFaIT7dadmr2c0aVSOW
