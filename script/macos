@@ -1,19 +1,56 @@
 #!/usr/bin/env bash
+#
+# macOS system settings. Run by script/bootstrap on a new machine, and safe to
+# re-run afterwards -- every change is a `defaults write`, so it is idempotent.
+#
+# Deliberately no `set -e`: a key that a future macOS stops honouring should not
+# stop the rest from applying. That means the exit status says little, so the
+# provision workflow asserts a sample of the results with `defaults read`.
+#
+# Two things worth knowing before re-running on a machine you have since set up
+# by hand:
+#
+#   - the Dock's icons are wiped (see persistent-apps below)
+#   - the login shell is set to Homebrew's zsh
+#
+# Settings marked (relaunch) need the owning app restarted, which the killall at
+# the bottom handles. Settings marked (logout) need a full logout or restart.
 
-# Close any open System Preferences panes, to prevent them from overriding
-# settings we’re about to change
-osascript -e 'tell application "System Preferences" to quit'
+# Close System Settings, so an open pane cannot write its cached values back
+# over what we are about to change. Called "System Preferences" until Ventura
+# renamed it; the old name no longer resolves to anything.
+osascript -e 'tell application "System Settings" to quit' 2>/dev/null
 
-# Set shell to homebrew's zsh
-echo "Use homebrew's zsh for the user shell:"
-sudo dscl . -create "/Users/$USER" UserShell "$(brew --prefix )/bin/zsh"
+# Use Homebrew's zsh as the login shell, rather than the older one macOS ships.
+#
+# Guarded because bootstrap runs this script *before* the Brewfile installs zsh,
+# so on a genuinely new machine the binary does not exist yet -- and pointing a
+# login shell at a missing binary is how you end up unable to open a terminal.
+# Re-running bootstrap once the Brewfile has been applied picks it up.
+#
+# Registered in /etc/shells and set with chsh rather than written straight into
+# the directory with dscl: chsh validates the shell, and some tools check that
+# list before trusting a shell.
+brew_zsh="$(brew --prefix)/bin/zsh"
+current_shell="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
+if [ ! -x "$brew_zsh" ]; then
+	echo "Skipping login shell: $brew_zsh is not installed yet (the Brewfile installs it)"
+elif [ "$current_shell" = "$brew_zsh" ]; then
+	echo "Login shell is already $brew_zsh"
+else
+	echo "Using Homebrew's zsh for the login shell:"
+	grep -qxF "$brew_zsh" /etc/shells || echo "$brew_zsh" | sudo tee -a /etc/shells >/dev/null
+	sudo chsh -s "$brew_zsh" "$USER"
+fi
 
 ###############################################################################
 # General UI/UX                                                               #
 ###############################################################################
 
-# Use Dark mode permanently
-defaults write NSGlobalDomain AppleInterfaceStyle  -string "Dark"
+# Use Dark mode permanently (logout). Note that if appearance has ever been set
+# to "Auto", AppleInterfaceStyleSwitchesAutomatically wins over this, and would
+# need deleting as well.
+defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
 
 # Expand save panel by default
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
@@ -36,7 +73,8 @@ defaults write com.apple.dock tilesize -int 48
 # Set the dock to the right side of the screen
 defaults write com.apple.dock orientation -string "right"
 
-# Wipe all (default) app icons from the Dock
+# Wipe all app icons from the Dock (relaunch). This is why re-running bootstrap
+# on an established machine costs you whatever you have pinned since.
 defaults write com.apple.dock persistent-apps -array
 
 # Show only open applications in the Dock
@@ -60,7 +98,8 @@ defaults write com.apple.dock show-recents -bool false
 # Finder                                                                      #
 ###############################################################################
 
-# Set $HOME as the default location for new Finder windows
+# Set $HOME as the default location for new Finder windows. "PfHm" is Finder's
+# code for the home folder; the path below is what it actually opens.
 defaults write com.apple.finder NewWindowTarget -string "PfHm"
 defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}"
 
@@ -73,28 +112,43 @@ defaults write com.apple.finder ShowPathbar -bool true
 # Keep folders on top when sorting by name
 defaults write com.apple.finder _FXSortFoldersFirst -bool true
 
-# When performing a search, search the current folder by default
+# Search the current folder by default rather than the whole Mac ("SCev" is
+# this Mac, "SCsp" the previous scope, "SCcf" the current folder).
 defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
 
 # Avoid creating .DS_Store files on network or USB volumes
 defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 
-# Use list view in all Finder windows by default
+# Use list view in all Finder windows by default. Four-character view codes:
+# "Nlsv" list, "icnv" icon, "clmv" column, "Flwv" gallery.
 defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
 
 ###############################################################################
 # Terminal                                                                    #
 ###############################################################################
 
-# Only use UTF-8 in Terminal.app
+# Only use UTF-8 in Terminal.app. The domain is really com.apple.Terminal, but
+# `defaults` matches domains case-insensitively, so this does land correctly.
 defaults write com.apple.terminal StringEncodings -array 4
 
 # Enable Secure Keyboard Entry in Terminal.app
 # See: https://security.stackexchange.com/a/47786/8918
+#
+# Terminal rewrites its own preferences when it quits, so this only sticks if
+# Terminal is not running when it is applied -- otherwise it gets overwritten
+# and has to be set from Terminal's own menu instead.
 defaults write com.apple.terminal SecureKeyboardEntry -bool true
 
-# Use Gotham theme by default in Terminal.app
+# Use Gotham theme by default in Terminal.app.
+#
+# Only attempted from a real desktop session. AppleScript that drives a GUI app
+# cannot work over ssh or from a headless machine: the AppleEvent has nothing to
+# talk to and blocks until it times out. On a real machine the first run also
+# needs Automation consent, which macOS prompts for.
+if [ "$(launchctl managername 2>/dev/null)" != "Aqua" ]; then
+	echo "Skipping the Terminal theme: not a desktop session"
+else
 osascript <<EOD
 tell application "Terminal"
 	local allOpenedWindows
@@ -127,7 +181,11 @@ tell application "Terminal"
 	end repeat
 end tell
 EOD
+fi
 
+# Restart the apps that own the settings above, so the (relaunch) ones take
+# effect now. SystemUIServer still exists, though most of the menu bar it used
+# to own now belongs to ControlCenter.
 for app in \
 	"Dock" \
 	"Finder" \
