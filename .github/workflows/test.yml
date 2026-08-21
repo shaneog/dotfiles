@@ -65,8 +65,10 @@ jobs:
       # $HOME. ZDOTDIR points at the repo, so $HOME is left untouched.
       - name: Warm the plugin cache
         run: |
-          warm() { ZDOTDIR="$PWD/config/zsh" ZSH_NO_TMUX_AUTOSTART=1 \
-                     ZSH_NO_ZCOMPILE=1 zsh -lic 'true' "$@"; }
+          # TERM matters: without it, tput writes to stderr during startup.
+          warm() { ZDOTDIR="$PWD/config/zsh" TERM=xterm-256color \
+                     ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
+                     zsh -lic 'true' "$@"; }
           warm
           # Second run must be quiet: the tests assert startup is silent, so a
           # still-downloading cache would surface as a confusing test failure.
