@@ -1,5 +1,11 @@
 #!/usr/bin/env zsh
 
+# Opt out of background compilation. The recompile runs detached, so a .zwc can
+# land a moment after you edit one of these files, and zsh prefers a .zwc that
+# is not *older* than its source -- meaning the next shell can run the stale
+# compiled copy. Set this while editing zsh config, and in tests.
+[[ -n "$ZSH_NO_ZCOMPILE" ]] && return
+
 # Execute code that does not affect the current session in the background.
 (
     setopt LOCAL_OPTIONS EXTENDED_GLOB
