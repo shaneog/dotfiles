@@ -19,20 +19,35 @@ STUB
 )"
 }
 
-# Call the real autoloaded function with a controlled environment.
+# Call the real autoloaded function with a controlled environment. Output is
+# captured so a failure can report what the shell actually did.
 autostart() {
-  env -i HOME="$HOME" PATH="$STUBS:/usr/bin:/bin" USER=some.user \
+  run env -i HOME="$HOME" PATH="$STUBS:/usr/bin:/bin" USER=some.user \
       TMUX_LOG="$TMUX_LOG" XDG_CONFIG_HOME="$REPO/config" \
       STUB_HAS_SESSION="${STUB_HAS_SESSION:-1}" STUB_CLIENTS="${STUB_CLIENTS:-}" \
       "$@" \
-      zsh -fi -c "fpath=($REPO/config/zsh/autoload \$fpath)
+      "$ZSH_BIN" -fi -c "fpath=($REPO/config/zsh/autoload \$fpath)
                   autoload -Uz tmux_autostart
+                  print -r -- \"probe: interactive=\${options[interactive]} tmux=\$+commands[tmux] which=\$commands[tmux]\" >&2
                   tmux_autostart"
+}
+
+# Assert the stub recorded a matching invocation, dumping enough state to
+# diagnose a failure on a machine we cannot poke at interactively.
+assert_tmux() {
+  if ! grep -q -- "$1" "$TMUX_LOG"; then
+    echo "expected tmux invocation matching: $1"
+    echo "--- shell status: $status"
+    echo "--- shell output: $output"
+    echo "--- tmux log ($TMUX_LOG):"; cat "$TMUX_LOG" 2>&1 | sed 's/^/    /'
+    echo "--- stub dir ($STUBS):"; ls -l "$STUBS" 2>&1 | sed 's/^/    /'
+    return 1
+  fi
 }
 
 @test "starts a session from Terminal.app" {
   autostart TERM_PROGRAM=Apple_Terminal
-  grep -q 'new-session -s someuser' "$TMUX_LOG"
+  assert_tmux 'new-session -s someuser'
 }
 
 @test "session name strips dots from the username" {
@@ -42,7 +57,7 @@ autostart() {
 
 @test "uses the repo tmux.conf rather than the default" {
   autostart TERM_PROGRAM=Apple_Terminal
-  grep -q -- "-f $REPO/config/tmux/tmux.conf" "$TMUX_LOG"
+  assert_tmux "-f $REPO/config/tmux/tmux.conf"
 }
 
 @test "does not fire from a vscode terminal" {
@@ -77,7 +92,7 @@ autostart() {
 @test "does not fire in a non-interactive shell" {
   env -i HOME="$HOME" PATH="$STUBS:/usr/bin:/bin" USER=some.user \
       TMUX_LOG="$TMUX_LOG" TERM_PROGRAM=Apple_Terminal \
-      zsh -f -c "fpath=($REPO/config/zsh/autoload \$fpath)
+      "$ZSH_BIN" -f -c "fpath=($REPO/config/zsh/autoload \$fpath)
                  autoload -Uz tmux_autostart
                  tmux_autostart"
   [ ! -s "$TMUX_LOG" ]
@@ -86,7 +101,7 @@ autostart() {
 @test "does not fire when tmux is not installed" {
   env -i HOME="$HOME" PATH="/usr/bin:/bin" USER=some.user \
       TMUX_LOG="$TMUX_LOG" TERM_PROGRAM=Apple_Terminal \
-      zsh -fi -c "fpath=($REPO/config/zsh/autoload \$fpath)
+      "$ZSH_BIN" -fi -c "fpath=($REPO/config/zsh/autoload \$fpath)
                   autoload -Uz tmux_autostart
                   tmux_autostart"
   [ ! -s "$TMUX_LOG" ]
@@ -94,7 +109,7 @@ autostart() {
 
 @test "attaches to an existing session with no clients" {
   STUB_HAS_SESSION=0 STUB_CLIENTS= autostart TERM_PROGRAM=Apple_Terminal
-  grep -q 'attach-session -t someuser' "$TMUX_LOG"
+  assert_tmux 'attach-session -t someuser'
 }
 
 @test "never steals a session that already has a client" {

@@ -9,7 +9,7 @@ load '../helpers/common'
   for f in "$REPO"/config/zsh/.zshenv "$REPO"/config/zsh/.zprofile \
            "$REPO"/config/zsh/.zshrc "$REPO"/config/zsh/.zlogin \
            "$REPO"/config/zsh/lib/*.zsh; do
-    run zsh -n "$f"
+    run "$ZSH_BIN" -n "$f"
     [ "$status" -eq 0 ] || { echo "parse failed: $f"; echo "$output"; return 1; }
   done
 }
@@ -17,7 +17,7 @@ load '../helpers/common'
 @test "every autoloaded function parses" {
   local f
   for f in "$REPO"/config/zsh/autoload/*; do
-    run zsh -n "$f"
+    run "$ZSH_BIN" -n "$f"
     [ "$status" -eq 0 ] || { echo "parse failed: $f"; echo "$output"; return 1; }
   done
 }

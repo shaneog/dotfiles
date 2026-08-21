@@ -4,7 +4,10 @@
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 # Captured while $HOME is still the real one, before any test overrides it.
 REAL_HOME="${REAL_HOME:-$HOME}"
-export REPO REAL_HOME
+# The zsh under test. Set ZSH_BIN to exercise a specific build; tests invoke it
+# by absolute path so a hermetic PATH cannot silently change which one runs.
+ZSH_BIN="${ZSH_BIN:-$(command -v zsh)}"
+export REPO REAL_HOME ZSH_BIN
 
 # GNU timeout, BSD gtimeout, or nothing (CI runners vary).
 _timeout() {
@@ -66,10 +69,10 @@ run_login_shell() {
   # _timeout is a shell function, so it has to wrap env rather than the reverse
   _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
-    zsh -lic "$@"
+    "$ZSH_BIN" -lic "$@"
 }
 
-# zsh cannot enable ZLE without a controlling terminal, so `zsh -ic` from a test
+# zsh cannot enable ZLE without a controlling terminal, so `"$ZSH_BIN" -ic` from a test
 # harness always emits "can't change option: zle". Verified absent under a real
 # pty, so it is harness noise rather than a config problem. Everything else on
 # stderr is a genuine failure.

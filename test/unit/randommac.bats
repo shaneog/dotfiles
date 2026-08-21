@@ -22,7 +22,7 @@ STUB
 randommac() {
   env -i HOME="$BATS_TEST_TMPDIR" PATH="$STUBS:/usr/bin:/bin:/opt/homebrew/bin" \
       LOG="$LOG" "$@" \
-      zsh -fic "fpath=($REPO/config/zsh/autoload \$fpath)
+      "$ZSH_BIN" -fic "fpath=($REPO/config/zsh/autoload \$fpath)
                 autoload -Uz randommac
                 randommac \${RANDOMMAC_IFACE:-}"
 }

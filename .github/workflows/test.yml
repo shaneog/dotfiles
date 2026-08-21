@@ -41,9 +41,7 @@ jobs:
       - name: Pin the zsh under test
         run: |
           "${{ matrix.path }}" --version
-          mkdir -p "$RUNNER_TEMP/bin"
-          ln -sf "${{ matrix.path }}" "$RUNNER_TEMP/bin/zsh"
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          echo "ZSH_BIN=${{ matrix.path }}" >> "$GITHUB_ENV"
       - name: Guard matrix and autoloaded functions
         run: bats --print-output-on-failure test/unit
 

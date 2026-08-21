@@ -19,7 +19,7 @@ probe_lib() {
   env -i HOME="$FAKE_HOME" PATH="${STUBS:+$STUBS:}/usr/bin:/bin" USER=tester \
       XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$FAKE_HOME/.local/share" \
       XDG_CACHE_HOME="$FAKE_HOME/.cache" ZINIT_LOG="$ZINIT_LOG" "$@" \
-      zsh -fi -c "
+      "$ZSH_BIN" -fi -c "
         zinit() { print -r -- \"zinit \$*\" >> \$ZINIT_LOG }
         $before
         source '$REPO/config/zsh/lib/$lib'
@@ -147,7 +147,7 @@ STUB
   cp -R "$REPO/config/zsh" "$BATS_TEST_TMPDIR/zdot"
   find "$BATS_TEST_TMPDIR/zdot" -name '*.zwc*' -delete
   env -i HOME="$FAKE_HOME" PATH="/usr/bin:/bin" ZSH_NO_ZCOMPILE=1 \
-    ZDOTDIR="$BATS_TEST_TMPDIR/zdot" zsh -c "source $BATS_TEST_TMPDIR/zdot/.zlogin"
+    ZDOTDIR="$BATS_TEST_TMPDIR/zdot" "$ZSH_BIN" -c "source $BATS_TEST_TMPDIR/zdot/.zlogin"
   sleep 1
   [ "$(find "$BATS_TEST_TMPDIR/zdot" -name '*.zwc*' | wc -l | tr -d ' ')" -eq 0 ]
 }
