@@ -6,6 +6,17 @@ ssh/*
 config/*
 config/*/
 
+# Tool state and generated config, ignored deliberately. Each entry needs a rule
+# of its own rather than relying on the blanket lines above, so that a directory
+# which is merely forgotten can be told apart from one that is meant to be
+# absent -- see the classification test in test/static/lint.bats. Anything that
+# should not be published goes in .git/info/exclude instead.
+config/fish/
+config/op/
+config/pip/
+config/toolhive/
+config/uv/
+
 # Starship
 !config/starship.toml
 

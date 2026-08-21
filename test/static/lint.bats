@@ -105,3 +105,48 @@ load '../helpers/common'
   stray="$(cd "$REPO" && git ls-files --others --exclude-standard -- config/)"
   [ -z "$stray" ] || { echo "untracked and unignored under config/:"; echo "$stray"; return 1; }
 }
+
+@test "every config entry is deliberately tracked or deliberately ignored" {
+  # ~/.config is a symlink into this repo, so tools create directories here.
+  # config/* ignores everything by default, which is the safe direction for a
+  # public repo -- but it also means a directory you meant to version is
+  # silently absent. Require each entry to be classified by a rule of its own:
+  # tracked, or matched by something more specific than the blanket rule.
+  #
+  # Machine-local or otherwise unpublishable entries belong in
+  # .git/info/exclude, which counts as an explicit rule without appearing in
+  # the tracked .gitignore.
+  local blanket unclassified="" exclude_file
+  blanket="$(grep -n '^config/\*' "$REPO/.gitignore" | cut -d: -f1 | tr '\n' ' ')"
+  exclude_file="$(cd "$REPO" && git rev-parse --absolute-git-dir)/info/exclude"
+  local entry rule line
+  for entry in "$REPO"/config/*; do
+    entry="config/$(basename "$entry")"
+    git -C "$REPO" ls-files --error-unmatch "$entry" >/dev/null 2>&1 && continue
+    rule="$(git -C "$REPO" check-ignore -v "$entry" 2>/dev/null)"
+    if [ -z "$rule" ]; then
+      unclassified="$unclassified\n  $entry (neither tracked nor ignored)"
+      continue
+    fi
+    # Only the blanket config/* rule matched, so nothing was decided about this
+    # path. .gitignore outranks .git/info/exclude, so check-ignore will always
+    # report the blanket rule even when a local classification exists -- consult
+    # the exclude file directly.
+    case "$rule" in
+      *.gitignore:*)
+        line="$(echo "$rule" | cut -d: -f2)"
+        case " $blanket " in
+          *" $line "*)
+            grep -qE "^${entry}/?\$" "$exclude_file" 2>/dev/null && continue
+            unclassified="$unclassified\n  $entry (only the blanket rule)"
+            ;;
+        esac
+        ;;
+    esac
+  done
+  if [ -n "$unclassified" ]; then
+    printf 'unclassified config entries:%b\n' "$unclassified"
+    echo "add a specific rule to .gitignore, or to .git/info/exclude if it should not be published"
+    return 1
+  fi
+}
