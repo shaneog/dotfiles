@@ -1,0 +1,27 @@
+# Randomise the Wi-Fi MAC address.
+#
+# Apple removed the `airport` utility, so the interface is power-cycled to force
+# a disassociation instead of calling `airport -z`.
+#
+# usage: randommac [interface]        (default: en0)
+
+local iface=${1:-en0}
+
+(( $+commands[openssl] ))      || { print -ru2 "randommac: openssl not found"; return 1 }
+(( $+commands[networksetup] )) || { print -ru2 "randommac: networksetup not found"; return 1 }
+
+# Random address forced to be locally administered (bit 1 set) and unicast
+# (bit 0 clear). A multicast address would be rejected by the interface.
+local -a octets
+octets=( ${(s: :)$(openssl rand -hex 6 | sed 's/../& /g')} )
+octets[1]=$(printf '%02x' $(( (0x${octets[1]} & 0xFE) | 0x02 )))
+local mac=$(printf '%s:%s:%s:%s:%s:%s' $octets)
+
+print -r "randommac: setting $iface to $mac"
+sudo networksetup -setairportpower "$iface" off || return 1
+if ! sudo ifconfig "$iface" ether "$mac"; then
+  sudo networksetup -setairportpower "$iface" on
+  print -ru2 "randommac: failed to set the address"
+  return 1
+fi
+sudo networksetup -setairportpower "$iface" on
