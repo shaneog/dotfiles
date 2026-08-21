@@ -1,7 +1,11 @@
 #!/usr/bin/env zsh
 
-export SDKMAN_DIR="$HOME/.sdkman"
+# Skip when the base layer already initialised SDKMAN; sourcing its init twice
+# only duplicates PATH entries.
+if (( ! $+functions[sdk] )); then
+  export SDKMAN_DIR="$HOME/.sdkman"
 
-if [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
-  source "$HOME/.sdkman/bin/sdkman-init.sh"
+  if [ -f "$SDKMAN_DIR/bin/sdkman-init.sh" ]; then
+    source "$SDKMAN_DIR/bin/sdkman-init.sh"
+  fi
 fi

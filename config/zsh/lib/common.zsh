@@ -4,8 +4,11 @@
 # Plugins
 ##
 zinit light zsh-users/zsh-completions
-zinit light zsh-users/zsh-autosuggestions
-zinit light zdharma-continuum/fast-syntax-highlighting
+
+# Skip whatever the base layer already provides: two ZLE syntax highlighters or
+# two autosuggestion widgets fight over the line editor.
+(( $+functions[_zsh_autosuggest_start] )) || zinit light zsh-users/zsh-autosuggestions
+(( $+functions[_zsh_highlight] )) || zinit light zdharma-continuum/fast-syntax-highlighting
 
 # http://zshwiki.org/home/config/prompt
 # enable colors and predefined variables

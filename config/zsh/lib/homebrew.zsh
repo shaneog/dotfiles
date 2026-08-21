@@ -2,10 +2,8 @@
 
 zinit snippet PZTM::homebrew
 
-FPATH="${HOMEBREW_PREFIX}/share/zsh/site-functions:${FPATH}"
-
-# Set homebrew shellenv
-if [ -d "/opt/homebrew" ]; then
+# Set homebrew shellenv, unless the base layer already did it
+if [ -z "${HOMEBREW_PREFIX}" ] && [ -d "/opt/homebrew" ]; then
   HOMEBREW_PREFIX="/opt/homebrew";
   HOMEBREW_CELLAR="/opt/homebrew/Cellar";
   HOMEBREW_REPOSITORY="/opt/homebrew";
@@ -13,3 +11,5 @@ if [ -d "/opt/homebrew" ]; then
   MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
   INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
 fi
+
+FPATH="${HOMEBREW_PREFIX}/share/zsh/site-functions:${FPATH}"
