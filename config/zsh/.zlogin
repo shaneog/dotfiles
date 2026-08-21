@@ -1,29 +1,25 @@
 #!/usr/bin/env zsh
 
-# Opt out of background compilation. The recompile runs detached, so a .zwc can
-# land a moment after you edit one of these files, and zsh prefers a .zwc that
-# is not *older* than its source -- meaning the next shell can run the stale
-# compiled copy. Set this while editing zsh config, and in tests.
+# Compile the completion dump in the background, so it costs this shell nothing.
+#
+# Only the dump is compiled. The zsh sources used to be compiled here too, but
+# that raced with editing them: zrecompile runs detached, so a .zwc could be
+# written from content read before an edit, and zsh prefers a .zwc that is not
+# *older* than its source -- so the next shell would run the stale compiled
+# copy. Compiling them measured no faster anyway (210.9ms vs 215.1ms over 30
+# runs, i.e. within noise), and it wrote build artefacts into the repo.
+#
+# The dump is safe to compile: it is machine-generated, nobody edits it, and it
+# lives in the cache directory rather than the repo.
 [[ -n "$ZSH_NO_ZCOMPILE" ]] && return
 
-# Execute code that does not affect the current session in the background.
 (
-    setopt LOCAL_OPTIONS EXTENDED_GLOB
+    setopt LOCAL_OPTIONS
     autoload -U zrecompile
 
-    # Compile zcompdump, if modified, to increase startup speed.
-    ZSH_COMPDUMP="${ZSH_COMPDUMP:-${XDG_CACHE_HOME:-${ZSH_CACHE_DIR:-$HOME/.cache}/zsh}/zcompdump}"
+    ZSH_COMPDUMP="${ZSH_COMPDUMP:-${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump}"
 
     if [[ -s "$ZSH_COMPDUMP" && (! -s "${ZSH_COMPDUMP}.zwc" || "$ZSH_COMPDUMP" -nt "${ZSH_COMPDUMP}.zwc") ]]; then
         zrecompile -pq "$ZSH_COMPDUMP"
     fi
-    # zcompile .zshrc
-    zrecompile -pq ${ZDOTDIR:-${HOME}}/.zshrc
-    zrecompile -pq ${ZDOTDIR:-${HOME}}/.zprofile
-    zrecompile -pq ${ZDOTDIR:-${HOME}}/.zshenv
-    # recompile all zsh or sh
-    for f in $ZDOTDIR/**/*.*sh
-    do
-        zrecompile -pq $f
-    done
 ) &!

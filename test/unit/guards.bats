@@ -143,13 +143,41 @@ STUB
 
 # --- zlogin -----------------------------------------------------------------
 
-@test "zlogin: skips background compilation when told to" {
-  cp -R "$REPO/config/zsh" "$BATS_TEST_TMPDIR/zdot"
-  find "$BATS_TEST_TMPDIR/zdot" -name '*.zwc*' -delete
-  env -i HOME="$FAKE_HOME" PATH="/usr/bin:/bin" ZSH_NO_ZCOMPILE=1 \
-    ZDOTDIR="$BATS_TEST_TMPDIR/zdot" "$ZSH_BIN" -c "source $BATS_TEST_TMPDIR/zdot/.zlogin"
-  sleep 1
-  [ "$(find "$BATS_TEST_TMPDIR/zdot" -name '*.zwc*' | wc -l | tr -d ' ')" -eq 0 ]
+# .zlogin forks its work, so give it a moment to land.
+run_zlogin() {
+  ZDOT="$BATS_TEST_TMPDIR/zdot"
+  cp -R "$REPO/config/zsh" "$ZDOT"
+  find "$ZDOT" -name '*.zwc*' -delete
+  mkdir -p "$FAKE_HOME/.cache/zsh"
+  printf '#compdef fake\n' > "$FAKE_HOME/.cache/zsh/zcompdump"
+  env -i HOME="$FAKE_HOME" PATH="/usr/bin:/bin" ZDOTDIR="$ZDOT" "$@" \
+    "$ZSH_BIN" -c "source $ZDOT/.zlogin"
+  local i
+  for i in $(seq 1 40); do
+    [ -s "$FAKE_HOME/.cache/zsh/zcompdump.zwc" ] && break
+    sleep 0.1
+  done
+}
+
+@test "zlogin: compiles the completion dump" {
+  run_zlogin
+  [ -s "$FAKE_HOME/.cache/zsh/zcompdump.zwc" ]
+}
+
+@test "zlogin: never compiles the zsh sources" {
+  # Compiling hand-edited sources races with editing them: a detached compile
+  # can write a .zwc that shadows a newer source, so the next shell runs stale
+  # code. It also wrote build artefacts into the repo.
+  run_zlogin
+  local artefacts
+  artefacts="$(find "$ZDOT" -name '*.zwc*')"
+  [ -z "$artefacts" ] || { echo "compiled sources: $artefacts"; return 1; }
+}
+
+@test "zlogin: skips all background work when told to" {
+  run_zlogin ZSH_NO_ZCOMPILE=1
+  [ ! -e "$FAKE_HOME/.cache/zsh/zcompdump.zwc" ]
+  [ -z "$(find "$ZDOT" -name '*.zwc*')" ]
 }
 
 # --- environment ------------------------------------------------------------
