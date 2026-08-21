@@ -99,11 +99,9 @@ run_dotfile_scripts() {
       for i in "$@"; do
         if [ -f "$i" ] && [ -x "$i" ]; then
           log "Running dotfiles $i:"
-          if [ -z "$DEBUG" ]; then
-            "$i" 2>/dev/null
-          else
-            "$i"
-          fi
+          # Not silenced: this is the one step whose failure you most need to
+          # be able to read, and set -e aborts on it anyway.
+          "$i"
           break
         fi
       done
@@ -117,22 +115,30 @@ groups | grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &
 
-# Install Homebrew
-log "Installing Homebrew:"
-NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Install Homebrew, unless it is already here: re-running the installer on a
+# machine that has it wastes minutes and buries the rest of the output.
+if command -v brew >/dev/null 2>&1; then
+  log "Homebrew already installed:"
+else
+  log "Installing Homebrew:"
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
 [ -d "/opt/homebrew" ] && eval "$(/opt/homebrew/bin/brew shellenv)"
 logk
 
-# Setup dotfiles
+# Setup dotfiles. Both of these can be overridden, to install from a fork, from
+# a branch, from a mirror, or from a local copy on a machine that has no GitHub
+# credentials yet.
 GITHUB_USER="${GITHUB_USER:-shaneog}"
-if [ -n "$GITHUB_USER" ]; then
-  DOTFILES_URL="https://github.com/$GITHUB_USER/dotfiles"
-
+DOTFILES_URL="${DOTFILES_URL:-https://github.com/$GITHUB_USER/dotfiles}"
+DOTFILES_REF="${DOTFILES_REF:-}"
+if [ -n "$DOTFILES_URL" ]; then
   if git ls-remote "$DOTFILES_URL" &>/dev/null; then
-    log "Fetching $GITHUB_USER/dotfiles from GitHub:"
+    log "Fetching dotfiles from $DOTFILES_URL:"
     if [ ! -d "$HOME/.dotfiles" ]; then
       log "Cloning to ~/.dotfiles:"
-      git clone "$Q" "$DOTFILES_URL" ~/.dotfiles
+      # shellcheck disable=SC2086
+      git clone "$Q" ${DOTFILES_REF:+--branch "$DOTFILES_REF"} "$DOTFILES_URL" ~/.dotfiles
     else
       (
         cd ~/.dotfiles
