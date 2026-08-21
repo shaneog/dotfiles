@@ -24,7 +24,7 @@ load '../helpers/common'
 
 @test "bash scripts parse and pass shellcheck" {
   local f
-  for f in "$REPO"/script/*; do
+  for f in "$REPO"/script/* "$REPO"/test/vm/*; do
     [ -f "$f" ] || continue
     case "$f" in *.terminal) continue ;; esac
     run bash -n "$f"

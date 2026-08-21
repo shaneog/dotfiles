@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Runs inside the throwaway VM, driven by test/vm/run. Installs the dotfiles the
+# way a new machine does, then asserts what came out.
+set -euo pipefail
+
+say() { printf '\n--> %s\n' "$*"; }
+die() { printf '\n!!! %s\n' "$*" >&2; exit 1; }
+
+SRC="$HOME/dotfiles-src"
+[ -d "$SRC" ] || die "no source tree at $SRC"
+
+# bootstrap needs sudo without a terminal to type into. It already supports an
+# askpass helper, so use its own hook rather than editing sudoers.
+ASKPASS="$HOME/vmtest/askpass"
+printf '#!/bin/sh\necho "%s"\n' "${VM_PASS:-admin}" > "$ASKPASS"
+chmod 700 "$ASKPASS"
+export SUDO_ASKPASS="$ASKPASS"
+
+say "no Homebrew here yet, as on any new machine"
+if command -v brew >/dev/null 2>&1; then die "Homebrew is already installed"; fi
+
+say "running script/bootstrap"
+# Installs from the copied tree instead of the default branch, so this exercises
+# the code in front of us.
+DOTFILES_URL="$SRC" "$SRC/script/bootstrap"
+
+say "Homebrew was installed from scratch"
+[ -x /opt/homebrew/bin/brew ] || die "bootstrap did not install Homebrew"
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+say "the dotfiles were cloned and linked from ~/.dotfiles"
+[ -d "$HOME/.dotfiles/.git" ] || die "nothing was cloned to ~/.dotfiles"
+[ "$HOME/.zshenv"   -ef "$HOME/.dotfiles/config/zsh/.zshenv" ] || die ".zshenv is wrong"
+[ "$HOME/.config"   -ef "$HOME/.dotfiles/config" ]             || die ".config is wrong"
+[ "$HOME/.Brewfile" -ef "$HOME/.dotfiles/Brewfile" ]           || die ".Brewfile is wrong"
+
+say "the Brewfile's formulae are installed"
+for f in starship fzf direnv tmux neovim bats-core; do
+  brew list --formula --versions "$f" >/dev/null 2>&1 || die "$f was not installed"
+done
+
+say "the macOS defaults were applied"
+[ "$(defaults read com.apple.dock tilesize)" = "48" ] || die "script/macos did not apply"
+
+say "a first login shell is fully wired"
+probe='print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"'
+out="$(TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic "$probe")"
+echo "    $out"
+case "$out" in
+  *"starship=1 direnv=1 fzf=1 dump=yes"*) ;;
+  *) die "the shell came up incomplete" ;;
+esac
+
+say "a second login shell is silent"
+TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic 'true' 2>"$HOME/vmtest/second.err"
+noise="$(grep -v "can't change option: zle" "$HOME/vmtest/second.err" | grep '[[:alpha:]]' || true)"
+[ -z "$noise" ] || die "unexpected stderr on a settled machine: $noise"
+
+if [ -n "${VM_RUN_SUITE:-}" ]; then
+  say "running the bats suite on a pristine machine"
+  cd "$HOME/.dotfiles"
+  /bin/bash "$(command -v bats)" test/static test/unit test/integration
+fi
+
+say "guest assertions passed"

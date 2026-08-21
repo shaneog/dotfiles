@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+#
+# End-to-end install test in a throwaway macOS VM. Local only.
+#
+# CI runners are not fresh Macs: Homebrew, the command line tools, pyenv and nvm
+# are all preinstalled there, so anything that assumes a genuinely new machine
+# survives every check we have. This boots real macOS with none of it, which is
+# the one thing the provision workflow cannot do.
+#
+# Expensive: the base image is tens of gigabytes on first use, and a full run
+# takes the better part of an hour.
+#
+#   test/vm/run                   provision, install, assert, destroy
+#   test/vm/run --keep            leave the VM up afterwards to poke at
+#   VM_RUN_SUITE=1 test/vm/run    also run the bats suite inside the VM
+#
+# Overridable: VM_IMAGE, VM_NAME, VM_USER, VM_PASS.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+VM_NAME="${VM_NAME:-dotfiles-e2e}"
+VM_IMAGE="${VM_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-base:latest}"   # macOS 26
+VM_USER="${VM_USER:-admin}"
+VM_PASS="${VM_PASS:-admin}"
+KEEP=""
+[ "${1:-}" = "--keep" ] && KEEP=1
+
+say()  { printf '\n==> %s\n' "$*"; }
+die()  { printf '\n!!! %s\n' "$*" >&2; exit 1; }
+
+# --- preflight --------------------------------------------------------------
+
+[ "$(uname -m)" = "arm64" ] || die "Apple Silicon only"
+command -v expect >/dev/null || die "expect not found (it ships with macOS)"
+command -v tart >/dev/null || die "tart not installed. Homebrew now gates
+third-party taps, so this needs two steps:
+  brew trust --formula cirruslabs/cli/softnet
+  brew install cirruslabs/cli/tart"
+
+free_gb="$(df -g / | awk 'NR==2 {print $4}')"
+[ "$free_gb" -ge 60 ] || die "need roughly 60GB free for the base image, have ${free_gb}GB"
+
+WORK="$(mktemp -d)"
+KEY="$WORK/id_ed25519"
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR)
+
+cleanup() {
+  local status=$?
+  if [ -n "$KEEP" ]; then
+    say "leaving $VM_NAME up at ${VM_IP:-unknown}. Delete it with: tart delete $VM_NAME"
+    printf '    ssh %s@%s   (password %s)\n' "$VM_USER" "${VM_IP:-?}" "$VM_PASS"
+  else
+    say "tearing the VM down"
+    tart stop "$VM_NAME" >/dev/null 2>&1 || true
+    tart delete "$VM_NAME" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$WORK"
+  exit $status
+}
+trap cleanup EXIT
+
+# --- provision --------------------------------------------------------------
+
+say "cloning $VM_IMAGE (the first run pulls tens of gigabytes)"
+tart delete "$VM_NAME" >/dev/null 2>&1 || true
+tart clone "$VM_IMAGE" "$VM_NAME" \
+  || die "clone failed. Check the tag exists; override with VM_IMAGE=
+  https://github.com/orgs/cirruslabs/packages?repo_name=macos-image-templates"
+
+say "booting headless"
+tart run --no-graphics "$VM_NAME" >"$WORK/tart.log" 2>&1 &
+
+say "waiting for an address"
+for _ in $(seq 1 60); do
+  VM_IP="$(tart ip "$VM_NAME" 2>/dev/null || true)"
+  [ -n "${VM_IP:-}" ] && break
+  sleep 5
+done
+[ -n "${VM_IP:-}" ] || die "no address after five minutes; see $WORK/tart.log"
+say "VM is at $VM_IP"
+
+# One password authentication to install a throwaway key, so that every command
+# after this has a usable exit status.
+say "installing an ephemeral ssh key"
+ssh-keygen -q -t ed25519 -N '' -f "$KEY"
+vm() { ssh -i "$KEY" "${SSH_OPTS[@]}" "$VM_USER@$VM_IP" "$@"; }
+for _ in $(seq 1 30); do
+  expect -c "
+    set timeout 30
+    spawn ssh-copy-id -i $KEY.pub -o StrictHostKeyChecking=no \
+      -o UserKnownHostsFile=/dev/null $VM_USER@$VM_IP
+    expect {
+      \"assword:\" { send \"$VM_PASS\r\"; exp_continue }
+      eof
+    }" >/dev/null 2>&1 || true
+  vm true >/dev/null 2>&1 && break
+  sleep 5
+done
+vm true || die "cannot ssh in; see $WORK/tart.log"
+
+# --- the machine must actually be fresh -------------------------------------
+
+say "confirming this really is a fresh machine"
+if vm 'command -v brew >/dev/null 2>&1'; then
+  die "the image already has Homebrew, so this proves nothing that CI does not"
+fi
+if vm 'test -e ~/.dotfiles'; then die "the image already has ~/.dotfiles"; fi
+
+# --- install and assert -----------------------------------------------------
+
+# Sent as a tarball rather than mounted: no assumptions about guest mounts, and
+# it keeps the guest side identical however this is invoked. Note that bootstrap
+# *clones* from this copy, so what gets installed is the committed state of the
+# current branch -- uncommitted changes come along in the copy but are not what
+# is installed.
+say "copying the tree in"
+vm 'rm -rf ~/dotfiles-src ~/vmtest && mkdir -p ~/dotfiles-src ~/vmtest'
+tar -C "$REPO" -cf - . | vm 'tar -C ~/dotfiles-src -xf -'
+tar -C "$REPO/test/vm" -cf - guest-test | vm 'tar -C ~/vmtest -xf -'
+
+casks="$(grep -oE "^cask '[^']+'" "$REPO/Brewfile" | cut -d\' -f2 | tr '\n' ' ')"
+
+say "installing, inside the VM"
+vm "chmod +x ~/vmtest/guest-test && \
+    VM_PASS='$VM_PASS' \
+    HOMEBREW_BUNDLE_CASK_SKIP='$casks' \
+    VM_RUN_SUITE='${VM_RUN_SUITE:-}' \
+    ~/vmtest/guest-test"
+
+say "PASSED: a fresh macOS machine installs and comes up correctly"

@@ -99,6 +99,26 @@ runners provide, and which parses some things differently to a modern bash:
 /bin/bash "$(command -v bats)" test/static test/unit test/integration
 ```
 
+A fresh-machine test runs locally only, since CI runners are not fresh Macs --
+Homebrew, the command line tools, pyenv and nvm are all preinstalled there:
+
+```sh
+make test-vm            # boot macOS 26 in Tart, install end to end, destroy
+test/vm/run --keep      # leave the VM up to poke at
+```
+
+It needs [Tart](https://tart.run), which Homebrew now gates behind tap trust:
+
+```sh
+brew trust --formula cirruslabs/cli/softnet
+brew install cirruslabs/cli/tart
+```
+
+Expect tens of gigabytes for the base image and the better part of an hour for a
+full run. `script/bootstrap` is pointed at a copy of the working tree via
+`DOTFILES_URL`, so it installs the current branch rather than whatever is on the
+default one.
+
 Two workflows run it. `test` runs the suite on every push, against both the
 system and Homebrew zsh. `provision` runs the scripts that set up a machine --
 `bootstrap`, `setup`, `macos`, `remove` -- for real on disposable runners,
