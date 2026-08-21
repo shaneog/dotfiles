@@ -10,7 +10,10 @@ setup() {
 }
 
 teardown() {
-  guard_home "$FAKE_HOME" && rm -rf "$FAKE_HOME"
+  if [ -n "${FAKE_HOME:-}" ] && guard_home "$FAKE_HOME"; then
+    rm -rf "$FAKE_HOME"
+  fi
+  return 0
 }
 
 run_setup() {

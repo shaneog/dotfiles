@@ -10,8 +10,11 @@ setup() {
 }
 
 teardown() {
-  guard_home "$HOME_WITH"    && rm -rf "$HOME_WITH"
-  guard_home "$HOME_WITHOUT" && rm -rf "$HOME_WITHOUT"
+  local h
+  for h in "${HOME_WITH:-}" "${HOME_WITHOUT:-}"; do
+    [ -n "$h" ] && guard_home "$h" && rm -rf "$h"
+  done
+  return 0
 }
 
 probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
@@ -41,7 +44,7 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 }
 
 @test "a non-interactive shell produces no output at all" {
-  run --separate-stderr env -i HOME="$HOME_WITH" PATH="$PATH" zsh -c 'true'
+  run --separate-stderr env -i HOME="$HOME_WITH" PATH="$PATH" "$ZSH_BIN" -c 'true'
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ -z "$stderr" ]
@@ -92,7 +95,7 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
   # Regression: the prezto fallback used to run before ZDOTDIR was assigned, so
   # it sourced $HOME/.zprofile (the base layer's) instead of ours.
   run --separate-stderr env -i HOME="$HOME_WITH" PATH="$PATH" \
-    USER="${USER:-tester}" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -ic \
+    USER="${USER:-tester}" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 "$ZSH_BIN" -ic \
     'print "OURS=${LESSCHARSET:-no} BASE=${BASE_LAYER_PROFILE_RAN:-no}"'
   [ "$output" = "OURS=utf-8 BASE=1" ]
 }
@@ -104,7 +107,7 @@ exit 0
 STUB
 )"
   run env -i HOME="$HOME_WITH" PATH="$stubs:$PATH" USER="${USER:-tester}" \
-    TERM="${TERM:-xterm}" ZSH_NO_TMUX_AUTOSTART=1 zsh -lic \
+    TERM="${TERM:-xterm}" ZSH_NO_TMUX_AUTOSTART=1 "$ZSH_BIN" -lic \
     'print "AWS=${_comps[aws]:-MISSING}"'
   echo "$output" | grep -q "AWS=_bash_complete"
 }

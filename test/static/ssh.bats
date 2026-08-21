@@ -10,7 +10,10 @@ setup() {
 }
 
 teardown() {
-  guard_home "$SSH_HOME" && rm -rf "$SSH_HOME"
+  if [ -n "${SSH_HOME:-}" ] && guard_home "$SSH_HOME"; then
+    rm -rf "$SSH_HOME"
+  fi
+  return 0
 }
 
 # Effective config for a host, as ssh itself resolves it (no network involved).

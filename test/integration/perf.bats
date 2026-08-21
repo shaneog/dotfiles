@@ -12,15 +12,20 @@ setup() {
   FAKE_HOME="$(make_home)"
 }
 
+# Must not fail: a skipped test never reaches the FAKE_HOME assignment, and a
+# failing teardown is reported as a failing test.
 teardown() {
-  [ -n "${FAKE_HOME:-}" ] && guard_home "$FAKE_HOME" && rm -rf "$FAKE_HOME"
+  if [ -n "${FAKE_HOME:-}" ] && guard_home "$FAKE_HOME"; then
+    rm -rf "$FAKE_HOME"
+  fi
+  return 0
 }
 
 @test "an interactive login shell starts within budget" {
   local json="$BATS_TEST_TMPDIR/bench.json"
   run hyperfine --warmup 2 --runs 10 --export-json "$json" --shell=none \
     -- "env -i HOME=$FAKE_HOME PATH=$PATH TERM=xterm-256color USER=${USER:-tester} \
-        ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 zsh -lic exit"
+        ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 $ZSH_BIN -lic exit"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   local mean_ms
   mean_ms="$(python3 -c "import json,sys; print(round(json.load(open(sys.argv[1]))['results'][0]['mean']*1000))" "$json")"
@@ -31,7 +36,7 @@ teardown() {
 @test "a non-interactive shell is near-free" {
   local json="$BATS_TEST_TMPDIR/bench-ni.json"
   run hyperfine --warmup 2 --runs 10 --export-json "$json" --shell=none \
-    -- "env -i HOME=$FAKE_HOME PATH=$PATH zsh -c exit"
+    -- "env -i HOME=$FAKE_HOME PATH=$PATH $ZSH_BIN -c exit"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   local mean_ms
   mean_ms="$(python3 -c "import json,sys; print(round(json.load(open(sys.argv[1]))['results'][0]['mean']*1000))" "$json")"
