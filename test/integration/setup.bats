@@ -97,3 +97,15 @@ snapshot() {
   run_setup
   [ -f "$FAKE_HOME/.ssh/config-local" ]
 }
+
+@test "backs up a pre-existing directory instead of deleting it" {
+  # Any machine that has been used already has files under ~/.config and ~/.ssh.
+  mkdir -p "$FAKE_HOME/.config/some-other-tool"
+  echo "keep me" > "$FAKE_HOME/.config/some-other-tool/state"
+  run_setup
+  [ -L "$FAKE_HOME/.config" ]
+  [ "$FAKE_HOME/.config" -ef "$REPO/config" ]
+  local rescued
+  rescued="$(cat "$FAKE_HOME"/.config.bak.*/some-other-tool/state 2>/dev/null)"
+  [ "$rescued" = "keep me" ] || { echo "pre-existing content was destroyed"; return 1; }
+}
