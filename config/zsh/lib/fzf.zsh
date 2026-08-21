@@ -1,17 +1,8 @@
 #!/usr/bin/env zsh
 
-zinit ice from"gh-r" as"program" bpick"*arm*"
-zinit light junegunn/fzf
-
-zinit ice pick"bin/fzf-tmux" as"program" bpick"*arm*"
-zinit light junegunn/fzf
-
-# Create and bind multiple widgets using fzf. multisrc sources both files; the
-# clone hook that used to run key-bindings.zsh could only fail, since the file
-# ships non-executable and is meant to be sourced, not executed.
-zinit ice multisrc"shell/{completion,key-bindings}.zsh" id-as"junegunn/fzf_completions" \
-  pick"/dev/null"
-zinit light junegunn/fzf
+# fzf comes from the Brewfile, which also ships fzf-tmux and the completions.
+# `fzf --zsh` emits both the completion and key-binding integration.
+cached_init fzf fzf --zsh && source $REPLY
 
 # Ignore gitignore with fzf
 FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow -g "!{.git,node_modules}/*" 2> /dev/null'

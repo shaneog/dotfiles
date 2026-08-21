@@ -1,0 +1,40 @@
+# Cache a tool's shell-integration script, so startup neither shells out to
+# generate it nor downloads the tool to begin with. The binaries come from the
+# Brewfile; only the wiring lives in this repo.
+#
+# Sets $REPLY to the cached file and returns 0, so callers can do:
+#
+#   cached_init starship starship init zsh && source $REPLY
+#
+# Returns non-zero (and leaves $REPLY empty) when the tool is not installed, so
+# a missing tool is a no-op rather than an error.
+#
+# usage: cached_init <name> <command> [args...]
+
+emulate -L zsh
+setopt local_options
+
+local name=$1; shift
+local bin=${commands[$1]}
+REPLY=
+
+[[ -n $bin ]] || return 1
+
+local dir=${XDG_CACHE_HOME:-$HOME/.cache}/zsh/init
+local file=$dir/$name.zsh
+
+# Regenerate when missing, empty, or older than the binary that produced it, so
+# an upgraded tool refreshes its own integration.
+if [[ ! -s $file || $bin -nt $file ]]; then
+  mkdir -p $dir || return 1
+  # Write via a temporary file: a reader must never see a half-written script,
+  # and a failed generation must not leave a broken cache behind.
+  local tmp=$file.$$
+  if ! "$@" > $tmp 2>/dev/null || [[ ! -s $tmp ]]; then
+    rm -f $tmp
+    return 1
+  fi
+  mv -f $tmp $file || return 1
+fi
+
+REPLY=$file

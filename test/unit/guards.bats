@@ -20,6 +20,8 @@ probe_lib() {
       XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$FAKE_HOME/.local/share" \
       XDG_CACHE_HOME="$FAKE_HOME/.cache" ZINIT_LOG="$ZINIT_LOG" "$@" \
       "$ZSH_BIN" -fi -c "
+        fpath=($REPO/config/zsh/autoload \$fpath)
+        autoload -Uz \$fpath[1]/*(.:t)
         zinit() { print -r -- \"zinit \$*\" >> \$ZINIT_LOG }
         $before
         source '$REPO/config/zsh/lib/$lib'
@@ -102,11 +104,6 @@ probe_lib() {
     'print "precmd=$precmd_functions preexec=$preexec_functions"'
   [[ "$output" != *"prompt_pure_precmd"* ]]
   [[ "$output" != *"prompt_pure_preexec"* ]]
-}
-
-@test "prompt: always loads starship" {
-  probe_lib prompt.zsh '' ':'
-  grep -q "starship" "$ZINIT_LOG"
 }
 
 # --- python -----------------------------------------------------------------
@@ -194,14 +191,30 @@ run_zlogin() {
 
 # --- prompt under a dumb terminal -------------------------------------------
 
-@test "prompt: leaves a dumb terminal alone" {
-  probe_lib prompt.zsh '' ':' TERM=dumb
-  [ ! -s "$ZINIT_LOG" ]
+# A stub starship whose init script is observable once sourced.
+stub_starship() {
+  STUBS="$(stub_dir)"
+  stub_cmd starship <<'STUB'
+#!/bin/sh
+echo 'STARSHIP_INIT_SOURCED=1'
+STUB
 }
 
-@test "prompt: still loads starship on a capable terminal" {
-  probe_lib prompt.zsh '' ':' TERM=xterm-256color
-  grep -q starship "$ZINIT_LOG"
+@test "prompt: initialises starship on a capable terminal" {
+  stub_starship
+  run probe_lib prompt.zsh '' 'print "${STARSHIP_INIT_SOURCED:-no}"' TERM=xterm-256color
+  [ "$output" = "1" ]
+}
+
+@test "prompt: leaves a dumb terminal alone" {
+  stub_starship
+  run probe_lib prompt.zsh '' 'print "${STARSHIP_INIT_SOURCED:-no}"' TERM=dumb
+  [ "$output" = "no" ]
+}
+
+@test "prompt: no-op when starship is not installed" {
+  run probe_lib prompt.zsh '' 'print "${STARSHIP_INIT_SOURCED:-no}"' TERM=xterm-256color
+  [ "$output" = "no" ]
 }
 
 # --- 1password agent --------------------------------------------------------

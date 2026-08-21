@@ -50,8 +50,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+      # The shell integration for these is wired up by config/zsh/lib, and the
+      # Brewfile is what installs them, so the runner needs them too.
       - name: Install tooling
-        run: brew install bats-core
+        run: brew install bats-core direnv fzf starship
 
       # The plugin set is defined by the zsh libs, so key the cache on them.
       - name: Restore plugin cache

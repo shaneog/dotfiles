@@ -14,8 +14,7 @@ if (( $+functions[prompt_pure_precmd] )); then
   add-zsh-hook -d preexec prompt_pure_preexec
 fi
 
-# https://starship.rs
-zinit ice as"program" bpick"*aarch64*.tar.gz"  from"gh-r" \
-  atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
-  atpull"%atclone" src"init.zsh"
-zinit light starship/starship
+# https://starship.rs -- comes from the Brewfile, which also installs its
+# completions into Homebrew's site-functions. Its init is cached rather than
+# regenerated on every shell.
+cached_init starship starship init zsh && source $REPLY
