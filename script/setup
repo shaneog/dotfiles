@@ -20,6 +20,14 @@ for DOTFILE in *; do
   echo "$DOTFILE" | grep -q '\.sh' \
     && HOMEFILE="$HOME/.$(echo "$DOTFILE" | sed -e 's/\.sh//')"
 
+  # Already pointing into the repo: leave it be, rather than `rm -r` a live
+  # directory (~/.config in particular, which other tools write into too)
+  if [ -L "$HOMEFILE" ] && [ "$HOMEFILE" -ef "$DIRFILE" ]
+  then
+    echo "$HOMEFILE == $DIRFILE (unchanged)"
+    continue
+  fi
+
   if [ $UNIX ]
   then
     if [ -L "$HOMEFILE" ] && ! [ -d "$DOTFILE" ]
@@ -34,7 +42,14 @@ for DOTFILE in *; do
   fi
 done
 
-# Symlink .zshenv
+# Symlink .zshenv. This is the entry point that sets ZDOTDIR, and the only
+# home-level shell file we own. Where something else already manages
+# ~/.profile, ~/.bashrc, ~/.zprofile and ~/.zshrc, those are sourced as a base
+# layer from our own .zprofile/.zshrc rather than replaced.
+if [ -e "$HOME/.zshenv" ] && [ ! -L "$HOME/.zshenv" ]
+then
+  mv -v "$HOME/.zshenv" "$HOME/.zshenv.bak.$(date +%Y%m%d%H%M%S)"
+fi
 ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
 
 # Set up ssh/config-local, if it doesn't exist

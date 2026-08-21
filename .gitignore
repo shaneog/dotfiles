@@ -34,3 +34,5 @@ config/tmux/plugins
 !config/zsh/
 config/zsh/.zcompdump
 config/zsh/**/*.zwc*
+# completion dump some setups write into ${ZDOTDIR}
+config/zsh/.zcmpdump*
