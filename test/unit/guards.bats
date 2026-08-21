@@ -118,22 +118,22 @@ probe_lib() {
 }
 
 @test "python: does not front PATH when pyenv has no shims yet" {
-  STUBS="$(stub_cmd pyenv <<'STUB'
+  STUBS="$(stub_dir)"
+  stub_cmd pyenv <<'STUB'
 #!/bin/sh
 exit 0
 STUB
-)"
   run probe_lib python.zsh '' 'print "shell=${PYENV_SHELL:-unset} path=$PATH"'
   [[ "$output" == "shell=zsh"* ]]
   [[ "$output" != *"pyenv/shims"* ]]
 }
 
 @test "python: fronts PATH and hooks precmd once pyenv is usable" {
-  STUBS="$(stub_cmd pyenv <<'STUB'
+  STUBS="$(stub_dir)"
+  stub_cmd pyenv <<'STUB'
 #!/bin/sh
 exit 0
 STUB
-)"
   mkdir -p "$FAKE_HOME/.local/share/pyenv/shims" \
            "$FAKE_HOME/.local/share/pyenv/plugins/pyenv-virtualenv"
   run probe_lib python.zsh '' 'print "path=$PATH hook=$precmd_functions"'

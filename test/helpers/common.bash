@@ -51,14 +51,25 @@ install_base_layer() {
   cp "$REPO/test/fixtures/base-layer/dot-zshrc" "$1/.zshrc"
 }
 
-# Put a stub executable named $1 on PATH; its body is read from stdin.
-# Echoes the directory holding it, for the caller to prepend to PATH.
-stub_cmd() {
+# Directory holding stub executables; prepend it to PATH.
+stub_dir() {
   local dir="${BATS_TEST_TMPDIR:-$BATS_SUITE_TMPDIR}/stubs"
   mkdir -p "$dir"
+  echo "$dir"
+}
+
+# Write a stub executable named $1, body read from stdin.
+#
+# Deliberately does not echo its directory: callers must use stub_dir for that.
+# bash 3.2 -- the system bash, and what CI runs bats under -- terminates a
+# command substitution at the first unbalanced ")" inside a heredoc, so
+# `X="$(stub_cmd foo <<EOF ... case in *bar) ... EOF)"` captures the body and
+# re-parses it as code.
+stub_cmd() {
+  local dir
+  dir="$(stub_dir)"
   cat > "$dir/$1"
   chmod +x "$dir/$1"
-  echo "$dir"
 }
 
 # Run the repo's config as an interactive login shell, with $1 as $HOME.
@@ -77,5 +88,12 @@ run_login_shell() {
 # pty, so it is harness noise rather than a config problem. Everything else on
 # stderr is a genuine failure.
 strip_harness_noise() {
-  grep -v "can't change option: zle" | grep -v '^[[:space:]]*$' || true
+  grep -v "can't change option: zle" \
+    | grep -v '^[[:space:]]*$' \
+    | grep '[[:alpha:]]' \
+    || true
 }
+
+# The final filter drops lines with no letters at all, which is what curl
+# progress bars are ("####### 100.0%"). A plugin download on a cold cache is
+# not a config defect, and any genuine diagnostic contains words.

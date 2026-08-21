@@ -7,7 +7,8 @@ load '../helpers/common'
 setup() {
   TMUX_LOG="$BATS_TEST_TMPDIR/tmux.log"
   : > "$TMUX_LOG"
-  STUBS="$(stub_cmd tmux <<'STUB'
+  STUBS="$(stub_dir)"
+  stub_cmd tmux <<'STUB'
 #!/bin/sh
 echo "$*" >> "$TMUX_LOG"
 case "$*" in
@@ -16,7 +17,6 @@ case "$*" in
 esac
 exit 0
 STUB
-)"
 }
 
 # Call the real autoloaded function with a controlled environment. Output is

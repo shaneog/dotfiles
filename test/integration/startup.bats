@@ -101,11 +101,11 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 }
 
 @test "completions registered by the base layer survive our compinit" {
-  local stubs; stubs="$(stub_cmd aws_completer <<'STUB'
+  local stubs; stubs="$(stub_dir)"
+  stub_cmd aws_completer <<'STUB'
 #!/bin/sh
 exit 0
 STUB
-)"
   run env -i HOME="$HOME_WITH" PATH="$stubs:$PATH" USER="${USER:-tester}" \
     TERM="${TERM:-xterm}" ZSH_NO_TMUX_AUTOSTART=1 "$ZSH_BIN" -lic \
     'print "AWS=${_comps[aws]:-MISSING}"'
