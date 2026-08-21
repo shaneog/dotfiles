@@ -175,3 +175,60 @@ jobs:
             [ ! -L "$HOME_UNDER_TEST/$link" ] || {
               echo "$link survived as a dangling link"; exit 1; }
           done
+
+  bootstrap:
+    name: bootstrap end to end
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      # Casks are gigabytes and most of them need a GUI. brew bundle can skip
+      # named dependencies through the environment, so neither the Brewfile nor
+      # the script needs a test-only escape hatch.
+      - name: Skip the casks
+        run: |
+          casks="$(grep -oE "^cask '[^']+'" Brewfile | cut -d\' -f2 | tr '\n' ' ')"
+          echo "HOMEBREW_BUNDLE_CASK_SKIP=$casks" >> "$GITHUB_ENV"
+
+      # Takes the fresh-machine branch -- a real clone into ~/.dotfiles, rather
+      # than the pull branch -- but sourced from the checkout, so it is the code
+      # under test and not whatever main happens to be.
+      - name: Run script/bootstrap
+        run: |
+          HOME_UNDER_TEST="$RUNNER_TEMP/home"
+          echo "HOME_UNDER_TEST=$HOME_UNDER_TEST" >> "$GITHUB_ENV"
+          mkdir -p "$HOME_UNDER_TEST"
+          ref="$(git rev-parse --abbrev-ref HEAD)"
+          [ "$ref" = "HEAD" ] && ref=""    # detached: let it clone the default
+          HOME="$HOME_UNDER_TEST" \
+            DOTFILES_URL="$GITHUB_WORKSPACE" \
+            DOTFILES_REF="$ref" \
+            ./script/bootstrap
+
+      - name: It cloned into ~/.dotfiles and linked from there
+        run: |
+          set -x
+          [ -d "$HOME_UNDER_TEST/.dotfiles/.git" ]
+          [ "$HOME_UNDER_TEST/.zshenv" -ef "$HOME_UNDER_TEST/.dotfiles/config/zsh/.zshenv" ]
+          [ "$HOME_UNDER_TEST/.config" -ef "$HOME_UNDER_TEST/.dotfiles/config" ]
+          [ "$HOME_UNDER_TEST/.Brewfile" -ef "$HOME_UNDER_TEST/.dotfiles/Brewfile" ]
+
+      - name: It applied the macOS defaults
+        run: |
+          [ "$(defaults read com.apple.dock tilesize)" = "48" ]
+
+      - name: It installed what the Brewfile asks for
+        run: |
+          for f in starship fzf direnv tmux neovim; do
+            brew list --formula --versions "$f" >/dev/null || {
+              echo "bootstrap did not install $f"; exit 1; }
+          done
+
+      - name: The bootstrapped machine has a working shell
+        run: |
+          HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
+            zsh -lic 'print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"' \
+            | tee shell.out
+          grep -q "starship=1 direnv=1 fzf=1 dump=yes" shell.out || {
+            echo "the bootstrapped machine has an incomplete shell"; exit 1; }
