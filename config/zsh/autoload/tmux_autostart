@@ -1,0 +1,24 @@
+# Attach to (or start) a personal tmux session.
+#
+# Deliberately an allowlist: only a real Terminal.app window qualifies, which
+# leaves IDE terminals, ssh sessions, scripts and tool-spawned shells alone.
+# TERM_PROGRAM is simply unset in most of those, so a denylist can't work.
+# Set ZSH_NO_TMUX_AUTOSTART to opt out for a single shell.
+
+[[ -o interactive ]]                        || return 0
+[[ -z "$TMUX" ]]                            || return 0
+[[ "$TERM_PROGRAM" == "Apple_Terminal" ]]   || return 0
+[[ -z "$ZSH_NO_TMUX_AUTOSTART" ]]           || return 0
+(( $+commands[tmux] ))                      || return 0
+
+# Called before the alias in lib/tmux.zsh exists, so name the config outright
+local -a tmux_cmd=(tmux -f "${XDG_CONFIG_HOME}/tmux/tmux.conf")
+local session=${USER//./}
+
+if $tmux_cmd has-session -t "$session" 2>/dev/null; then
+  # Only attach when nothing else is on this session, so we never steal it
+  [[ -z "$($tmux_cmd list-clients -t "$session" 2>/dev/null)" ]] || return 0
+  $tmux_cmd attach-session -t "$session"
+else
+  $tmux_cmd new-session -s "$session"
+fi
