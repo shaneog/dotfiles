@@ -95,3 +95,13 @@ load '../helpers/common'
     grep -q "bats.*test/$tier" "$wf" || { echo "CI never runs test/$tier"; return 1; }
   done
 }
+
+@test "no stray runtime state is lurking under config/" {
+  # ~/.config is a symlink into this repo, so tools write their state here.
+  # Anything new must be a deliberate decision: track it, or ignore it.
+  # Left alone, an allowlisted directory can silently accumulate state that a
+  # broad `git add` would then publish.
+  local stray
+  stray="$(cd "$REPO" && git ls-files --others --exclude-standard -- config/)"
+  [ -z "$stray" ] || { echo "untracked and unignored under config/:"; echo "$stray"; return 1; }
+}

@@ -26,6 +26,8 @@ config/tmux/plugins
 
 # homebrew
 !config/homebrew
+# runtime state: brew writes into $XDG_CONFIG_HOME/homebrew
+config/homebrew/trust.json*
 
 # karabiner
 !config/karabiner
