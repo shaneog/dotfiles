@@ -114,8 +114,23 @@ brew trust --formula cirruslabs/cli/softnet
 brew install cirruslabs/cli/tart
 ```
 
-Expect tens of gigabytes for the base image and the better part of an hour for a
-full run. `script/bootstrap` is pointed at a copy of the working tree via
+The base image is tens of gigabytes on first use, but it is cached after that,
+and a full run is quicker than you would think. Measured on macOS 26:
+
+| | |
+| ------------- | ------------- |
+| Pulling the base image (once) | 546s |
+| Boot, ssh, copy the tree in | ~20s |
+| `script/bootstrap`, of which | 161s |
+| &nbsp;&nbsp;Homebrew from scratch | 11s |
+| &nbsp;&nbsp;`script/macos` | 121s |
+| &nbsp;&nbsp;Brewfile, formulae only | 24s |
+| &nbsp;&nbsp;`after-setup` | 27s |
+| First login shell, installing every plugin | 22s |
+| **Whole run, image cached** | **201s** |
+
+So a bare machine reaches a working shell in about three minutes, plus whatever
+the casks cost. `script/macos` is most of it. `script/bootstrap` is pointed at a copy of the working tree via
 `DOTFILES_URL`, so it installs the current branch rather than whatever is on the
 default one.
 

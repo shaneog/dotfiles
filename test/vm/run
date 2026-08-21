@@ -25,7 +25,20 @@ VM_PASS="${VM_PASS:-admin}"
 KEEP=""
 [ "${1:-}" = "--keep" ] && KEEP=1
 
-say()  { printf '\n==> %s\n' "$*"; }
+TIMINGS="${TMPDIR:-/tmp}/dotfiles-vm-timings.txt"
+: > "$TIMINGS"
+STARTED=$(date +%s)
+PHASE_AT=$STARTED
+PHASE_NAME=""
+
+# Doubles as the phase marker: each one closes the previous phase, so the
+# breakdown comes out of the narration rather than being maintained separately.
+say() {
+  local now; now=$(date +%s)
+  [ -n "$PHASE_NAME" ] && printf '%6ds  %s\n' "$((now - PHASE_AT))" "$PHASE_NAME" >> "$TIMINGS"
+  PHASE_NAME="$*"; PHASE_AT=$now
+  printf '\n==> %s\n' "$*"
+}
 die()  { printf '\n!!! %s\n' "$*" >&2; exit 1; }
 
 # --- preflight --------------------------------------------------------------
@@ -54,6 +67,10 @@ cleanup() {
     tart stop "$VM_NAME" >/dev/null 2>&1 || true
     tart delete "$VM_NAME" >/dev/null 2>&1 || true
   fi
+  say "finished"
+  printf '\n=== timings ===\n'
+  cat "$TIMINGS"
+  printf '%6ds  TOTAL\n' "$(( $(date +%s) - STARTED ))"
   rm -rf "$WORK"
   exit $status
 }

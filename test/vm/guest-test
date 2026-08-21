@@ -4,8 +4,37 @@
 # way a new machine does, then asserts what came out.
 set -euo pipefail
 
-say() { printf '\n--> %s\n' "$*"; }
+GUEST_STARTED=$(date +%s)
+PHASE_AT=$GUEST_STARTED
+PHASE_NAME=""
+TIMINGS="$HOME/vmtest/timings.txt"
+
+say() {
+  local now; now=$(date +%s)
+  [ -n "$PHASE_NAME" ] && printf '%6ds  %s\n' "$((now - PHASE_AT))" "$PHASE_NAME" >> "$TIMINGS"
+  PHASE_NAME="$*"; PHASE_AT=$now
+  printf '\n--> %s\n' "$*"
+}
 die() { printf '\n!!! %s\n' "$*" >&2; exit 1; }
+
+report_timings() {
+  say "finished"
+  printf '\n=== guest timings ===\n'
+  cat "$TIMINGS"
+  printf '%6ds  GUEST TOTAL\n' "$(( $(date +%s) - GUEST_STARTED ))"
+  # bootstrap logs its own phases, so timestamping its output breaks down where
+  # the time inside it actually went
+  if [ -s "$HOME/vmtest/bootstrap.log" ]; then
+    printf '\n=== inside script/bootstrap ===\n'
+    awk '/^[0-9]+ --> / {
+           if (prev_t) printf "%6ds  %s\n", $1 - prev_t, prev_m
+           prev_t = $1; $1 = ""; prev_m = $0
+         }
+         END { if (prev_t) printf "%6ds  %s (to end)\n", ts - prev_t, prev_m }' \
+      ts="$(date +%s)" "$HOME/vmtest/bootstrap.log"
+  fi
+}
+trap report_timings EXIT
 
 SRC="$HOME/dotfiles-src"
 [ -d "$SRC" ] || die "no source tree at $SRC"
@@ -23,7 +52,21 @@ if command -v brew >/dev/null 2>&1; then die "Homebrew is already installed"; fi
 say "running script/bootstrap"
 # Installs from the copied tree instead of the default branch, so this exercises
 # the code in front of us.
-DOTFILES_URL="$SRC" "$SRC/script/bootstrap"
+mkdir -p "$HOME/vmtest"
+# Stamp only bootstrap's own phase markers. systime() is a gawk extension and a
+# fresh macOS has BSD awk, and stamping every line would fork date thousands of
+# times during the Homebrew install.
+stamp_markers() {
+  while IFS= read -r line; do
+    case "$line" in
+      "--> "*) printf '%s %s\n' "$(date +%s)" "$line" ;;
+      *)       printf '    %s\n' "$line" ;;
+    esac
+  done
+}
+DOTFILES_URL="$SRC" "$SRC/script/bootstrap" 2>&1 \
+  | stamp_markers \
+  | tee "$HOME/vmtest/bootstrap.log"
 
 say "Homebrew was installed from scratch"
 [ -x /opt/homebrew/bin/brew ] || die "bootstrap did not install Homebrew"
