@@ -24,6 +24,11 @@ brew 'tmux'
 brew 'wget'
 brew 'yq'
 
+# Testing
+brew 'bats-core'
+brew 'hyperfine'
+brew 'shellcheck'
+
 # Apps
 cask '1password'
 cask '1password-cli'
