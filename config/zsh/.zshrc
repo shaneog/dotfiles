@@ -1,5 +1,21 @@
 #!/usr/bin/env zsh
 
+# Guard against double-sourcing, in case $HOME/.zshrc also sources this file.
+[[ -n "$__DOTFILES_ZSHRC" ]] && return
+__DOTFILES_ZSHRC=1
+
+##
+# Base layer
+##
+# Layer on top of an existing rc file, if there is one, so anything configured
+# below wins. Guard: when ZDOTDIR is unset this file *is* $HOME/.zshrc, and
+# sourcing it would recurse.
+__dotfiles_zdotdir=${${ZDOTDIR:-$HOME}:A}
+if [[ "$__dotfiles_zdotdir" != "${HOME:A}" && -r "$HOME/.zshrc" ]]; then
+  source "$HOME/.zshrc"
+fi
+unset __dotfiles_zdotdir
+
 ##
 # Zinit
 ##
@@ -49,6 +65,13 @@ else
 fi
 
 zinit cdreplay -q
+
+# compinit above resets $_comps, which drops completions the base layer
+# registered through bashcompinit. Re-register the ones we know about.
+if (( $+commands[aws_completer] )) && (( ! $+_comps[aws] )); then
+  autoload -Uz bashcompinit && bashcompinit
+  complete -C "$commands[aws_completer]" aws
+fi
 
 # Use a local zshrc, if exists
 if [[ -f "$HOME/.zshrc.local" ]]; then
