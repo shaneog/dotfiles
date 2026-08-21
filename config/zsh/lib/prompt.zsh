@@ -1,5 +1,9 @@
 #!/usr/bin/env zsh
 
+# A dumb terminal (Emacs shell-mode, some CI) has no cursor control, and
+# starship errors on every prompt there. Leave zsh's default prompt alone.
+[[ "$TERM" == "dumb" ]] && return
+
 # Tear down a prompt the base layer may have installed. starship overwrites
 # $PROMPT regardless, but pure's hooks would go on running async git work for a
 # prompt that is no longer drawn.
