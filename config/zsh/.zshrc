@@ -5,6 +5,35 @@
 __DOTFILES_ZSHRC=1
 
 ##
+# tmux
+##
+# Attach (or start) a session before anything below runs, so the outer shell
+# doesn't pay for an init it is about to replace; the rest of this file runs on
+# detach. An allowlist rather than a denylist: only a real Terminal.app window
+# qualifies, which leaves IDE terminals, ssh sessions, scripts and any
+# tool-spawned shell alone (TERM_PROGRAM is simply unset in most of those).
+if [[ -o interactive ]] \
+  && [[ -z "$TMUX" ]] \
+  && [[ "$TERM_PROGRAM" == "Apple_Terminal" ]] \
+  && [[ -z "$ZSH_NO_TMUX_AUTOSTART" ]] \
+  && (( $+commands[tmux] )); then
+  # Called before the alias in lib/tmux.zsh exists, so name the config outright
+  __dotfiles_tmux=(tmux -f "${XDG_CONFIG_HOME}/tmux/tmux.conf")
+  __dotfiles_tmux_session=${USER//./}
+
+  if $__dotfiles_tmux has-session -t "$__dotfiles_tmux_session" 2>/dev/null; then
+    # Only attach when nothing else is on this session, so we never steal it
+    if [[ -z "$($__dotfiles_tmux list-clients -t "$__dotfiles_tmux_session" 2>/dev/null)" ]]; then
+      $__dotfiles_tmux attach-session -t "$__dotfiles_tmux_session"
+    fi
+  else
+    $__dotfiles_tmux new-session -s "$__dotfiles_tmux_session"
+  fi
+
+  unset __dotfiles_tmux __dotfiles_tmux_session
+fi
+
+##
 # Base layer
 ##
 # Layer on top of an existing rc file, if there is one, so anything configured
