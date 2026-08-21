@@ -46,14 +46,15 @@ zinit snippet PZTM::completion
 # Enable zsh corrections
 setopt CORRECT
 
-# Environment
-EDITOR="nvim"
-VISUAL=$VISUAL
-PAGER="less"
+# Environment. Exported, so child processes (sudoedit, crontab, tools that
+# shell out to a pager) see them too.
+export EDITOR="nvim"
+export VISUAL="$EDITOR"
+export PAGER="less"
 
 # Default less options
 # Mouse-wheel scrolling has been disabled by -X (disable screen clearing).
-LESS="-F -g -i -M -R -S -w -X -z-4"
+export LESS="-F -g -i -M -R -S -w -X -z-4"
 
 # Fix for https://openradar.appspot.com/27348363
 ssh-add --apple-load-keychain 2>/dev/null
