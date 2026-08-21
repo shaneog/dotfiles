@@ -10,13 +10,36 @@ To install, run the following command:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/shaneog/dotfiles/HEAD/script/bootstrap)"
 ```
 
-### Keybase/GPG
-
-To import a PGP key from Keybase.io:
+To install from somewhere other than the default branch -- a branch you are
+still working on, a fork, a mirror, or a copy on a drive, which is handy on a
+machine that has no GitHub credentials yet:
 
 ```sh
-keybase pgp export --secret | gpg --allow-secret-key-import --import
+DOTFILES_URL=/Volumes/stick/dotfiles ./script/bootstrap
+DOTFILES_REF=some-branch ./script/bootstrap
 ```
+
+### Commit signing (required)
+
+`.config/git/config` turns on SSH commit signing unconditionally, but the key
+itself is machine-specific, so **`~/.gitconfig-user` has to exist before the
+first commit on a new machine**. Without it git fails with *either
+user.signingkey or gpg.ssh.defaultKeyCommand needs to be configured*.
+
+```
+[user]
+	name = Your Name
+	email = you@example.com
+	signingkey = ssh-ed25519 AAAA...        # the public key, not a path
+```
+
+Signing goes through 1Password's `op-ssh-sign`, so 1Password needs to be
+installed and its SSH agent enabled (Settings, Developer, Use the SSH agent).
+`git log --show-signature` verifies against `.config/git/allowed_signers`.
+
+As an alternative to naming a key, `gpg.ssh.defaultKeyCommand = ssh-add -L`
+signs with whatever the agent lists first -- convenient, but it silently
+follows the agent's ordering.
 
 ### Local Overrides
 
@@ -31,6 +54,14 @@ The following files allow for local overrides:
 
 To ignore local changes to already committed files such as `.ssh/config-local`, use `git update-index --skip-worktree <file>`.
 
+### Environment Knobs
+
+| Variable | Effect |
+| ------------- | ------------- |
+| `ZSH_NO_TMUX_AUTOSTART` | Don't attach a tmux session for this shell. Autostart only ever fires from Terminal.app, so editors, IDE terminals, ssh sessions and scripts are already left alone. |
+| `ZSH_NO_ZCOMPILE` | Skip the background compile of the completion dump. |
+| `DOTFILES_URL`, `DOTFILES_REF` | Where `script/bootstrap` installs from. |
+
 ### Screenshots
 
 #### Gotham Theme
@@ -41,7 +72,56 @@ To ignore local changes to already committed files such as `.ssh/config-local`, 
 
 ---
 
+## Tests
+
+```sh
+make test              # everything, about 35s
+make test-static       # parsing and linting, no side effects
+make test-unit         # capability guards and autoloaded functions
+make test-integration  # the real startup chain in a disposable $HOME
+```
+
+Layering is covered by a fixture that impersonates a managed shell setup owning
+`~/.zprofile` and `~/.zshrc`, so the tests behave the same on a machine that has
+no such setup, and both configurations are asserted.
+
+Two suites are opt-in, being slow or noisy:
+
+```sh
+DOTFILES_COLD_CACHE=1 make test-integration   # install from an empty plugin cache
+SKIP_PERF=1 make test-integration             # (default in CI) skip startup timing
+```
+
+The suite has to pass under **bash 3.2**, which is what a stock Mac and the CI
+runners provide, and which parses some things differently to a modern bash:
+
+```sh
+/bin/bash "$(command -v bats)" test/static test/unit test/integration
+```
+
+Two workflows run it. `test` runs the suite on every push, against both the
+system and Homebrew zsh. `provision` runs the scripts that set up a machine --
+`bootstrap`, `setup`, `macos`, `remove` -- for real on disposable runners,
+weekly and on demand, since they otherwise only ever run on a new machine.
+
+---
+
 ## ZSH Performance
+
+Currently **~200ms** for an interactive login shell in isolation, and ~320ms on
+a machine that also has a managed shell setup layered underneath. Measured with
+`hyperfine`, and guarded by a budget in `test/integration/perf.bats`:
+
+```sh
+hyperfine --warmup 3 'zsh -lic exit'
+```
+
+Most of what remains is plugin loading. Two things dominated it historically and
+are worth remembering: a completion dump that was never cached cost ~340ms per
+shell, and compiling the zsh sources to `.zwc` saved nothing measurable.
+
+The runs below are a historical log, kept for the shape of the curve rather than
+as current figures.
 
 Benchmark Details:
 - macOS Monterey 12.2.1
