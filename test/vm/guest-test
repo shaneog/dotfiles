@@ -95,6 +95,28 @@ case "$out" in
   *) die "the shell came up incomplete" ;;
 esac
 
+# Asserting that after-setup and the tmux config *worked*, not merely that they
+# ran. after-setup hung indefinitely on a fresh machine until recently, and CI
+# reported it green throughout.
+say "neovim plugins were actually installed"
+plugged="$HOME/.config/nvim/plugged"
+nvim_count="$(find "$plugged" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
+[ "${nvim_count:-0}" -ge 1 ] || die "after-setup ran but installed no plugins"
+echo "    $nvim_count plugins"
+
+say "tmux bootstraps its own plugins on first start"
+tmux -f "$HOME/.config/tmux/tmux.conf" new-session -d -s probe
+tmux_count=0
+for _ in $(seq 1 60); do
+  tmux_count="$(find "$HOME/.config/tmux/plugins" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
+  [ "${tmux_count:-0}" -ge 3 ] && break
+  sleep 2
+done
+tmux kill-server 2>/dev/null || true
+[ "${tmux_count:-0}" -ge 3 ] \
+  || die "tmux installed $tmux_count plugin directories, expected tpm plus the configured ones"
+echo "    $tmux_count plugin directories"
+
 say "a second login shell is silent"
 TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic 'true' 2>"$HOME/vmtest/second.err"
 noise="$(grep -v "can't change option: zle" "$HOME/vmtest/second.err" | grep '[[:alpha:]]' || true)"
