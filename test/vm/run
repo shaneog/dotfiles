@@ -137,11 +137,21 @@ tar -C "$REPO/test/vm" -cf - guest-test | vm 'tar -C ~/vmtest -xf -'
 
 casks="$(grep -oE "^cask '[^']+'" "$REPO/Brewfile" | cut -d\' -f2 | tr '\n' ' ')"
 
+# A hang inside the guest should cost minutes, not the afternoon: script/macos
+# and after-setup have both blocked on prompts nobody could answer.
+VM_TIMEOUT="${VM_TIMEOUT:-1800}"
+( sleep "$VM_TIMEOUT"
+  printf '\n!!! timed out after %ss, stopping the VM\n' "$VM_TIMEOUT" >&2
+  tart stop "$VM_NAME" >/dev/null 2>&1 ) &
+WATCHDOG=$!
+
 say "installing, inside the VM"
 vm "chmod +x ~/vmtest/guest-test && \
     VM_PASS='$VM_PASS' \
     HOMEBREW_BUNDLE_CASK_SKIP='$casks' \
     VM_RUN_SUITE='${VM_RUN_SUITE:-}' \
     ~/vmtest/guest-test"
+
+kill "$WATCHDOG" 2>/dev/null || true
 
 say "PASSED: a fresh macOS machine installs and comes up correctly"

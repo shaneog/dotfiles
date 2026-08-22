@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
 
-# Install neovim plugins
-nvim +PlugInstall +qall
+# Install neovim plugins.
+#
+# Headless, with stdin closed, and run twice.
+#
+# On a new machine init.vim curls vim-plug and registers a VimEnter autocmd to
+# run PlugInstall -- but plug.vim cannot be used by the start that fetched it, so
+# the first nvim reports an undefined function. An interactive nvim then sits on
+# a "Press ENTER" prompt indefinitely, which hung an entire bootstrap in a fresh
+# VM. CI never caught it because a runner's stdin is already /dev/null.
+#
+# The first pass fetches vim-plug; the second can actually install with it.
+if ! command -v nvim >/dev/null 2>&1; then
+	echo "Skipping neovim plugins: nvim is not installed"
+	exit 0
+fi
+
+nvim --headless "+qall" </dev/null 2>/dev/null || true
+nvim --headless "+PlugInstall" "+qall" </dev/null
