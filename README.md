@@ -121,16 +121,22 @@ and a full run is quicker than you would think. Measured on macOS 26:
 | ------------- | ------------- |
 | Pulling the base image (once) | 546s |
 | Boot, ssh, copy the tree in | ~20s |
-| `script/bootstrap`, of which | 161s |
-| &nbsp;&nbsp;Homebrew from scratch | 11s |
-| &nbsp;&nbsp;`script/macos` | 121s |
-| &nbsp;&nbsp;Brewfile, formulae only | 24s |
-| &nbsp;&nbsp;`after-setup` | 27s |
-| First login shell, installing every plugin | 22s |
-| **Whole run, image cached** | **201s** |
+| `script/bootstrap`, of which | 44s |
+| &nbsp;&nbsp;Homebrew from scratch | 10s |
+| &nbsp;&nbsp;`script/macos` | 1s |
+| &nbsp;&nbsp;Brewfile, formulae only | 29s |
+| &nbsp;&nbsp;`after-setup` | 30s |
+| First login shell, installing every plugin | 24s |
+| **Whole run, image cached** | **95s** |
 
-So a bare machine reaches a working shell in about three minutes, plus whatever
-the casks cost. `script/macos` is most of it. `script/bootstrap` is pointed at a copy of the working tree via
+So a bare machine reaches a working shell inside two minutes, plus whatever the
+casks cost.
+
+This test has earned its keep twice. `script/macos` used to take 121s of that,
+all of it an AppleScript waiting on an AppleEvent that a headless machine can
+never deliver. And `after-setup` could hang indefinitely on a "Press ENTER"
+prompt -- intermittently, which is why it needed a real machine to catch: CI
+passed it every time, because a runner hands every step /dev/null on stdin. `script/bootstrap` is pointed at a copy of the working tree via
 `DOTFILES_URL`, so it installs the current branch rather than whatever is on the
 default one.
 
