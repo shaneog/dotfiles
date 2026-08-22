@@ -165,10 +165,11 @@ load '../helpers/common'
 
 @test "no secrets in the history" {
   command -v gitleaks >/dev/null || skip "gitleaks not installed"
-  # format.pretty is set in config/git/config, and a custom log format stops
-  # gitleaks finding commit boundaries: it reports "0 commits scanned" and then
-  # "no leaks found", which reads as a pass. Neutralise it here rather than
-  # trusting whatever config the caller happens to have.
+  # A custom format.pretty stops gitleaks finding commit boundaries: it reports
+  # "0 commits scanned" and then "no leaks found", which reads exactly like a
+  # pass. This repo no longer sets one, but the caller's own config might, so
+  # neutralise it rather than trusting the environment -- and fail below if
+  # nothing was actually scanned.
   run env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=format.pretty GIT_CONFIG_VALUE_0=medium \
     gitleaks git --no-banner --redact --exit-code 1 "$REPO"
   echo "$output"

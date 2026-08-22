@@ -11,6 +11,12 @@
 
   lg = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
 
+  # Date-first one-liner. This was format.pretty, which made it the default for
+  # every `git log` -- and a non-standard default breaks anything that parses
+  # git's output. gitleaks, for one, silently scanned zero commits and reported
+  # no leaks found.
+  l = log --format=format:'%C(blue)%ad%Creset %C(yellow)%h%C(green)%d%Creset %C(blue)%s %C(magenta) [%an]%Creset'
+
   patch = !git --no-pager diff --no-color
 
   cleanup = "!git branch -vv | grep ': gone]' |  grep -v '\\*' | awk '{ print $1; }' | xargs -r git branch -d"
@@ -20,9 +26,6 @@
   editor = nvim
   pager = diff-so-fancy | less --tabs=4 -RFX
   excludesfile = ~/.config/git/ignore
-
-[format]
-  pretty = format:%C(blue)%ad%Creset %C(yellow)%h%C(green)%d%Creset %C(blue)%s %C(magenta) [%an]%Creset
 
 [merge]
   ff = only
