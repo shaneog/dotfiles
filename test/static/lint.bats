@@ -62,11 +62,23 @@ load '../helpers/common'
 }
 
 @test "tmux config loads without error" {
-  run tmux -L dotfiles-test -f "$REPO/config/tmux/tmux.conf" \
+  # The config bootstraps TPM by cloning it, so hand it a throwaway HOME with a
+  # stub already in place. Otherwise this "static" test clones eight plugins over
+  # the network -- into this repo, since ~/.config is a symlink to it.
+  local home="$BATS_TEST_TMPDIR/home"
+  mkdir -p "$home/.config/tmux/plugins/tpm"
+  printf '#!/bin/sh\nexit 0\n' > "$home/.config/tmux/plugins/tpm/tpm"
+  chmod +x "$home/.config/tmux/plugins/tpm/tpm"
+
+  run env HOME="$home" tmux -L dotfiles-test -f "$REPO/config/tmux/tmux.conf" \
     new-session -d -s probe
   [ "$status" -eq 0 ] || echo "$output"
   tmux -L dotfiles-test kill-server 2>/dev/null || true
   [ "$status" -eq 0 ]
+
+  # and nothing was fetched
+  [ "$(ls "$home/.config/tmux/plugins")" = "tpm" ] \
+    || { echo "the config fetched plugins during a static test"; return 1; }
 }
 
 @test "Brewfile is parseable and declares the test tooling" {
@@ -149,4 +161,19 @@ load '../helpers/common'
     echo "add a specific rule to .gitignore, or to .git/info/exclude if it should not be published"
     return 1
   fi
+}
+
+@test "no secrets in the history" {
+  command -v gitleaks >/dev/null || skip "gitleaks not installed"
+  # format.pretty is set in config/git/config, and a custom log format stops
+  # gitleaks finding commit boundaries: it reports "0 commits scanned" and then
+  # "no leaks found", which reads as a pass. Neutralise it here rather than
+  # trusting whatever config the caller happens to have.
+  run env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=format.pretty GIT_CONFIG_VALUE_0=medium \
+    gitleaks git --no-banner --redact --exit-code 1 "$REPO"
+  echo "$output"
+  [ "$status" -eq 0 ] || { echo "gitleaks found something in the history"; return 1; }
+  # a scan that scanned nothing is not a pass
+  echo "$output" | grep -qE "[1-9][0-9]* commits scanned" \
+    || { echo "gitleaks scanned no commits, so this proved nothing"; return 1; }
 }

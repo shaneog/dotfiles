@@ -76,7 +76,7 @@ To ignore local changes to already committed files such as `.ssh/config-local`, 
 
 ```sh
 make test              # everything, about 35s
-make test-static       # parsing and linting, no side effects
+make test-static       # parsing, linting and a secret scan
 make test-unit         # capability guards and autoloaded functions
 make test-integration  # the real startup chain in a disposable $HOME
 ```
