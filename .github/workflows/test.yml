@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Nothing here is pinned -- zinit takes whatever is on master and the Brewfile
+  # has no versions -- so upstream breakage would otherwise arrive silently, in a
+  # shell rather than in a notification.
+  schedule:
+    - cron: '23 7 * * 1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Install tooling
-        run: brew install bats-core shellcheck jq tmux
+        run: brew install bats-core shellcheck jq tmux gitleaks
       - name: Lint and parse every config
         run: bats --print-output-on-failure test/static
 

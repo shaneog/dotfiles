@@ -29,6 +29,7 @@ brew 'yq'
 
 # Testing
 brew 'bats-core'
+brew 'gitleaks'
 brew 'hyperfine'
 brew 'shellcheck'
 
