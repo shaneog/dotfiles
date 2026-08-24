@@ -98,11 +98,17 @@ esac
 # Asserting that after-setup and the tmux config *worked*, not merely that they
 # ran. after-setup hung indefinitely on a fresh machine until recently, and CI
 # reported it green throughout.
-say "neovim plugins were actually installed"
-plugged="$HOME/.config/nvim/plugged"
-nvim_count="$(find "$plugged" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
-[ "${nvim_count:-0}" -ge 1 ] || die "after-setup ran but installed no plugins"
+say "neovim plugins and parsers were actually installed"
+lazy="$HOME/.local/share/nvim/lazy"
+nvim_count="$(find "$lazy" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
+[ "${nvim_count:-0}" -ge 5 ] || die "after-setup ran but installed no plugins"
 echo "    $nvim_count plugins"
+# Parsers are the half that fails quietly: without tree-sitter-cli, install()
+# reports success and builds nothing, and highlighting simply never happens.
+parsers="$HOME/.local/share/nvim/site/parser"
+parser_count="$(find "$parsers" -name '*.so' 2>/dev/null | wc -l | tr -d ' ')"
+[ "${parser_count:-0}" -ge 10 ] || die "after-setup installed $parser_count treesitter parsers"
+echo "    $parser_count treesitter parsers"
 
 say "tmux bootstraps its own plugins on first start"
 tmux -f "$HOME/.config/tmux/tmux.conf" new-session -d -s probe

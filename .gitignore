@@ -21,9 +21,8 @@ config/uv/
 !config/starship.toml
 
 # neovim
+# lazy.nvim keeps plugins under stdpath("data"), so nothing it writes lands here
 !config/nvim/
-config/nvim/autoload
-config/nvim/plugged
 
 # tmux
 !config/tmux/

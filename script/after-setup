@@ -1,22 +1,43 @@
 #!/usr/bin/env bash
 
-# Install neovim plugins.
+# Install neovim's plugins and treesitter parsers.
 #
-# Headless, with stdin closed, and run twice.
+# Headless, with stdin closed. An interactive nvim on a fresh machine can sit on
+# a "Press ENTER" prompt indefinitely, which hung an entire bootstrap in a VM
+# once; CI never caught it because a runner's stdin is already /dev/null.
 #
-# On a new machine init.vim curls vim-plug and registers a VimEnter autocmd to
-# run PlugInstall -- but plug.vim cannot be used by the start that fetched it, so
-# the first nvim reports an undefined function. An interactive nvim then sits on
-# a "Press ENTER" prompt indefinitely, which hung an entire bootstrap in a fresh
-# VM. CI never caught it because a runner's stdin is already /dev/null.
+# Two passes, for two different reasons:
 #
-# The first pass fetches vim-plug; the second can actually install with it.
+#   1. `Lazy! sync` clones the plugins. The bang makes it wait rather than
+#      returning while clones are still running.
+#   2. nvim-treesitter's install() is asynchronous, so a headless nvim would
+#      exit before any parser finished building. install():wait() is the
+#      documented way to block, and needs tree-sitter-cli from the Brewfile --
+#      without it the call reports success and installs nothing at all.
 set -euo pipefail
 
 if ! command -v nvim >/dev/null 2>&1; then
-	echo "Skipping neovim plugins: nvim is not installed"
+	echo "Skipping neovim setup: nvim is not installed"
 	exit 0
 fi
 
-nvim --headless "+qall" </dev/null 2>/dev/null || true
-nvim --headless "+PlugInstall" "+qall" </dev/null
+nvim --headless "+Lazy! sync" +qa </dev/null
+
+if ! command -v tree-sitter >/dev/null 2>&1; then
+	echo "Skipping treesitter parsers: tree-sitter-cli is not installed"
+	exit 0
+fi
+
+nvim --headless -c 'lua
+local seen, list = {}, {}
+for _, parser in pairs(require("parsers")) do
+  if not seen[parser] then
+    seen[parser] = true
+    list[#list + 1] = parser
+  end
+end
+table.sort(list)
+require("nvim-treesitter").install(list):wait(600000)
+local installed = require("nvim-treesitter").get_installed("parsers")
+io.stdout:write(("installed %d of %d treesitter parsers\n"):format(#installed, #list))
+' +qa </dev/null

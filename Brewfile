@@ -18,6 +18,7 @@ brew 'neovim'
 brew 'ripgrep'
 brew 'starship'
 brew 'tmux'
+brew 'tree-sitter-cli'
 brew 'wget'
 brew 'yq'
 
