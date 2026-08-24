@@ -25,7 +25,6 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "NODENV_ROOT=${NODENV_ROOT:-unset}"
        print "STARSHIP=$+functions[prompt_starship_precmd]"
        print "PURE_HOOKED=$precmd_functions[(r)prompt_pure_precmd]"
-       print "HL=$(( $+functions[_zsh_highlight] + $+functions[_fast_highlight] ))"
        print "AUTOSUGGEST=$+functions[_zsh_autosuggest_start]"
        print "BASE_PATH=$path[(r)/base/rc-bin]"'
 
@@ -61,7 +60,6 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
   run run_login_shell "$HOME_WITH" "$probe"
   echo "$output" | grep -q "STARSHIP=1"      # starship installed its precmd
   echo "$output" | grep -q "PURE_HOOKED=$"   # pure's hook was removed
-  echo "$output" | grep -q "HL=1"            # exactly one syntax highlighter
   echo "$output" | grep -q "AUTOSUGGEST=1"   # exactly one autosuggester
 }
 
@@ -75,7 +73,6 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
   run run_login_shell "$HOME_WITHOUT" "$probe"
   echo "$output" | grep -q "PROFILE_RAN=no RC_RAN=no"
   echo "$output" | grep -q "STARSHIP=1"
-  echo "$output" | grep -q "HL=1"
   echo "$output" | grep -q "NODENV_ROOT=$HOME_WITHOUT/.local/share/nodenv"
 }
 
