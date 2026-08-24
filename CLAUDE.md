@@ -60,13 +60,16 @@ dependency that "must" have been inert wasn't.
 
 ## Habits
 
-- **Conventional Commits, with a body of one to three sentences.** Say why the
-  change exists, or what was broken. Subject-only is for changes that explain
-  themselves — a rename, a typo. Cut the process (what was checked, what was
-  measured unless the number is the point), anything a comment in the diff
-  already says, and anything about the author. A longer body is for a failure
-  mode that was silent, where the next person's instinct would be to write the
-  same bug again.
+- **Conventional Commits, with a body as long as the change has decisions in
+  it.** Say why, or what was broken; the diff already says what. One decision is
+  a sentence or two. Nine independent decisions — nine Brewfile entries dropped
+  for nine different reasons — earn a line each, because none of them can be
+  read off the diff. Subject-only suits a rename or a typo.
+
+  Cut regardless of length: the process (what was checked; what was measured,
+  unless the number is the point), anything a comment in the diff already says,
+  and anything about the author. Four paragraphs for adding one plugin was all
+  three of those at once.
 - **Comments explain the code as it is; what it used to be goes in the commit
   message.** A config file read in a year should not be a changelog. "Declared
   conditionally, because unconditional RGB breaks 256-color terminals" belongs in
