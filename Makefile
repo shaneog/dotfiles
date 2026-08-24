@@ -19,3 +19,8 @@ test-vm:
 	test/vm/run
 
 lint: test-static
+
+# Upstream rot: renamed, deprecated or archived packages, plus tools the config
+# invokes that no Brewfile installs. Runs weekly in CI; this is the same check.
+audit:
+	./script/audit

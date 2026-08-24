@@ -1,0 +1,45 @@
+name: audit
+
+on:
+  workflow_dispatch:
+  # Packages get renamed, deprecated and archived on upstream's schedule, not
+  # ours. This is the afternoon spent auditing the Brewfile by hand, on a cron.
+  schedule:
+    - cron: '41 7 * * 1'
+
+# Reads the repo, queries Homebrew and the GitHub API, writes nothing back.
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: upstream audit
+    # macOS because the checks are Homebrew's: rename, deprecation, disablement.
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Audit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          script/audit | tee "$RUNNER_TEMP/audit.txt"
+
+      # The log is the report, so put it where a failure notification can be read
+      # without opening the job.
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo '## Upstream audit'
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/audit.txt" 2>/dev/null || echo 'the audit produced no output'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
