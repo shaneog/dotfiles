@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# Install all dotfiles into the home directory
+#
+# Install all dotfiles into the home directory.
+#
+# Every top-level entry becomes ~/.<name>, except the repo's own scaffolding.
+# Anything already at the target path is moved aside rather than deleted, and the
+# externally managed shell files -- ~/.profile, ~/.bashrc, ~/.zprofile, ~/.zshrc
+# -- are never touched: they are sourced as a base layer from ours instead.
+set -euo pipefail
 
 DOTFILESDIRREL="$(dirname "$0")"
 cd "$DOTFILESDIRREL"/.. || exit
@@ -13,8 +20,7 @@ for DOTFILE in *; do
   [ -d "$DOTFILE" ] && DOTFILE="$DOTFILE/"
   DIRFILE="$DOTFILESDIR/$DOTFILE"
 
-  # shellcheck disable=SC2196
-  echo "$DOTFILE" | egrep -q '(^script/$|^test/$|^Makefile$|\.txt$|\.md$)' && continue
+  echo "$DOTFILE" | grep -qE '(^script/$|^test/$|^Makefile$|\.txt$|\.md$)' && continue
 
   # shellcheck disable=SC2001
   echo "$DOTFILE" | grep -q '\.sh' \
@@ -28,7 +34,7 @@ for DOTFILE in *; do
     continue
   fi
 
-  if [ $UNIX ]
+  if [ -n "${UNIX:-}" ]
   then
     if [ -L "$HOMEFILE" ] && ! [ -d "$DOTFILE" ]
     then
