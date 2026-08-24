@@ -221,11 +221,10 @@ STUB
 }
 
 @test "completion styling is ours, and nothing of ours runs a second compinit" {
-  # Prezto's completion module supplied these styles, and alongside them its own
-  # compinit against its own dump -- part of four compinits and three dumps per
-  # shell. The styles moved into lib/completion.zsh and the module was dropped.
-  # Both halves are asserted because either failing is silent: completion just
-  # quietly behaves differently, and a stray dump is invisible until it is stale.
+  # These styles come from lib/completion.zsh, and prezto's completion module is
+  # deliberately not loaded: it runs a second compinit against a second dump.
+  # Both halves are asserted because either failing is silent -- completion just
+  # behaves differently, and a stray dump is invisible until it goes stale.
   local home; home="$(make_home)"
   run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
@@ -242,10 +241,9 @@ STUB
 }
 
 @test "fzf's file command actually returns files" {
-  # This shipped broken: FZF_DEFAULT_COMMAND called rg, rg was in no Brewfile,
-  # and fzf treats a failing command as an empty result set -- so Ctrl-T quietly
-  # listed nothing on every machine. Asserting the widget exists was not enough,
-  # because the widget existed the whole time. Assert output instead.
+  # fzf treats a failing command as an empty result set, so a backend nothing
+  # installs is silent: the widget still exists and simply lists nothing.
+  # Asserting on output is the only way to see it.
   command -v rg >/dev/null || skip "ripgrep not installed"
   local home; home="$(make_home)"
   run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \

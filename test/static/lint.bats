@@ -63,7 +63,7 @@ load '../helpers/common'
 
 @test "tmux config loads without error" {
   # The config bootstraps TPM by cloning it, so hand it a throwaway HOME with a
-  # stub already in place. Otherwise this "static" test clones eight plugins over
+  # stub already in place. Otherwise this "static" test clones plugins over
   # the network -- into this repo, since ~/.config is a symlink to it.
   local home="$BATS_TEST_TMPDIR/home"
   mkdir -p "$home/.config/tmux/plugins/tpm"

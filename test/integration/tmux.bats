@@ -4,13 +4,9 @@ bats_require_minimum_version 1.5.0
 
 load '../helpers/common'
 
-# tmux accepts a config file that is largely nonsense: an option it no longer
-# recognises is an error printed where nobody is looking, and a theme sourced by
-# a plugin fails the same way. The gotham theme here had been dead since tmux
-# 2.9 -- status-attr, window-status-fg and the rest were replaced by the -style
-# options -- so the status bar ran on tmux's default green for years without a
-# word. These assert the options that came out the far end, not that the file
-# parsed.
+# tmux will load a config full of options it no longer recognises: the errors go
+# where nobody is looking, and the settings simply do not apply. So these assert
+# the options that came out the far end rather than that the file parsed.
 
 setup() {
   command -v tmux >/dev/null 2>&1 || skip "tmux is not installed"
@@ -117,8 +113,8 @@ show() {
 }
 
 @test "tmux: only the plugins with no built-in equivalent are declared" {
-  # Six of the eight became a line of config each. The legacy @tpm_plugins
-  # spelling is checked for too, since it is what the old config used.
+  # A plugin here has to do something tmux cannot. The legacy @tpm_plugins
+  # spelling is checked for too, since tpm still honours it silently.
   local declared legacy
   declared="$(grep -c "^set -g @plugin" "$REPO/config/tmux/tmux.conf" || true)"
   # An actual setting, not the comment explaining why it is gone.

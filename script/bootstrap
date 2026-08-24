@@ -170,7 +170,7 @@ fi
 
 # Use Homebrew's zsh as the login shell, now that the Brewfile has installed it.
 #
-# This used to live in script/macos, which bootstrap runs before the Brewfile --
+# Set here rather than in script/macos, which bootstrap runs before the Brewfile --
 # so on a new machine it pointed the login shell at a binary that did not exist
 # yet. Registered in /etc/shells and set with chsh rather than written into the
 # directory with dscl, because chsh validates the shell and some tools consult

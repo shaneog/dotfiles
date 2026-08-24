@@ -3,19 +3,10 @@
 # Completion behavior and styling, taken from prezto's completion module:
 # https://github.com/sorin-ionescu/prezto/blob/master/modules/completion/init.zsh
 #
-# The module itself is no longer loaded, because three of its parts duplicated
-# work already done elsewhere:
-#
-#   - its own compinit, against its own dump. Between this, the base layer and
-#     .zshrc, a shell ran compinit four times and kept three dumps; the one at
-#     the end of .zshrc is the only one we control, so it is the one that stays.
-#   - an fpath entry for a copy of zsh-completions it vendored itself. common.zsh
-#     already loads that project through zinit, and the set of registered
-#     completions is the same either way.
-#   - an fpath entry for keg-only brewed curl, which is no longer installed.
-#
-# Styles for mutt and a handful of 1990s media players went with it. What is left
-# is the styling, which is the part that was doing real work.
+# The module itself is deliberately not loaded. It runs its own compinit against
+# its own dump, and puts a vendored copy of zsh-completions on fpath that
+# common.zsh already loads through zinit -- so only the styling below is wanted.
+# compinit belongs to .zshrc, which is the one this repo controls.
 
 [[ $TERM == dumb ]] && return 1
 

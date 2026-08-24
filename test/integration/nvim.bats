@@ -119,14 +119,14 @@ setup() {
   run probe "$NVIM_DATA/COMMIT_EDITMSG" -c 'lua
     io.stdout:write(("ft=%s tw=%d spell=%s lang=%s"):format(
       vim.bo.filetype, vim.bo.textwidth, tostring(vim.wo.spell), vim.bo.spelllang))' -c qa
-  # spelllang is asserted so it cannot drift back to a guess: en_us is chosen
-  # deliberately, and matches the locale .zprofile sets.
+  # en_us is deliberate, and matches the locale .zprofile sets.
   echo "$output" | grep -q "ft=gitcommit tw=72 spell=true lang=en_us" \
     || { echo "the gitcommit ftplugin did not apply: $output"; return 1; }
 }
 
 @test "nvim: the language providers stay disabled" {
-  # Replaces two copies of a python2 host prog pointing at an Intel prefix.
+  # Nothing here uses them, and a probe for a missing interpreter is startup
+  # cost for nothing.
   run probe -c 'lua io.stdout:write(("py=%s rb=%s node=%s perl=%s"):format(
     tostring(vim.g.loaded_python3_provider), tostring(vim.g.loaded_ruby_provider),
     tostring(vim.g.loaded_node_provider), tostring(vim.g.loaded_perl_provider)))' -c qa

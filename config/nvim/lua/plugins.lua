@@ -1,20 +1,13 @@
--- Five repositories, replacing twenty-three.
---
--- Gone because Neovim does it now: editorconfig-vim, vim-commentary,
--- vim-unimpaired, vim-repeat. Gone because the tooling is not on these machines:
--- vim-go, vim-jsonnet, nginx.vim, vim-haml, and the Rails cluster. Gone because
--- something here does it better: vim-polyglot (treesitter), vim-gitgutter
--- (gitsigns), airline (mini.statusline), vim-surround and vim-easy-align (mini),
--- fzf.vim with fzf-filemru and vim-ripgrep (fzf-lua). Solarized was never used;
--- gotham is the colorscheme, and has been since 2016.
+-- Five repositories. Anything Neovim provides itself -- commenting, editorconfig,
+-- the ]q and [b motions -- is not a plugin here, and neither is support for a
+-- language whose tooling is not installed.
 
 local parsers = require("parsers")
 
 return {
-  -- Colourscheme, the same one as the Terminal profile and tmux. It predates
-  -- treesitter, so highlighting lands on Neovim's default capture links rather
-  -- than fine-grained groups -- which is fine, and is what it looked like
-  -- before.
+  -- The same colorscheme as the Terminal profile and tmux. Written before
+  -- treesitter, so highlighting resolves through Neovim's default capture links
+  -- rather than fine-grained groups.
   {
     "whatyouhide/vim-gotham",
     lazy = false,
@@ -33,11 +26,10 @@ return {
     build = ":TSUpdate",
     lazy = false,
     config = function()
-      -- Parsers are installed by script/after-setup, not here. Calling install()
-      -- on every start is both noisy in a headless run and racy: two concurrent
-      -- installs of the same parser collide renaming their temp directories,
-      -- which is how yaml failed to build while the run reported success.
-      -- :TSInstall and :TSUpdate remain for doing it by hand.
+      -- Parsers are installed by script/after-setup, not here: install() on
+      -- every start is noisy in a headless run, and two concurrent installs of
+      -- the same parser collide renaming their temp directories while still
+      -- reporting success. :TSInstall and :TSUpdate do it by hand.
 
       -- Shell dialects share bash's parser; .zsh files are most of this repo.
       for ft, parser in pairs(parsers) do
@@ -62,10 +54,8 @@ return {
     opts = {},
   },
 
-  -- One picker, replacing three plugins. The old fzf.vim spec pointed at
-  -- $HOME/.zplug/repos/junegunn/fzf, which stopped existing when the shell
-  -- moved to zinit, so that picker has been broken for years. fzf, fd and
-  -- ripgrep all come from the Brewfile.
+  -- fzf, fd and ripgrep all come from the Brewfile, so this picker has no
+  -- vendored binary and no path of its own to keep in step with the shell.
   {
     "ibhagwan/fzf-lua",
     cmd = "FzfLua",
@@ -78,9 +68,8 @@ return {
     version = false,
     lazy = false,
     config = function()
-      -- tpope's keys on purpose: ys/ds/cs is twenty years of muscle memory, and
-      -- mini's own sa/sd/sr would be a silent retraining. This is mini's
-      -- documented vim-surround recipe.
+      -- tpope's keys on purpose: mini's own sa/sd/sr would be a silent
+      -- retraining. This is mini's documented vim-surround recipe.
       require("mini.surround").setup({
         mappings = {
           add = "ys",

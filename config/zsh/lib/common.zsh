@@ -5,9 +5,8 @@
 ##
 zinit light zsh-users/zsh-completions
 
-# Highlighting is zsh-patina's, activated at the end of .zshrc:
-# fast-syntax-highlighting used to be loaded here and is gone. A base layer may
-# still load zsh-syntax-highlighting on the same ZLE hook, which is not ours to
+# Highlighting is zsh-patina's, activated at the end of .zshrc. A base layer may
+# load zsh-syntax-highlighting on the same ZLE hook, which is not ours to
 # uninstall, so the patina block stands it down instead.
 #
 # Autosuggestions are a different widget, and still ours unless something else

@@ -3,10 +3,9 @@
 
 local opt = vim.opt
 
--- 24-bit color where the terminal says it has it. Terminal.app has supported it
--- since Tahoe and sets COLORTERM=truecolor; anything that does not say so keeps
--- the 256-color rendering, which is what this has been getting all along -- the
--- old config set NVIM_TUI_ENABLE_TRUE_COLOR, ignored by nvim since 0.1.
+-- 24-bit color where the terminal says it has it. Terminal.app sets
+-- COLORTERM=truecolor; anything that does not say so keeps 256-color
+-- rendering rather than being sent escapes it cannot draw.
 opt.termguicolors = vim.env.COLORTERM == "truecolor" or vim.env.COLORTERM == "24bit"
 opt.background = "dark"
 
@@ -30,9 +29,7 @@ if vim.fn.executable("rg") == 1 then
 end
 
 -- Nothing here uses the python, ruby, node or perl providers. Disabling them
--- skips the probe at startup and keeps :checkhealth honest. This replaces two
--- copies of a g:python_host_prog that pointed at an Intel Homebrew prefix and
--- a python2 that has been end-of-life since 2020.
+-- skips the probe at startup and keeps :checkhealth honest.
 vim.g.loaded_python3_provider = 0
 vim.g.loaded_ruby_provider = 0
 vim.g.loaded_node_provider = 0

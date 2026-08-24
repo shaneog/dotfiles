@@ -3,7 +3,7 @@ name: audit
 on:
   workflow_dispatch:
   # Packages get renamed, deprecated and archived on upstream's schedule, not
-  # ours. This is the afternoon spent auditing the Brewfile by hand, on a cron.
+  # ours, so this runs on a schedule of its own.
   schedule:
     - cron: '41 7 * * 1'
 

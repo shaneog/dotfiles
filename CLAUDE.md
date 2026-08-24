@@ -62,6 +62,12 @@ dependency that "must" have been inert wasn't.
 
 - **Conventional Commits.** The message says why, and records the evidence: the
   measurement, the before and after, what was actually checked.
+- **Comments explain the code as it is; what it used to be goes in the commit
+  message.** A config file read in a year should not be a changelog. "Declared
+  conditionally, because unconditional RGB breaks 256-color terminals" belongs in
+  the file; "this had been broken for years" belongs in the commit. A
+  `Regression:` note in a test is the exception, since the past bug is the reason
+  the assertion exists.
 - **No co-author trailer** — `attribution` is empty in the Claude Code settings.
 - **Never `git checkout --` or `git reset --hard` a file with uncommitted work.**
   Back it up with `cp` before mutating it for a test.

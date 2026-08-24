@@ -29,8 +29,8 @@ Host *
     # agent for every host. The path is the same on every Mac, and the setting is
     # inert when 1Password is not installed.
     #
-    # AddKeysToAgent and UseKeychain used to be here. Both are about on-disk keys
-    # and passphrases in the Apple keychain, which is the model this replaces.
+    # AddKeysToAgent and UseKeychain are deliberately absent: both are about
+    # on-disk keys and keychain passphrases, which the agent replaces.
     #
     # IdentitiesOnly is deliberately left alone: setting it would restrict
     # authentication to keys named by IdentityFile, and there are none.

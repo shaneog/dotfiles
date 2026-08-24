@@ -2,7 +2,7 @@
 
 # Compile the completion dump in the background, so it costs this shell nothing.
 #
-# Only the dump is compiled. The zsh sources used to be compiled here too, but
+# Only the dump is compiled. Compiling the zsh sources as well is tempting, but
 # that raced with editing them: zrecompile runs detached, so a .zwc could be
 # written from content read before an edit, and zsh prefers a .zwc that is not
 # *older* than its source -- so the next shell would run the stale compiled

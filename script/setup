@@ -53,9 +53,9 @@ for DOTFILE in *; do
     then
       ln -sfv "$DIRFILE" "$HOMEFILE"
     else
-      # Back up rather than delete: on any machine that has been used, ~/.config
-      # and ~/.ssh already hold other tools' files, and this used to `rm -r`
-      # them outright.
+      # Back up rather than delete: on any machine that has been used,
+      # ~/.config and ~/.ssh already hold other tools' files, and an `rm -r`
+      # here would take them with it.
       if [ -e "$HOMEFILE" ] || [ -L "$HOMEFILE" ]
       then
         mv -v "$HOMEFILE" "$HOMEFILE.bak.$(date +%Y%m%d%H%M%S)"

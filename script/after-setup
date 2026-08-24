@@ -2,9 +2,9 @@
 
 # Install neovim's plugins and treesitter parsers.
 #
-# Headless, with stdin closed. An interactive nvim on a fresh machine can sit on
-# a "Press ENTER" prompt indefinitely, which hung an entire bootstrap in a VM
-# once; CI never caught it because a runner's stdin is already /dev/null.
+# Headless, with stdin closed: an interactive nvim on a fresh machine can sit on
+# a "Press ENTER" prompt indefinitely, and a CI runner will not reproduce it
+# because its stdin is already /dev/null.
 #
 # Two passes, for two different reasons:
 #

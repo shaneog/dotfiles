@@ -2,8 +2,7 @@
 #
 # Checks the things that rot quietly: packages that upstream has deprecated or
 # renamed, plugin repositories that have been archived, and tools the shell
-# config invokes but no Brewfile installs. All of it was done by hand once; this
-# is that afternoon, written down.
+# config invokes but no Brewfile installs.
 #
 # Exits non-zero when something needs attention. Sections that cannot run say so
 # rather than passing silently.
@@ -110,11 +109,9 @@ fi
 head2 "Tools the config invokes but the Brewfile does not install"
 # Only command positions that can be read mechanically, so this does not guess:
 # the fzf command variables, cached_init/cached_completion, git's pager, and
-# alias targets. That set is what produced the one real bug here -- fzf calling
-# an rg that nothing installed.
+# alias targets.
 # Comment lines are dropped first: prose mentioning cached_init or a command
-# name is not an invocation, and reading it as one is how this reported that the
-# config depends on a tool called "deliberately".
+# name is not an invocation, and reading it as one produces false positives.
 strip_comments() { grep -vE "^[[:space:]]*#"; }
 {
   grep -rh "FZF_" config/zsh | strip_comments \
@@ -153,9 +150,9 @@ rm -f /tmp/audit-drift.$$
 
 head2 "Config left behind after its tool was dropped"
 # The drift check above runs one way: tools the config invokes. This runs the
-# other way, and is why windsurf.zsh outlived the cask it supported by three
-# commits. Libs that are not about a single tool are named here, so adding one
-# is a decision rather than an omission.
+# other way -- a lib whose tool nothing installs any more. Libs that are not
+# about a single tool are named here, so adding one is a decision rather than an
+# omission.
 NOT_A_TOOL="alias common completion history homebrew node prompt"
 orphans=0
 for lib in config/zsh/lib/*.zsh; do
