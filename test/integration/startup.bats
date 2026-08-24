@@ -169,3 +169,15 @@ STUB
   echo "$output" | grep -q "vim=local-override" \
     || { echo "the local zshrc did not override the config"; return 1; }
 }
+
+@test "the deferred alias-tips plugin actually arrives" {
+  # Loaded with zinit turbo, so it appears only after the first prompt, which
+  # makes silence its failure mode: the feature would simply never show up.
+  # Bursting the scheduler is how a non-interactive shell reaches that point.
+  local home; home="$(make_home)"
+  run run_login_shell "$home" '@zinit-scheduler burst >/dev/null 2>&1
+    print "loaded=$+functions[_check_aliases] hooked=$preexec_functions[(r)_check_aliases]"'
+  guard_home "$home" && rm -rf "$home"
+  echo "$output" | grep -q "loaded=1 hooked=_check_aliases" \
+    || { echo "the deferred plugin never loaded: $output"; return 1; }
+}
