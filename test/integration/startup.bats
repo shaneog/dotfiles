@@ -156,3 +156,16 @@ STUB
   guard_home "$home" && rm -rf "$home"
   [ "$cached" = yes ] || { echo "completion dump was not cached"; return 1; }
 }
+
+@test "a local zshrc is sourced, and loads late enough to override" {
+  # Documented in the README as the local override for .zshrc. The point of an
+  # override is that it wins, so assert ordering rather than mere sourcing:
+  # lib/alias.zsh aliases vim to nvim, and the local file must beat it.
+  local home; home="$(make_home)"
+  printf 'export ZSHRC_LOCAL_RAN=1\nalias vim=local-override\n' > "$home/.zshrc.local"
+  run run_login_shell "$home" 'print "ran=${ZSHRC_LOCAL_RAN:-no}"; alias vim'
+  guard_home "$home" && rm -rf "$home"
+  echo "$output" | grep -q "ran=1" || { echo "the local zshrc was not sourced"; return 1; }
+  echo "$output" | grep -q "vim=local-override" \
+    || { echo "the local zshrc did not override the config"; return 1; }
+}
