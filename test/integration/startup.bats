@@ -214,3 +214,24 @@ STUB
   echo "$output" | grep -q "onfpath=1" || { echo "not on fpath: $output"; return 1; }
   echo "$output" | grep -qE "file=[0-9]{3,}" || { echo "completion not generated: $output"; return 1; }
 }
+
+@test "completion styling is ours, and nothing of ours runs a second compinit" {
+  # Prezto's completion module supplied these styles, and alongside them its own
+  # compinit against its own dump -- part of four compinits and three dumps per
+  # shell. The styles moved into lib/completion.zsh and the module was dropped.
+  # Both halves are asserted because either failing is silent: completion just
+  # quietly behaves differently, and a stray dump is invisible until it is stale.
+  local home; home="$(make_home)"
+  run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+    USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
+    "$ZSH_BIN" -lic '
+      print "menu=$(zstyle -L ":completion:*:*:*:*:*" | grep -c "menu select")"
+      print "nocase=$(zstyle -L ":completion:*" matcher-list | grep -c lower)"
+      print "cache=$(zstyle -L ":completion::complete:*" cache-path | grep -c "zsh/zcompcache")"'
+  local strays; strays="$(find "$home/.cache" -name zcompdump -not -path "*/zsh/*" 2>/dev/null | wc -l | tr -d ' ')"
+  guard_home "$home" && rm -rf "$home"
+  echo "$output" | grep -q "menu=1"   || { echo "menu selection style is missing: $output"; return 1; }
+  echo "$output" | grep -q "nocase=1" || { echo "case-insensitive matching is missing: $output"; return 1; }
+  echo "$output" | grep -q "cache=1"  || { echo "completion cache path is not ours: $output"; return 1; }
+  [ "$strays" = 0 ] || { echo "something wrote a second completion dump"; return 1; }
+}

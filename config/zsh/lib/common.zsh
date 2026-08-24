@@ -47,15 +47,17 @@ zinit for \
 # functions -- nothing that can matter before the first prompt is drawn.
 zinit ice wait lucid
 zinit snippet PZTM::utility
-zinit ice blockf \
-  atclone"git clone -q --depth=1 https://github.com/zsh-users/zsh-completions.git external"
-zinit snippet PZTM::completion
+# Prezto's completion module is deliberately absent: its styling now lives in
+# lib/completion.zsh, without the second compinit and second dump it carried.
 
 ##
 # Configuration
 ##
 
-# Enable zsh corrections
+# Enable zsh corrections. The utility module is told not to do this itself
+# above, because prezto's own switch is checked with `zstyle -T` (true when
+# unset) and its nocorrect aliases sit outside that guard: the aliases apply
+# either way, so this is the same state prezto would have set, set here.
 setopt CORRECT
 
 # Environment. Exported, so child processes (sudoedit, crontab, tools that
