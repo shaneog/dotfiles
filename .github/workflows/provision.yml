@@ -28,7 +28,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install what the Brewfile provides for the shell
         run: brew install direnv fzf starship
@@ -123,7 +123,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # Casks are gigabytes and several need a GUI, so validate everything but
       # only install the formulae.
       - name: Every entry resolves
@@ -138,7 +138,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Run it
         run: ./script/macos
       # --check reads the same table the apply pass used, so this covers every
@@ -151,7 +151,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # The repo has to live at ~/.dotfiles, as it does on a real machine: the
       # symlinks then point inside it, so removing it leaves them broken, which
       # is what remove's find-and-delete relies on. A symlink to the workspace
@@ -201,7 +201,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Casks are gigabytes and most of them need a GUI. brew bundle can skip
       # named dependencies through the environment, so neither the Brewfile nor

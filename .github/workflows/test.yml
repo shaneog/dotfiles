@@ -26,7 +26,7 @@ jobs:
     name: static checks
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Install tooling
         run: brew install bats-core shellcheck jq tmux gitleaks
       - name: Lint and parse every config
@@ -44,7 +44,7 @@ jobs:
           - zsh: homebrew
             path: /opt/homebrew/bin/zsh
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Install tooling
         run: |
           brew install bats-core
@@ -60,7 +60,7 @@ jobs:
     name: integration
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # The shell integration for these is wired up by config/zsh/lib, and the
       # Brewfile is what installs them, so the runner needs them too.
       - name: Install tooling
@@ -68,7 +68,7 @@ jobs:
 
       # The plugin set is defined by the zsh libs, so key the cache on them.
       - name: Restore plugin cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/share/zinit
           key: zinit-${{ runner.os }}-${{ hashFiles('config/zsh/lib/*.zsh', 'config/zsh/.zshrc') }}
