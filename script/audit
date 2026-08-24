@@ -149,6 +149,27 @@ else
 fi
 rm -f /tmp/audit-drift.$$
 
+# ------------------------------------------- config for tools nothing installs
+
+head2 "Config left behind after its tool was dropped"
+# The drift check above runs one way: tools the config invokes. This runs the
+# other way, and is why windsurf.zsh outlived the cask it supported by three
+# commits. Libs that are not about a single tool are named here, so adding one
+# is a decision rather than an omission.
+NOT_A_TOOL="alias common completion history homebrew node prompt"
+orphans=0
+for lib in config/zsh/lib/*.zsh; do
+  tool="$(basename "$lib" .zsh)"
+  case " $NOT_A_TOOL " in *" $tool "*) continue ;; esac
+  grep -qE "^(brew|cask) '$tool'" Brewfile && continue
+  case "$tool" in
+    docker) grep -q "^cask 'docker-desktop'" Brewfile && continue ;;
+  esac
+  fail "$lib configures '$tool', which no Brewfile entry installs"
+  orphans=$((orphans + 1))
+done
+[ "$orphans" -gt 0 ] || ok "every tool-specific lib has a package behind it"
+
 # ------------------------------------------------------------------------ result
 
 printf '\n== Summary\n'
