@@ -101,7 +101,7 @@ if (( $+commands[zsh-patina] )); then
   # A base layer may already have loaded zsh-syntax-highlighting on the same
   # hook, and two highlighters fighting over the line editor shows up as
   # flicker. Emptying its highlighter list stands it down, which is documented
-  # behaviour and does not depend on the version or how it registered itself.
+  # behavior and does not depend on the version or how it registered itself.
   (( $+functions[_zsh_highlight] )) && ZSH_HIGHLIGHT_HIGHLIGHTERS=()
   eval "$(zsh-patina activate)"
 fi

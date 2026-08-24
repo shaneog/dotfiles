@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-# Completion behaviour and styling, taken from prezto's completion module:
+# Completion behavior and styling, taken from prezto's completion module:
 # https://github.com/sorin-ionescu/prezto/blob/master/modules/completion/init.zsh
 #
 # The module itself is no longer loaded, because three of its parts duplicated

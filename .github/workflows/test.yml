@@ -96,5 +96,5 @@ jobs:
           fi
 
       # Startup timing is too noisy on shared runners to gate on.
-      - name: Layering and setup behaviour
+      - name: Layering and setup behavior
         run: SKIP_PERF=1 bats --print-output-on-failure test/integration

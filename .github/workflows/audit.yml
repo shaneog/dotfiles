@@ -33,7 +33,7 @@ jobs:
 
       # The log is the report, so put it where a failure notification can be read
       # without opening the job.
-      - name: Summarise
+      - name: Summarize
         if: always()
         run: |
           {

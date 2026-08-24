@@ -44,7 +44,7 @@ VM that installs onto fresh macOS end to end, local only, via `make test-vm`.
   fzf's widget existed while its command returned nothing; stderr assertions
   passed vacuously without `bats_require_minimum_version`; a `sudo` stub that
   never exec'd its arguments made a failure path unreachable.
-- **Assert the behaviour, not its scaffolding.** "The widget exists" is not "the
+- **Assert the behavior, not its scaffolding.** "The widget exists" is not "the
   widget returns files".
 - **Skipping is not passing.** A check that cannot run must say so out loud —
   see `NOT CHECKED` in `script/audit`.
@@ -54,7 +54,7 @@ VM that installs onto fresh macOS end to end, local only, via `make test-vm`.
 ## Measure, don't assert
 
 Speed claims need hyperfine numbers, upstream-health claims need an API answer,
-behaviour claims need a probe in a real shell. Confident guesses here have been
+behavior claims need a probe in a real shell. Confident guesses here have been
 wrong more than once: a plugin removal that "must" have been faster wasn't, a
 dependency that "must" have been inert wasn't.
 

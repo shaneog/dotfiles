@@ -6,7 +6,7 @@
 -- something here does it better: vim-polyglot (treesitter), vim-gitgutter
 -- (gitsigns), airline (mini.statusline), vim-surround and vim-easy-align (mini),
 -- fzf.vim with fzf-filemru and vim-ripgrep (fzf-lua). Solarized was never used;
--- gotham is the colourscheme, and has been since 2016.
+-- gotham is the colorscheme, and has been since 2016.
 
 local parsers = require("parsers")
 

@@ -8,8 +8,11 @@
 #
 # Two passes, for two different reasons:
 #
-#   1. `Lazy! sync` clones the plugins. The bang makes it wait rather than
-#      returning while clones are still running.
+#   1. `Lazy! restore` clones the plugins at the versions in the committed
+#      lockfile. Not `sync`, which is install-clean-update and so would move
+#      every plugin to its latest commit and rewrite that lockfile -- on a new
+#      machine that is the opposite of what a lockfile is for. The bang makes it
+#      wait rather than returning while clones are still running.
 #   2. nvim-treesitter's install() is asynchronous, so a headless nvim would
 #      exit before any parser finished building. install():wait() is the
 #      documented way to block, and needs tree-sitter-cli from the Brewfile --
@@ -21,7 +24,7 @@ if ! command -v nvim >/dev/null 2>&1; then
 	exit 0
 fi
 
-nvim --headless "+Lazy! sync" +qa </dev/null
+nvim --headless "+Lazy! restore" +qa </dev/null
 
 if ! command -v tree-sitter >/dev/null 2>&1; then
 	echo "Skipping treesitter parsers: tree-sitter-cli is not installed"

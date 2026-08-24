@@ -6,7 +6,7 @@ load '../helpers/common'
 
 # Neovim's config is Lua and its plugins install themselves, so "it parses" says
 # almost nothing. These provision a hermetic data directory once, then assert the
-# editor that comes out of it actually works: the colourscheme applied, parsers
+# editor that comes out of it actually works: the colorscheme applied, parsers
 # built, highlighting attached, and the surround keys still tpope's.
 #
 # The data directory is keyed on the lockfile and the parser list and cached in
@@ -17,14 +17,19 @@ setup_file() {
   command -v nvim >/dev/null 2>&1 || return 0
 
   local key
-  key="$(cat "$REPO/config/nvim/lazy-lock.json" "$REPO/config/nvim/lua/parsers.lua" 2>/dev/null \
-    | shasum | cut -c1-12)"
+  key="$(find "$REPO/config/nvim" -type f -exec cat {} + 2>/dev/null | shasum | cut -c1-12)"
   export NVIM_DATA="${TMPDIR:-/tmp}/dotfiles-nvim-$key"
   export NVIM_HOME="$NVIM_DATA/home"
+  # A *copy* of the config, not the repo. lazy.nvim writes lazy-lock.json next to
+  # the config it loaded, and a provision into an empty data dir clones lazy.nvim
+  # from its stable branch -- so pointing at the repo let a test run rewrite a
+  # tracked file with whichever lazy commit was stable that day.
+  export NVIM_CONFIG="$NVIM_DATA/config"
 
   if [ ! -d "$NVIM_DATA/nvim/lazy/lazy.nvim" ]; then
-    mkdir -p "$NVIM_HOME"
-    HOME="$NVIM_HOME" XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$NVIM_DATA" \
+    mkdir -p "$NVIM_HOME" "$NVIM_CONFIG"
+    cp -R "$REPO/config/nvim" "$NVIM_CONFIG/nvim"
+    HOME="$NVIM_HOME" XDG_CONFIG_HOME="$NVIM_CONFIG" XDG_DATA_HOME="$NVIM_DATA" \
       XDG_STATE_HOME="$NVIM_DATA/state" XDG_CACHE_HOME="$NVIM_DATA/cache" \
       _timeout 900 "$REPO/script/after-setup" >"$NVIM_DATA/provision.log" 2>&1 || true
   fi
@@ -32,7 +37,7 @@ setup_file() {
 
 # Run lua in a headless nvim against the repo's config and the cached data dir.
 probe() {
-  HOME="$NVIM_HOME" XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$NVIM_DATA" \
+  HOME="$NVIM_HOME" XDG_CONFIG_HOME="$NVIM_CONFIG" XDG_DATA_HOME="$NVIM_DATA" \
     XDG_STATE_HOME="$NVIM_DATA/state" XDG_CACHE_HOME="$NVIM_DATA/cache" \
     TERM=xterm-256color _timeout 120 nvim --headless "$@" </dev/null 2>&1
 }
@@ -52,7 +57,7 @@ setup() {
   [ -z "$noise" ] || { echo "startup was not quiet: $noise"; return 1; }
 }
 
-@test "nvim: gotham is the colourscheme and space is the leader" {
+@test "nvim: gotham is the colorscheme and space is the leader" {
   run probe -c 'lua io.stdout:write(("colors=%s leader=%q"):format(vim.g.colors_name, vim.g.mapleader))' -c qa
   echo "$output" | grep -q "colors=gotham" || { echo "$output"; return 1; }
   echo "$output" | grep -q 'leader=" "' || { echo "$output"; return 1; }
@@ -112,9 +117,11 @@ setup() {
 
 @test "nvim: a commit message buffer is set up for writing one" {
   run probe "$NVIM_DATA/COMMIT_EDITMSG" -c 'lua
-    io.stdout:write(("ft=%s tw=%d spell=%s"):format(
-      vim.bo.filetype, vim.bo.textwidth, tostring(vim.wo.spell)))' -c qa
-  echo "$output" | grep -q "ft=gitcommit tw=72 spell=true" \
+    io.stdout:write(("ft=%s tw=%d spell=%s lang=%s"):format(
+      vim.bo.filetype, vim.bo.textwidth, tostring(vim.wo.spell), vim.bo.spelllang))' -c qa
+  # spelllang is asserted so it cannot drift back to a guess: en_us is chosen
+  # deliberately, and matches the locale .zprofile sets.
+  echo "$output" | grep -q "ft=gitcommit tw=72 spell=true lang=en_us" \
     || { echo "the gitcommit ftplugin did not apply: $output"; return 1; }
 }
 
