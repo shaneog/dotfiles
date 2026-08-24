@@ -26,6 +26,19 @@ for DOTFILE in *; do
   echo "$DOTFILE" | grep -q '\.sh' \
     && HOMEFILE="$HOME/.$(echo "$DOTFILE" | sed -e 's/\.sh//')"
 
+  # Never take over an ~/.ssh that holds a private key. On a machine where
+  # something else manages ssh -- a corporate setup, say -- replacing that
+  # directory with a symlink moves the key out of the path ssh looks in, and
+  # breaks authentication until it is put back.
+  if [ "$HOMEFILE" = "$HOME/.ssh" ] && [ ! -L "$HOMEFILE" ]
+  then
+    if ls "$HOMEFILE"/id_* >/dev/null 2>&1
+    then
+      echo "$HOMEFILE holds a private key and is managed elsewhere, leaving it alone"
+      continue
+    fi
+  fi
+
   # Already pointing into the repo: leave it be, rather than `rm -r` a live
   # directory (~/.config in particular, which other tools write into too)
   if [ -L "$HOMEFILE" ] && [ "$HOMEFILE" -ef "$DIRFILE" ]

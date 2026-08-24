@@ -109,3 +109,22 @@ snapshot() {
   rescued="$(cat "$FAKE_HOME"/.config.bak.*/some-other-tool/state 2>/dev/null)"
   [ "$rescued" = "keep me" ] || { echo "pre-existing content was destroyed"; return 1; }
 }
+
+@test "leaves an ssh directory holding a private key alone" {
+  # Where something else manages ssh -- a corporate setup, say -- replacing the
+  # directory with a symlink moves the key out of the path ssh searches, and
+  # breaks authentication until it is restored.
+  mkdir -p "$FAKE_HOME/.ssh"
+  printf 'PRIVATE KEY\n' > "$FAKE_HOME/.ssh/id_ed25519"
+  echo "managed elsewhere" > "$FAKE_HOME/.ssh/config"
+  run_setup
+  [ ! -L "$FAKE_HOME/.ssh" ] || { echo "setup replaced a managed ~/.ssh"; return 1; }
+  [ "$(cat "$FAKE_HOME/.ssh/id_ed25519")" = "PRIVATE KEY" ]
+  [ "$(cat "$FAKE_HOME/.ssh/config")" = "managed elsewhere" ]
+}
+
+@test "still links ssh on a machine with no keys of its own" {
+  run_setup
+  [ -L "$FAKE_HOME/.ssh" ]
+  [ "$FAKE_HOME/.ssh" -ef "$REPO/ssh" ]
+}
