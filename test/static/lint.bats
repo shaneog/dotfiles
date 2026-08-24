@@ -96,6 +96,19 @@ load '../helpers/common'
   done
 }
 
+@test "workflows ask for no more than they need" {
+  command -v yq >/dev/null || skip "yq not installed"
+  # The repository default is a write token, so a workflow that says nothing gets
+  # one. Neither of these writes to the repo.
+  local wf
+  for wf in "$REPO"/.github/workflows/*.yml; do
+    run yq -e '.permissions.contents == "read"' "$wf"
+    [ "$status" -eq 0 ] || { echo "$(basename "$wf") does not restrict its token"; return 1; }
+    run yq -e '.permissions | keys | length == 1' "$wf"
+    [ "$status" -eq 0 ] || { echo "$(basename "$wf") grants more than contents"; return 1; }
+  done
+}
+
 @test "github workflows are valid yaml and run the whole suite" {
   command -v yq >/dev/null || skip "yq not installed"
   local wf="$REPO/.github/workflows/test.yml"

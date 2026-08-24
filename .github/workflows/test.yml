@@ -11,6 +11,12 @@ on:
   schedule:
     - cron: '23 7 * * 1'
 
+# Neither workflow writes to the repository: it checks out, installs tools and
+# runs tests. The repository default is a write token, which is more than any of
+# this needs.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
