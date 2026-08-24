@@ -18,6 +18,10 @@
 # the rest from applying. Failures are counted and reported rather than passing
 # silently.
 #
+# -u and pipefail are still on: neither aborts on a failing command, so the
+# resilience above is unaffected, while a typo'd variable stops being silent.
+set -uo pipefail
+#
 # Two things worth knowing before re-running on a machine you have since set up
 # by hand:
 #
@@ -90,6 +94,7 @@ else
 		echo "#"
 		echo "# Log out afterwards: some of these only take effect on login."
 		echo "set -eu"
+		# shellcheck disable=SC2016  # written verbatim into the restore script
 		echo 'cd "$(dirname "$0")"'
 		for domain in "${TOUCHED_DOMAINS[@]}"; do
 			if [ -f "$BACKUP_DIR/$domain.plist" ]; then
@@ -98,6 +103,7 @@ else
 				echo "defaults delete $domain 2>/dev/null || true  # was not set before"
 			fi
 		done
+		# shellcheck disable=SC2016  # written verbatim into the restore script
 		echo 'sudo chsh -s "$(cat ./login-shell)" "$USER"'
 		echo 'killall Dock Finder SystemUIServer 2>/dev/null || true'
 		echo 'echo "Restored. Log out for the rest to take effect."'

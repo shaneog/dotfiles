@@ -14,7 +14,7 @@
 # Not undone either way: the settings script/macos wrote, because their previous
 # values are recorded nowhere. Shell history under $XDG_DATA_HOME/zsh is also
 # left alone, being yours rather than ours.
-set -e
+set -e -o pipefail
 
 DEBUG=""
 EVERYTHING=""
@@ -45,9 +45,6 @@ trap "cleanup" EXIT
 
 if [ -n "$DEBUG" ]; then
   set -x
-else
-  QUIET_FLAG="-q"
-  Q="$QUIET_FLAG"
 fi
 
 # We want to always prompt for sudo password at least once rather than doing
@@ -116,7 +113,7 @@ logk()  { echo "OK"; }
 
 
 [ "$USER" = "root" ] && abort "Run bootstrap as yourself, not root."
-groups | grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
+groups | grep -qE "\b(admin)\b" || abort "Add $USER to the admin group."
 
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &

@@ -11,6 +11,8 @@
 # VM. CI never caught it because a runner's stdin is already /dev/null.
 #
 # The first pass fetches vim-plug; the second can actually install with it.
+set -euo pipefail
+
 if ! command -v nvim >/dev/null 2>&1; then
 	echo "Skipping neovim plugins: nvim is not installed"
 	exit 0

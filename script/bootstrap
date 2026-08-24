@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # Bootstraps a new system
-set -e
+set -e -o pipefail
 
 [[ "$1" = "--debug" || -o xtrace ]] && DEBUG="1"
 
+# The sudo and logging helpers below are duplicated in script/remove rather than
+# shared. They cannot be sourced from a sibling file: this script is meant to be
+# run straight off the network, before any checkout exists --
+#
+#   /bin/bash -c "$(curl -fsSL .../script/bootstrap)"
+#
+# so it has to be self-contained. Any fix here needs applying there too.
 sudo_askpass() {
   if [ -n "$SUDO_ASKPASS" ]; then
     sudo --askpass "$@"
@@ -20,11 +27,14 @@ cleanup() {
 
 trap "cleanup" EXIT
 
+# An array rather than a string: quoting an empty string would pass git an empty
+# argument, which it rejects, and leaving it unquoted would be word-splitting
+# waiting to happen. Both git calls below expand to nothing when debugging.
+GIT_QUIET=()
 if [ -n "$DEBUG" ]; then
   set -x
 else
-  QUIET_FLAG="-q"
-  Q="$QUIET_FLAG"
+  GIT_QUIET=(-q)
 fi
 
 # We want to always prompt for sudo password at least once rather than doing
@@ -110,7 +120,7 @@ run_dotfile_scripts() {
 }
 
 [ "$USER" = "root" ] && abort "Run bootstrap as yourself, not root."
-groups | grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
+groups | grep -qE "\b(admin)\b" || abort "Add $USER to the admin group."
 
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &
@@ -138,11 +148,11 @@ if [ -n "$DOTFILES_URL" ]; then
     if [ ! -d "$HOME/.dotfiles" ]; then
       log "Cloning to ~/.dotfiles:"
       # shellcheck disable=SC2086
-      git clone "$Q" ${DOTFILES_REF:+--branch "$DOTFILES_REF"} "$DOTFILES_URL" ~/.dotfiles
+      git clone "${GIT_QUIET[@]}" ${DOTFILES_REF:+--branch "$DOTFILES_REF"} "$DOTFILES_URL" ~/.dotfiles
     else
       (
         cd ~/.dotfiles
-        git pull "$Q" --rebase --autostash
+        git pull "${GIT_QUIET[@]}" --rebase --autostash
       )
     fi
     run_dotfile_scripts script/setup
