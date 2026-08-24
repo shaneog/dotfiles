@@ -88,6 +88,10 @@ show() {
   start_tmux
   echo "$(show status-left)" | grep -qF '#{prefix_highlight}' \
     || { echo "no prefix_highlight placeholder in status-left: $(show status-left)"; return 1; }
+  # The prompt is a format, not a word: it renders whatever `set -g prefix` says,
+  # so the indicator cannot drift out of step with the actual key.
+  echo "$(show @prefix_highlight_prefix_prompt)" | grep -qF '#{prefix}' \
+    || { echo "the prefix prompt is hardcoded: $(show @prefix_highlight_prefix_prompt)"; return 1; }
   echo "$(show status-right)" | grep -qv "now_playing" \
     || { echo "status-right still calls the removed now-playing script"; return 1; }
 }

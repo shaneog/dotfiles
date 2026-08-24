@@ -131,13 +131,13 @@ tmux kill-server 2>/dev/null || true
 case "$status_left" in
   *'#{prefix_highlight}'*) die "the prefix plugin never interpolated status-left" ;;
 esac
-for state in client_prefix pane_in_mode synchronize-panes; do
+for state in client_prefix pane_in_mode synchronize-panes '#{prefix}'; do
   case "$status_left" in
     *"$state"*) ;;
     *) die "status-left is missing the $state indicator" ;;
   esac
 done
-echo "    the prefix indicator reports prefix, copy and sync"
+echo "    the prefix indicator reports the live prefix key, copy and sync"
 
 say "a second login shell is silent"
 TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic 'true' 2>"$HOME/vmtest/second.err"
