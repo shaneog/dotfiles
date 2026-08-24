@@ -1,0 +1,40 @@
+# Cache a tool's own completion function where compinit will find it.
+#
+# Completions do not need to be loaded at startup: a file named _<tool> on fpath
+# is autoloaded by zsh the first time you press tab on that command. So this
+# costs two stat calls per shell rather than the milliseconds a plugin spends
+# sourcing itself.
+#
+# Generated from the installed binary, so it always matches the version actually
+# on the machine -- unlike a third-party plugin vendoring a copy of upstream.
+#
+#   cached_completion docker docker completion zsh
+#
+# Adds the cache directory to fpath and returns 0 if the completion is in place,
+# non-zero if the tool is missing or generation failed.
+
+emulate -L zsh
+setopt local_options
+
+local name=$1; shift
+local bin=${commands[$1]}
+
+[[ -n $bin ]] || return 1
+
+local dir=${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions
+local file=$dir/_$name
+
+# Regenerate when missing, empty, or older than the binary that produced it.
+if [[ ! -s $file || $bin -nt $file ]]; then
+  mkdir -p $dir || return 1
+  # Via a temporary file: a half-written completion is worse than none, and a
+  # failed generation must not leave one behind.
+  local tmp=$file.$$
+  if ! "$@" > $tmp 2>/dev/null || [[ ! -s $tmp ]]; then
+    rm -f $tmp
+    return 1
+  fi
+  mv -f $tmp $file || return 1
+fi
+
+fpath=($dir $fpath)
