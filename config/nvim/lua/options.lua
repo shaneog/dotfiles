@@ -3,7 +3,11 @@
 
 local opt = vim.opt
 
-opt.termguicolors = true -- replaces NVIM_TUI_ENABLE_TRUE_COLOR, dead since 0.1
+-- 24-bit color where the terminal says it has it. Terminal.app has supported it
+-- since Tahoe and sets COLORTERM=truecolor; anything that does not say so keeps
+-- the 256-color rendering, which is what this has been getting all along -- the
+-- old config set NVIM_TUI_ENABLE_TRUE_COLOR, ignored by nvim since 0.1.
+opt.termguicolors = vim.env.COLORTERM == "truecolor" or vim.env.COLORTERM == "24bit"
 opt.background = "dark"
 
 opt.number = true
