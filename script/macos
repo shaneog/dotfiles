@@ -138,6 +138,11 @@ SETTINGS=(
 	"com.apple.finder|_FXSortFoldersFirst|-bool|true|relaunch|Folders first when sorting"
 	"com.apple.finder|FXDefaultSearchScope|-string|SCcf|relaunch|Search the current folder (SCcf; SCev is this Mac)"
 	"com.apple.finder|FXPreferredViewStyle|-string|Nlsv|relaunch|List view (Nlsv; icnv, clmv, Flwv are the others)"
+	"com.apple.finder|ShowHardDrivesOnDesktop|-bool|false|relaunch|No internal disks on the desktop"
+	"com.apple.finder|ShowExternalHardDrivesOnDesktop|-bool|true|relaunch|External disks on the desktop"
+	"com.apple.finder|ShowRemovableMediaOnDesktop|-bool|true|relaunch|Removable media on the desktop"
+	"com.apple.finder|ShowRecentTags|-bool|false|relaunch|No recent tags in the sidebar"
+	"com.apple.finder|WarnOnEmptyTrash|-bool|false|now|No warning when emptying the trash"
 
 	"com.apple.desktopservices|DSDontWriteNetworkStores|-bool|true|logout|No .DS_Store on network volumes"
 	"com.apple.desktopservices|DSDontWriteUSBStores|-bool|true|logout|No .DS_Store on USB volumes"
