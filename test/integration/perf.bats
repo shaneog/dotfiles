@@ -4,7 +4,7 @@ load '../helpers/common'
 
 # Startup cost is a feature of this repo (the README tracks it), so guard it.
 # Override the ceiling with DOTFILES_STARTUP_BUDGET_MS; skip with SKIP_PERF=1.
-BUDGET_MS="${DOTFILES_STARTUP_BUDGET_MS:-1500}"
+BUDGET_MS="${DOTFILES_STARTUP_BUDGET_MS:-500}"
 
 setup() {
   [ -z "$SKIP_PERF" ] || skip "SKIP_PERF set"
