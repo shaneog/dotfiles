@@ -110,8 +110,8 @@ test/vm/run --keep      # leave the VM up to poke at
 It needs [Tart](https://tart.run), which Homebrew now gates behind tap trust:
 
 ```sh
-brew trust --formula cirruslabs/cli/softnet
-brew install cirruslabs/cli/tart
+brew trust --formula openai/tools/softnet
+brew install openai/tools/tart
 ```
 
 The base image is tens of gigabytes on first use, but it is cached after that,

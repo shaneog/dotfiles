@@ -47,8 +47,8 @@ die()  { printf '\n!!! %s\n' "$*" >&2; exit 1; }
 command -v expect >/dev/null || die "expect not found (it ships with macOS)"
 command -v tart >/dev/null || die "tart not installed. Homebrew now gates
 third-party taps, so this needs two steps:
-  brew trust --formula cirruslabs/cli/softnet
-  brew install cirruslabs/cli/tart"
+  brew trust --formula openai/tools/softnet
+  brew install openai/tools/tart"
 
 free_gb="$(df -g / | awk 'NR==2 {print $4}')"
 [ "$free_gb" -ge 60 ] || die "need roughly 60GB free for the base image, have ${free_gb}GB"
