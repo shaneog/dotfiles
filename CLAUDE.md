@@ -60,12 +60,13 @@ dependency that "must" have been inert wasn't.
 
 ## Habits
 
-- **Conventional Commits, and short.** Subject, then a few lines at most: the
-  defect or the reason, not the process. No recounting of what was checked, no
-  repeating a comment that is already in the diff, and nothing about the author.
-  A number earns its place only when the claim would otherwise be arbitrary
-  ("550ms to 245ms"). Long bodies are for genuinely surprising failure modes,
-  and they are the exception.
+- **Conventional Commits, with a body of one to three sentences.** Say why the
+  change exists, or what was broken. Subject-only is for changes that explain
+  themselves — a rename, a typo. Cut the process (what was checked, what was
+  measured unless the number is the point), anything a comment in the diff
+  already says, and anything about the author. A longer body is for a failure
+  mode that was silent, where the next person's instinct would be to write the
+  same bug again.
 - **Comments explain the code as it is; what it used to be goes in the commit
   message.** A config file read in a year should not be a changelog. "Declared
   conditionally, because unconditional RGB breaks 256-color terminals" belongs in
