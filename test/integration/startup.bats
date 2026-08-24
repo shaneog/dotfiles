@@ -188,3 +188,29 @@ STUB
   echo "$output" | grep -q "patina=1 other=0 fast=0" \
     || { echo "highlighting is not solely patina's: $output"; return 1; }
 }
+
+@test "everything deferred to after the first prompt actually arrives" {
+  # Four things load via zinit turbo to keep them off the critical path. Their
+  # failure mode is silence -- no error, the feature simply never appears -- so
+  # each one is asserted here. Bursting the scheduler is how a non-interactive
+  # shell reaches the point a real one reaches after drawing its prompt.
+  local home; home="$(make_home)"
+  run run_login_shell "$home" '@zinit-scheduler burst >/dev/null 2>&1
+    print "autosuggest=$+functions[_zsh_autosuggest_start]"
+    print "utility_aliases=${+aliases[ll]}"
+    print "history_binding=$(bindkey -M emacs "^P" | grep -c history-substring-search-up)"'
+  guard_home "$home" && rm -rf "$home"
+  echo "$output" | grep -q "autosuggest=1"     || { echo "autosuggestions never arrived: $output"; return 1; }
+  echo "$output" | grep -q "utility_aliases=1" || { echo "prezto utility never arrived: $output"; return 1; }
+  echo "$output" | grep -q "history_binding=1" || { echo "history bindings never arrived: $output"; return 1; }
+}
+
+@test "docker completion is generated from the installed CLI" {
+  command -v docker >/dev/null || skip "docker not installed"
+  # Replaces a plugin that cost 20ms per shell and vendored upstream's copy.
+  local home; home="$(make_home)"
+  run run_login_shell "$home" 'print "file=$(wc -c < ${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_docker) onfpath=$(print -l $fpath | grep -c zsh/completions)"'
+  guard_home "$home" && rm -rf "$home"
+  echo "$output" | grep -q "onfpath=1" || { echo "not on fpath: $output"; return 1; }
+  echo "$output" | grep -qE "file=[0-9]{3,}" || { echo "completion not generated: $output"; return 1; }
+}

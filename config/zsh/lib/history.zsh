@@ -4,14 +4,21 @@
 # Plugins
 ##
 
+# Deferred, so the bindings have to be applied once the widgets exist -- binding
+# them at this point would name widgets that have not been defined yet. Kept as a
+# function rather than inline in atload, which would be a quoting exercise.
+_dotfiles_history_substring_keys() {
+	zmodload zsh/terminfo
+	[ -n "${terminfo[kcuu1]}" ] && bindkey "${terminfo[kcuu1]}" history-substring-search-up
+	[ -n "${terminfo[kcud1]}" ] && bindkey "${terminfo[kcud1]}" history-substring-search-down
+	bindkey -M emacs "^P" history-substring-search-up
+	bindkey -M emacs "^N" history-substring-search-down
+	bindkey -M vicmd "k" history-substring-search-up
+	bindkey -M vicmd "j" history-substring-search-down
+}
+
+zinit ice wait lucid atload"_dotfiles_history_substring_keys"
 zinit light zsh-users/zsh-history-substring-search
-zmodload zsh/terminfo
-[ -n "${terminfo[kcuu1]}" ] && bindkey "${terminfo[kcuu1]}" history-substring-search-up
-[ -n "${terminfo[kcud1]}" ] && bindkey "${terminfo[kcud1]}" history-substring-search-down
-bindkey -M emacs '^P' history-substring-search-up
-bindkey -M emacs '^N' history-substring-search-down
-bindkey -M vicmd 'k' history-substring-search-up
-bindkey -M vicmd 'j' history-substring-search-down
 
 ##
 # Configuration

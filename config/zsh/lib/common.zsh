@@ -12,7 +12,12 @@ zinit light zsh-users/zsh-completions
 #
 # Autosuggestions are a different widget, and still ours unless something else
 # got there first -- two of those fight over the line editor just the same.
-(( $+functions[_zsh_autosuggest_start] )) || zinit light zsh-users/zsh-autosuggestions
+if (( ! $+functions[_zsh_autosuggest_start] )); then
+	# atload starts it by hand: deferred loading misses the precmd hook it
+	# normally relies on.
+	zinit ice wait lucid atload"_zsh_autosuggest_start"
+	zinit light zsh-users/zsh-autosuggestions
+fi
 
 # http://zshwiki.org/home/config/prompt
 # enable colors and predefined variables
@@ -38,6 +43,9 @@ zinit for \
   PZTM::directory \
   PZTM::spectrum \
   PZTM::gnu-utility
+# Deferred: 22ms of the startup went here, and it is aliases and helper
+# functions -- nothing that can matter before the first prompt is drawn.
+zinit ice wait lucid
 zinit snippet PZTM::utility
 zinit ice blockf \
   atclone"git clone -q --depth=1 https://github.com/zsh-users/zsh-completions.git external"
@@ -61,4 +69,7 @@ export PAGER="less"
 export LESS="-F -g -i -M -R -S -w -X -z-4"
 
 # Fix for https://openradar.appspot.com/27348363
-ssh-add --apple-load-keychain 2>/dev/null
+#
+# Backgrounded: it is a subprocess costing 8ms of every shell start, and nothing
+# in the rest of startup waits on the keys being loaded.
+(ssh-add --apple-load-keychain &) 2>/dev/null
