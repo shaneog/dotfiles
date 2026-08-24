@@ -181,3 +181,13 @@ STUB
   echo "$output" | grep -q "loaded=1 hooked=_check_aliases" \
     || { echo "the deferred plugin never loaded: $output"; return 1; }
 }
+
+@test "zsh-patina is the only syntax highlighter" {
+  command -v zsh-patina >/dev/null || skip "zsh-patina not installed"
+  # It shares the line-pre-redraw hook with zsh-syntax-highlighting, which a base
+  # layer may have loaded. Two of them fighting is visible as flicker, so assert
+  # patina is hooked and any other has been stood down.
+  run run_login_shell "$HOME_WITH" 'print "patina=$+functions[_zsh_patina] other=${#ZSH_HIGHLIGHT_HIGHLIGHTERS} fast=$+functions[_fast_highlight]"'
+  echo "$output" | grep -q "patina=1 other=0 fast=0" \
+    || { echo "highlighting is not solely patina's: $output"; return 1; }
+}

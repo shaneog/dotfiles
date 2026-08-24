@@ -5,10 +5,14 @@
 ##
 zinit light zsh-users/zsh-completions
 
-# Skip whatever the base layer already provides: two ZLE syntax highlighters or
-# two autosuggestion widgets fight over the line editor.
+# Highlighting is zsh-patina's, activated at the end of .zshrc:
+# fast-syntax-highlighting used to be loaded here and is gone. A base layer may
+# still load zsh-syntax-highlighting on the same ZLE hook, which is not ours to
+# uninstall, so the patina block stands it down instead.
+#
+# Autosuggestions are a different widget, and still ours unless something else
+# got there first -- two of those fight over the line editor just the same.
 (( $+functions[_zsh_autosuggest_start] )) || zinit light zsh-users/zsh-autosuggestions
-(( $+functions[_zsh_highlight] )) || zinit light zdharma-continuum/fast-syntax-highlighting
 
 # http://zshwiki.org/home/config/prompt
 # enable colors and predefined variables

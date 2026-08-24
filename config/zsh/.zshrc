@@ -87,6 +87,25 @@ if (( $+commands[aws_completer] )) && (( ! $+_comps[aws] )); then
   complete -C "$commands[aws_completer]" aws
 fi
 
+##
+# Syntax highlighting
+##
+# zsh-patina comes from the Brewfile. Activated here rather than from lib/
+# because its README asks for the end of .zshrc, and because it wants to be the
+# last thing hooking line-pre-redraw.
+#
+# The one tool here that pays a subprocess per shell: its own output says not to
+# cache it, so cached_init is deliberately not used. Roughly 8ms for `activate`
+# plus a millisecond to eval, once its background daemon is warm.
+if (( $+commands[zsh-patina] )); then
+  # A base layer may already have loaded zsh-syntax-highlighting on the same
+  # hook, and two highlighters fighting over the line editor shows up as
+  # flicker. Emptying its highlighter list stands it down, which is documented
+  # behaviour and does not depend on the version or how it registered itself.
+  (( $+functions[_zsh_highlight] )) && ZSH_HIGHLIGHT_HIGHLIGHTERS=()
+  eval "$(zsh-patina activate)"
+fi
+
 # Use a local zshrc, if exists
 if [[ -f "$HOME/.zshrc.local" ]]; then
   source "$HOME/.zshrc.local"

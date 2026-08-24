@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install what the Brewfile provides for the shell
-        run: brew install direnv fzf starship
+        run: brew install direnv fzf starship zsh-patina
 
       # A real home that has already been lived in: an externally managed shell
       # setup, and other tools' files under ~/.config.
@@ -108,9 +108,9 @@ jobs:
           noise="$(grep -v "can't change option: zle" second.err | grep '[[:alpha:]]' || true)"
           [ -z "$noise" ] || { echo "unexpected stderr: $noise"; exit 1; }
           HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
-            zsh -lic 'print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"' \
+            zsh -lic 'print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] patina=$+functions[_zsh_patina] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"' \
             | tee shell.out
-          grep -q "starship=1 direnv=1 fzf=1 dump=yes" shell.out || {
+          grep -q "starship=1 direnv=1 fzf=1 patina=1 dump=yes" shell.out || {
             echo "a first shell did not end up fully wired"; exit 1; }
           # the externally managed files are layered under ours, so their
           # exports must survive into the final environment
@@ -248,7 +248,7 @@ jobs:
       - name: The bootstrapped machine has a working shell
         run: |
           HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
-            zsh -lic 'print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"' \
+            zsh -lic 'print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] patina=$+functions[_zsh_patina] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"' \
             | tee shell.out
-          grep -q "starship=1 direnv=1 fzf=1 dump=yes" shell.out || {
+          grep -q "starship=1 direnv=1 fzf=1 patina=1 dump=yes" shell.out || {
             echo "the bootstrapped machine has an incomplete shell"; exit 1; }

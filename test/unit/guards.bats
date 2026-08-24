@@ -76,9 +76,12 @@ probe_lib() {
 
 # --- syntax highlighting / autosuggestions ----------------------------------
 
-@test "common: skips its highlighter when one is already loaded" {
-  probe_lib common.zsh '_zsh_highlight() { : }' ':'
-  ! grep -q "fast-syntax-highlighting" "$ZINIT_LOG"
+@test "common: no longer loads a syntax highlighter of its own" {
+  # zsh-patina does the highlighting now, activated from .zshrc. Two plugins on
+  # the same ZLE hook show up as flicker, so nothing here may load one.
+  probe_lib common.zsh '' ':'
+  ! grep -qiE "syntax-highlighting" "$ZINIT_LOG" \
+    || { echo "common.zsh loaded a highlighter: $(cat "$ZINIT_LOG")"; return 1; }
 }
 
 @test "common: skips its autosuggestions when already loaded" {
@@ -86,9 +89,8 @@ probe_lib() {
   ! grep -q "zsh-autosuggestions" "$ZINIT_LOG"
 }
 
-@test "common: loads both when nothing else provides them" {
+@test "common: loads autosuggestions when nothing else provides them" {
   probe_lib common.zsh '' ':'
-  grep -q "fast-syntax-highlighting" "$ZINIT_LOG"
   grep -q "zsh-autosuggestions" "$ZINIT_LOG"
 }
 

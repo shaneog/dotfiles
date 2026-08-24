@@ -8,6 +8,7 @@ brew 'pyenv-virtualenv'
 
 # Shell
 brew 'zsh'
+brew 'zsh-patina'
 brew 'zsh-completions'
 
 # CLI/Term Tools
