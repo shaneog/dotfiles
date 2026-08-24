@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+#
+# What this machine has installed that the Brewfile does not declare, and what
+# the Brewfile declares that this machine does not have.
+#
+# Advisory, and deliberately not part of script/audit or its weekly cron: on a
+# machine whose shell is provisioned by something else, most of the first list
+# belongs to that something else, and a check that cries wolf every Monday gets
+# ignored. Run it when reconciling, and decide each entry.
+
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+
+for tool in brew jq; do
+	command -v "$tool" >/dev/null 2>&1 || {
+		echo "$tool is not installed; nothing to compare"
+		exit 0
+	}
+done
+
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+# Tap-qualified names compare on their last component: openai/tools/tart is tart.
+plain() { sed -E 's|.*/||' | sort -u; }
+
+grep -E "^brew '" Brewfile | tr -d "'" | awk '{print $2}' | plain > "$WORK/declared-formulae"
+grep -E "^cask '" Brewfile | tr -d "'" | awk '{print $2}' | plain > "$WORK/declared-casks"
+
+# Only what was asked for by name. Dependencies are noise: they are installed
+# because something else needed them, not because anyone chose them.
+brew info --json=v2 --installed 2>/dev/null \
+	| jq -r '.formulae[] | select(any(.installed[]?; .installed_on_request)) | "\(.name)\t\(.desc // "")"' \
+	> "$WORK/requested-with-desc"
+cut -f1 < "$WORK/requested-with-desc" | plain > "$WORK/requested-formulae"
+
+# Every installed formula, not just the requested ones: a declared formula that
+# arrived as some other formula's dependency is installed, and reporting it as
+# absent would be a lie.
+brew list --formula 2>/dev/null | plain > "$WORK/installed-formulae"
+
+brew list --cask 2>/dev/null | plain > "$WORK/installed-casks"
+
+describe() {
+	local name="$1" desc
+	desc="$(awk -F'\t' -v n="$name" '$1 == n || $1 ~ "/"n"$" {print $2; exit}' "$WORK/requested-with-desc")"
+	printf '  %-22s %s\n' "$name" "$(printf '%s' "${desc:-}" | cut -c1-52)"
+}
+
+printf '== Installed on request, not in the Brewfile\n'
+undeclared=0
+while IFS= read -r formula; do
+	[ -n "$formula" ] || continue
+	describe "$formula"
+	undeclared=$((undeclared + 1))
+done < <(comm -23 "$WORK/requested-formulae" "$WORK/declared-formulae")
+while IFS= read -r cask; do
+	[ -n "$cask" ] || continue
+	printf '  %-22s (cask)\n' "$cask"
+	undeclared=$((undeclared + 1))
+done < <(comm -23 "$WORK/installed-casks" "$WORK/declared-casks")
+[ "$undeclared" -gt 0 ] || printf '  nothing\n'
+
+printf '\n== Declared in the Brewfile, not installed here\n'
+missing=0
+while IFS= read -r formula; do
+	[ -n "$formula" ] || continue
+	printf '  %-22s\n' "$formula"
+	missing=$((missing + 1))
+done < <(comm -13 "$WORK/installed-formulae" "$WORK/declared-formulae")
+while IFS= read -r cask; do
+	[ -n "$cask" ] || continue
+	printf '  %-22s (cask)\n' "$cask"
+	missing=$((missing + 1))
+done < <(comm -13 "$WORK/installed-casks" "$WORK/declared-casks")
+[ "$missing" -gt 0 ] || printf '  nothing\n'
+
+printf '\n== Summary\n'
+printf '  %s undeclared, %s declared but absent\n' "$undeclared" "$missing"
+printf '  Neither is necessarily wrong: a machine provisioned by something else\n'
+printf '  will have plenty of the first, and apps skipped on purpose the second.\n'
