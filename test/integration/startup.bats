@@ -22,7 +22,8 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "PROFILE_RAN=${BASE_LAYER_PROFILE_RAN:-no} RC_RAN=${BASE_LAYER_RC_RAN:-no}"
        print "PIP=${PIP_CONFIG_FILE:-unset}"
        print "NODE=$(whence -w node 2>/dev/null || print none)"
-       print "NODENV_ROOT=${NODENV_ROOT:-unset}"
+       print "NPM_CACHE=${NPM_CONFIG_CACHE:-unset}"
+       print "MISE=$+functions[_mise_hook]"
        print "STARSHIP=$+functions[prompt_starship_precmd]"
        print "PURE_HOOKED=$precmd_functions[(r)prompt_pure_precmd]"
        print "AUTOSUGGEST=$+functions[_zsh_autosuggest_start]"
@@ -64,16 +65,20 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 }
 
 @test "the base layer keeps ownership of node" {
+  # Our layer hands node over wholesale rather than half-shadowing it, and mise
+  # cannot take it back: nvm's wrapper is a function, so it is found first.
   run run_login_shell "$HOME_WITH" "$probe"
   echo "$output" | grep -q "NODE=node: function"
-  echo "$output" | grep -q "NODENV_ROOT=unset"
+  echo "$output" | grep -q "NPM_CACHE=unset"
 }
 
 @test "our own tooling activates when there is no base layer" {
   run run_login_shell "$HOME_WITHOUT" "$probe"
+  command -v mise >/dev/null && { echo "$output" | grep -q "MISE=1" \
+    || { echo "mise never activated: $output"; return 1; } }
   echo "$output" | grep -q "PROFILE_RAN=no RC_RAN=no"
   echo "$output" | grep -q "STARSHIP=1"
-  echo "$output" | grep -q "NODENV_ROOT=$HOME_WITHOUT/.local/share/nodenv"
+  echo "$output" | grep -q "NPM_CACHE=$HOME_WITHOUT/.local/share/npm"
 }
 
 @test "PATH has no duplicates in either configuration" {

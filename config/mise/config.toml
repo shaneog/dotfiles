@@ -1,0 +1,17 @@
+# mise replaces nodenv, node-build, pyenv, pyenv-virtualenv and sdkman.
+#
+# No tools are declared here, deliberately. On a machine whose base layer already
+# owns a runtime -- nvm wrapping node and npm, sdkman wrapping sdk -- a global
+# declaration would have mise install a version it can never serve: those
+# wrappers are shell functions, and a function takes precedence over every PATH
+# entry mise adds. Tools belong in a project's mise.toml, or in `mise use -g` on
+# a machine where nothing else claims them.
+
+[settings]
+# Read .nvmrc, .node-version and .python-version. mise ignores them by default,
+# which would quietly do nothing in projects that already carry one.
+idiomatic_version_file_enable_tools = ["node", "python"]
+
+# Never install unprompted: a version file in a freshly cloned repo should
+# report a missing tool rather than start a download.
+not_found_auto_install = false

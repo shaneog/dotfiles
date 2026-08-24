@@ -43,6 +43,9 @@ config/homebrew/trust.json*
 # karabiner
 !config/karabiner
 
+# mise
+!config/mise
+
 # zsh
 !config/zsh/
 config/zsh/.zcompdump

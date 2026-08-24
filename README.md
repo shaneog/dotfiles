@@ -231,7 +231,12 @@ Results:
 
 Migrated from [`Spaceship`](https://spaceship-prompt.sh/) to [`Starship`](https://starship.rs/).
 
-Configured and enabled [`nodenv`](https://github.com/nodenv/nodenv) and [`pyenv`](https://github.com/pyenv/pyenv).
+Runtimes are [`mise`](https://mise.jdx.dev)'s, replacing `nodenv`, `pyenv`,
+`pyenv-virtualenv` and `sdkman`. No tools are declared globally: on a machine
+whose managed shell already owns a runtime -- `nvm` wrapping `node`, `sdkman`
+wrapping `sdk` -- those wrappers are shell functions and are found before
+anything `mise` puts on `PATH`, so they keep winning. Declare tools per project
+in a `mise.toml`, or with `mise use -g` where nothing else claims them.
 
 ```
         0.69 real         0.34 user         0.15 sys

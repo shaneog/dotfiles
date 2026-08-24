@@ -1,8 +1,5 @@
 # System
-brew 'nodenv'
-brew 'node-build'
-brew 'pyenv'
-brew 'pyenv-virtualenv'
+brew 'mise'
 
 # Shell
 brew 'zsh'

@@ -31,35 +31,58 @@ probe_lib() {
 # --- node -------------------------------------------------------------------
 
 @test "node: defers entirely when the base layer wraps node" {
-  run probe_lib node.zsh 'nvm() { : }' 'print "root=${NODENV_ROOT:-unset} cache=${NPM_CONFIG_CACHE:-unset}"'
-  [ "$output" = "root=unset cache=unset" ]
+  run probe_lib node.zsh 'nvm() { : }' 'print "cache=${NPM_CONFIG_CACHE:-unset}"'
+  [ "$output" = "cache=unset" ]
 }
 
 @test "node: defers when only node or npm is wrapped" {
-  run probe_lib node.zsh 'node() { : }' 'print "${NODENV_ROOT:-unset}"'
+  run probe_lib node.zsh 'node() { : }' 'print "${NPM_CONFIG_CACHE:-unset}"'
   [ "$output" = "unset" ]
-  run probe_lib node.zsh 'npm() { : }' 'print "${NODENV_ROOT:-unset}"'
-  [ "$output" = "unset" ]
-}
-
-@test "node: configures nodenv when nothing else owns node" {
-  run probe_lib node.zsh '' 'print "${NODENV_ROOT:-unset}"'
-  [ "$output" = "$FAKE_HOME/.local/share/nodenv" ]
-}
-
-# --- sdkman -----------------------------------------------------------------
-
-@test "sdkman: skips init when the base layer already provides sdk" {
-  run probe_lib sdkman.zsh 'sdk() { : }' 'print "${SDKMAN_DIR:-unset}"'
+  run probe_lib node.zsh 'npm() { : }' 'print "${NPM_CONFIG_CACHE:-unset}"'
   [ "$output" = "unset" ]
 }
 
-@test "sdkman: initialises when sdk is absent" {
-  run probe_lib sdkman.zsh '' 'print "${SDKMAN_DIR:-unset}"'
-  [ "$output" = "$FAKE_HOME/.sdkman" ]
+@test "node: keeps npm's cache under XDG when nothing else owns node" {
+  run probe_lib node.zsh '' 'print "${NPM_CONFIG_CACHE:-unset}"'
+  [ "$output" = "$FAKE_HOME/.local/share/npm" ]
 }
 
-# --- homebrew ---------------------------------------------------------------
+# --- mise -------------------------------------------------------------------
+
+@test "mise: inert when mise is not installed" {
+  run probe_lib mise.zsh '' 'print "hooks=$precmd_functions path=$PATH"'
+  [[ "$output" != *"mise"* ]]
+}
+
+@test "mise: activates when mise is present" {
+  STUBS="$(stub_dir)"
+  stub_cmd mise <<'STUB'
+#!/bin/sh
+echo 'MISE_ACTIVATED=yes'
+STUB
+  run probe_lib mise.zsh '' 'print "activated=${MISE_ACTIVATED:-no}"'
+  [ "$output" = "activated=yes" ]
+}
+
+@test "mise: does not displace a runtime the base layer wraps" {
+  # The migration away from nodenv rests on this: a base layer owning node does
+  # so with a shell function, and a function is found before anything mise adds
+  # to PATH. If that stopped being true, work's npm -- and the private registry
+  # it points at -- would be silently replaced by whatever mise installed.
+  STUBS="$(stub_dir)"
+  mkdir -p "$STUBS/misebin"
+  printf '#!/bin/sh\necho v99.0.0-from-mise\n' > "$STUBS/misebin/node"
+  chmod +x "$STUBS/misebin/node"
+  stub_cmd mise <<STUB
+#!/bin/sh
+echo 'export PATH="$STUBS/misebin:\$PATH"'
+STUB
+  run probe_lib mise.zsh 'node() { print v22.0.0-from-base-layer }' \
+    'print "mise_on_path=$([[ $PATH == *misebin* ]] && print yes || print no) node=$(node)"'
+  [[ "$output" == *"mise_on_path=yes"* ]] || { echo "mise never got on PATH: $output"; return 1; }
+  [[ "$output" == *"node=v22.0.0-from-base-layer"* ]] \
+    || { echo "mise displaced the base layer's node: $output"; return 1; }
+}
 
 @test "homebrew: does not re-prepend when the base layer set HOMEBREW_PREFIX" {
   [ -d /opt/homebrew ] || skip "no /opt/homebrew on this machine"
@@ -106,38 +129,6 @@ probe_lib() {
     'print "precmd=$precmd_functions preexec=$preexec_functions"'
   [[ "$output" != *"prompt_pure_precmd"* ]]
   [[ "$output" != *"prompt_pure_preexec"* ]]
-}
-
-# --- python -----------------------------------------------------------------
-
-@test "python: fully inert when pyenv is not installed" {
-  run probe_lib python.zsh '' 'print "shell=${PYENV_SHELL:-unset} hook=$precmd_functions path=$PATH"'
-  [[ "$output" == "shell=unset hook= path="* ]]
-  [[ "$output" != *"pyenv/shims"* ]]
-}
-
-@test "python: does not front PATH when pyenv has no shims yet" {
-  STUBS="$(stub_dir)"
-  stub_cmd pyenv <<'STUB'
-#!/bin/sh
-exit 0
-STUB
-  run probe_lib python.zsh '' 'print "shell=${PYENV_SHELL:-unset} path=$PATH"'
-  [[ "$output" == "shell=zsh"* ]]
-  [[ "$output" != *"pyenv/shims"* ]]
-}
-
-@test "python: fronts PATH and hooks precmd once pyenv is usable" {
-  STUBS="$(stub_dir)"
-  stub_cmd pyenv <<'STUB'
-#!/bin/sh
-exit 0
-STUB
-  mkdir -p "$FAKE_HOME/.local/share/pyenv/shims" \
-           "$FAKE_HOME/.local/share/pyenv/plugins/pyenv-virtualenv"
-  run probe_lib python.zsh '' 'print "path=$PATH hook=$precmd_functions"'
-  [[ "$output" == *"pyenv/shims"* ]]
-  [[ "$output" == *"_pyenv_virtualenv_hook"* ]]
 }
 
 # --- zlogin -----------------------------------------------------------------
