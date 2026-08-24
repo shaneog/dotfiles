@@ -114,7 +114,7 @@ fi
 # domain|key|type|value|when|what it does
 #
 # "when" is when it takes effect: now, relaunch (of the owning app, which the
-# killall at the bottom handles), or logout.
+# killall at the bottom handles), logout, or reboot.
 SETTINGS=(
 	"NSGlobalDomain|AppleInterfaceStyle|-string|Dark|logout|Dark mode"
 	"NSGlobalDomain|NSNavPanelExpandedStateForSaveMode|-bool|true|now|Expanded save panel"
@@ -143,10 +143,40 @@ SETTINGS=(
 	"com.apple.desktopservices|DSDontWriteUSBStores|-bool|true|logout|No .DS_Store on USB volumes"
 
 	"com.apple.Terminal|StringEncodings|-array|4|relaunch|UTF-8 only"
+
+	# Sound. beep.volume of 0 means alerts are silent -- raise it (0 to 1) if you
+	# want them audible. beep.feedback has no key until it is written: the toggle
+	# sits at the OS default until something records an intent.
+	"NSGlobalDomain|com.apple.sound.beep.volume|-float|0|now|Alert volume (silent)"
+	"NSGlobalDomain|com.apple.sound.uiaudio.enabled|-int|0|now|No interface sound effects"
+	"NSGlobalDomain|com.apple.sound.beep.feedback|-int|0|now|No feedback when volume changes"
+
+	# The startup chime is not a preference: it lives in NVRAM, needs sudo, and
+	# only takes effect at the next boot. Handled by the nvram branch below so it
+	# stays in this one list and --check covers it too.
+	"nvram|StartupMute|-string|%01|reboot|No startup chime"
 )
 
-# What `defaults read` gives back for a value, so what is wanted can be compared
-# with what is there instead of writing blindly every time.
+# Most settings are preferences; the startup chime is an NVRAM variable. Both go
+# through these so the table stays one list.
+read_setting() {
+	if [ "$1" = "nvram" ]; then
+		nvram "$2" 2>/dev/null | awk '{print $2}'
+	else
+		defaults read "$1" "$2" 2>/dev/null
+	fi
+}
+
+write_setting() {
+	if [ "$1" = "nvram" ]; then
+		sudo nvram "$2=$4"
+	else
+		defaults write "$1" "$2" "$3" "$4"
+	fi
+}
+
+# What a read gives back for a value, so what is wanted can be compared with what
+# is there instead of writing blindly every time.
 as_read() {
 	case "$1" in
 		-bool)  case "$2" in true|yes|1) echo 1 ;; *) echo 0 ;; esac ;;
@@ -166,7 +196,7 @@ for setting in "${SETTINGS[@]}"; do
 	value="$(eval echo "\"$value\"")"
 
 	want="$(as_read "$type" "$value" | tr -d '[:space:]')"
-	have="$(defaults read "$domain" "$key" 2>/dev/null | tr -d '[:space:]')"
+	have="$(read_setting "$domain" "$key" | tr -d '[:space:]')"
 
 	if [ "$want" = "$have" ]; then
 		applied=$((applied + 1))
@@ -180,7 +210,7 @@ for setting in "${SETTINGS[@]}"; do
 		continue
 	fi
 
-	if defaults write "$domain" "$key" "$type" "$value" 2>/dev/null; then
+	if write_setting "$domain" "$key" "$type" "$value" 2>/dev/null; then
 		changed=$((changed + 1))
 		printf '  %s (%s)\n' "$what" "$when"
 	else

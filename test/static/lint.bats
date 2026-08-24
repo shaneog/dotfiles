@@ -89,7 +89,7 @@ load '../helpers/common'
 }
 
 @test "script/macos only touches known domains" {
-  local known="NSGlobalDomain com.apple.desktopservices com.apple.dock com.apple.finder com.apple.print.PrintingPrefs com.apple.Terminal"
+  local known="NSGlobalDomain com.apple.desktopservices com.apple.dock com.apple.finder com.apple.print.PrintingPrefs com.apple.Terminal nvram"
   local d
   # the settings table
   for d in $(grep -oE '^[[:space:]]+"[A-Za-z][A-Za-z0-9.]*\|' "$REPO/script/macos" \
@@ -117,7 +117,7 @@ load '../helpers/common'
     esac
     when="$(echo "$line" | cut -d'|' -f5)"
     case "$when" in
-      now|relaunch|logout) ;;
+      now|relaunch|logout|reboot) ;;
       *) echo "unknown 'when' value '$when' in: $line"; return 1 ;;
     esac
   done < <(grep -E '^[[:space:]]+"[^"]*(\|[^"]*){5}"$' "$REPO/script/macos" \
