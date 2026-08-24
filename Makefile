@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-vm lint
+.PHONY: test test-static test-unit test-integration test-vm lint audit
 
 test: test-static test-unit test-integration
 
