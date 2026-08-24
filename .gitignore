@@ -33,6 +33,10 @@ config/tmux/plugins
 
 # github
 !config/gh
+# gh records the logged-in account here. The token lives in the keyring, but
+# this file is where gh puts one when the keyring is unavailable, and removing
+# it logs gh out -- so it stays on disk, untracked.
+config/gh/hosts.yml
 
 # homebrew
 !config/homebrew
