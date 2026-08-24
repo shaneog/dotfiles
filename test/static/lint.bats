@@ -89,7 +89,7 @@ load '../helpers/common'
 }
 
 @test "script/macos only writes defaults to known domains" {
-  local known="NSGlobalDomain com.apple.desktopservices com.apple.dock com.apple.finder com.apple.print.PrintingPrefs com.apple.terminal"
+  local known="NSGlobalDomain com.apple.desktopservices com.apple.dock com.apple.finder com.apple.print.PrintingPrefs com.apple.Terminal"
   local d
   for d in $(grep -oE '^[[:space:]]*defaults write [A-Za-z0-9.-]+' "$REPO/script/macos" | awk '{print $3}' | sort -u); do
     echo "$known" | grep -qw "$d" || { echo "unknown defaults domain: $d"; return 1; }

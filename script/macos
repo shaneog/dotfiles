@@ -21,6 +21,68 @@
 # renamed it; the old name no longer resolves to anything.
 osascript -e 'tell application "System Settings" to quit' 2>/dev/null
 
+###############################################################################
+# Record what was here first                                                  #
+###############################################################################
+
+# Whole domains, not individual keys: putting a key back means knowing its type,
+# and several of these are arrays. `defaults export` captures everything and
+# `defaults import` puts it back.
+#
+# First run only, deliberately. Running this again once the settings have been
+# applied would record the changed values as though they were the originals, and
+# quietly destroy the only copy of what the machine used to look like.
+BACKUP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/macos-defaults"
+TOUCHED_DOMAINS=(
+	NSGlobalDomain
+	com.apple.print.PrintingPrefs
+	com.apple.dock
+	com.apple.finder
+	com.apple.desktopservices
+	com.apple.Terminal
+)
+
+if [ -d "$BACKUP_DIR" ]; then
+	echo "Previous values already recorded in $BACKUP_DIR"
+else
+	echo "Recording the current values in $BACKUP_DIR:"
+	mkdir -p "$BACKUP_DIR"
+	for domain in "${TOUCHED_DOMAINS[@]}"; do
+		if defaults export "$domain" "$BACKUP_DIR/$domain.plist" 2>/dev/null; then
+			echo "  $domain"
+		else
+			echo "  $domain (not set on this machine)"
+		fi
+	done
+	dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}' \
+		> "$BACKUP_DIR/login-shell"
+
+	# A directory of plists is not much use on its own, so write the thing that
+	# actually puts them back.
+	{
+		echo "#!/usr/bin/env bash"
+		echo "#"
+		echo "# Restore the values this machine had before script/macos first ran."
+		echo "# Recorded $(date '+%Y-%m-%d %H:%M:%S %z')."
+		echo "#"
+		echo "# Log out afterwards: some of these only take effect on login."
+		echo "set -eu"
+		echo 'cd "$(dirname "$0")"'
+		for domain in "${TOUCHED_DOMAINS[@]}"; do
+			if [ -f "$BACKUP_DIR/$domain.plist" ]; then
+				echo "defaults import $domain ./$domain.plist"
+			else
+				echo "defaults delete $domain 2>/dev/null || true  # was not set before"
+			fi
+		done
+		echo 'sudo chsh -s "$(cat ./login-shell)" "$USER"'
+		echo 'killall Dock Finder SystemUIServer 2>/dev/null || true'
+		echo 'echo "Restored. Log out for the rest to take effect."'
+	} > "$BACKUP_DIR/restore"
+	chmod +x "$BACKUP_DIR/restore"
+	echo "  wrote $BACKUP_DIR/restore"
+fi
+
 # Use Homebrew's zsh as the login shell, rather than the older one macOS ships.
 #
 # Guarded because bootstrap runs this script *before* the Brewfile installs zsh,
@@ -128,9 +190,10 @@ defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
 # Terminal                                                                    #
 ###############################################################################
 
-# Only use UTF-8 in Terminal.app. The domain is really com.apple.Terminal, but
-# `defaults` matches domains case-insensitively, so this does land correctly.
-defaults write com.apple.terminal StringEncodings -array 4
+# Only use UTF-8 in Terminal.app. Spelled the way the domain really is: while
+# `defaults` matches domains case-insensitively, so com.apple.terminal would also
+# land, using one spelling keeps this greppable.
+defaults write com.apple.Terminal StringEncodings -array 4
 
 # Enable Secure Keyboard Entry in Terminal.app
 # See: https://security.stackexchange.com/a/47786/8918
@@ -138,49 +201,44 @@ defaults write com.apple.terminal StringEncodings -array 4
 # Terminal rewrites its own preferences when it quits, so this only sticks if
 # Terminal is not running when it is applied -- otherwise it gets overwritten
 # and has to be set from Terminal's own menu instead.
-defaults write com.apple.terminal SecureKeyboardEntry -bool true
+defaults write com.apple.Terminal SecureKeyboardEntry -bool true
 
-# Use Gotham theme by default in Terminal.app.
+# Use the Gotham profile in Terminal.app.
 #
-# Only attempted from a real desktop session. AppleScript that drives a GUI app
-# cannot work over ssh or from a headless machine: the AppleEvent has nothing to
-# talk to and blocks until it times out. On a real machine the first run also
-# needs Automation consent, which macOS prompts for.
+# Terminal registers a .terminal file when it is opened, so `open` is enough. No
+# AppleScript means no Automation consent prompt, and none of the window juggling
+# the old version needed -- it opened two windows to import the profile and then
+# closed them again. Skipped entirely when the profile is already installed, so a
+# re-run opens nothing.
+THEME_NAME="Gotham"
+THEME_FILE="$(cd "$(dirname "$0")" && pwd -P)/init/$THEME_NAME.terminal"
+
+profile_installed() {
+	defaults read com.apple.Terminal "Window Settings" 2>/dev/null \
+		| grep -qE "^[[:space:]]+\"?$THEME_NAME\"? ="
+}
+
 if [ "$(launchctl managername 2>/dev/null)" != "Aqua" ]; then
-	echo "Skipping the Terminal theme: not a desktop session"
+	echo "Skipping the Terminal profile: not a desktop session"
+elif [ ! -f "$THEME_FILE" ]; then
+	echo "Skipping the Terminal profile: $THEME_FILE is missing"
 else
-osascript <<EOD
-tell application "Terminal"
-	local allOpenedWindows
-	local initialOpenedWindows
-	local windowID
-	set themeName to "Gotham"
-	(* Store the IDs of all the open terminal windows. *)
-	set initialOpenedWindows to id of every window
-	(* Open the custom theme so that it gets added to the list
-	   of available terminal themes (note: this will open two
-	   additional terminal windows). *)
-	do shell script "open '$HOME/.dotfiles/script/init/" & themeName & ".terminal'"
-	(* Wait a little bit to ensure that the custom theme is added. *)
-	delay 1
-	(* Set the custom theme as the default terminal theme. *)
-	set default settings to settings set themeName
-	(* Get the IDs of all the currently opened terminal windows. *)
-	set allOpenedWindows to id of every window
-	repeat with windowID in allOpenedWindows
-		(* Close the additional windows that were opened in order
-		   to add the custom theme to the list of terminal themes. *)
-		if initialOpenedWindows does not contain windowID then
-			close (every window whose id is windowID)
-		(* Change the theme for the initial opened terminal windows
-		   to remove the need to close them in order for the custom
-		   theme to be applied. *)
-		else
-			set current settings of tabs of (every window whose id is windowID) to settings set themeName
-		end if
-	end repeat
-end tell
-EOD
+	if profile_installed; then
+		echo "Terminal profile $THEME_NAME is already installed"
+	else
+		echo "Installing the $THEME_NAME Terminal profile:"
+		open -g "$THEME_FILE"
+		# Wait for Terminal to register it, rather than sleeping a fixed second
+		# and hoping.
+		for _ in $(seq 1 40); do
+			profile_installed && break
+			sleep 0.25
+		done
+		profile_installed || echo "  (Terminal did not register it; open $THEME_FILE by hand)"
+	fi
+
+	defaults write com.apple.Terminal "Default Window Settings" -string "$THEME_NAME"
+	defaults write com.apple.Terminal "Startup Window Settings" -string "$THEME_NAME"
 fi
 
 # Restart the apps that own the settings above, so the (relaunch) ones take
