@@ -25,6 +25,7 @@ jobs:
   static:
     name: static checks
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - name: Install tooling
@@ -35,6 +36,7 @@ jobs:
   unit:
     name: unit (${{ matrix.zsh }} zsh)
     runs-on: macos-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -59,6 +61,7 @@ jobs:
   integration:
     name: integration
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       # The shell integration for these is wired up by config/zsh/lib, and the

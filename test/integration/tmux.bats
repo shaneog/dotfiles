@@ -10,31 +10,38 @@ load '../helpers/common'
 
 setup() {
   command -v tmux >/dev/null 2>&1 || skip "tmux is not installed"
-  TMUX_HOME="$(make_home)"
   SOCKET="dotfiles-test-$$-${BATS_TEST_NUMBER:-0}"
+  # A throwaway $HOME with a stub tpm already in place. The config clones tpm
+  # when it is missing, and ~/.config is a symlink to this repo, so without the
+  # stub these tests fetch plugins over the network and into the working tree.
+  TMUX_HOME="$BATS_TEST_TMPDIR/home"
+  mkdir -p "$TMUX_HOME/.config/tmux/plugins/tpm"
+  printf '#!/bin/sh\nexit 0\n' > "$TMUX_HOME/.config/tmux/plugins/tpm/tpm"
+  chmod +x "$TMUX_HOME/.config/tmux/plugins/tpm/tpm"
 }
 
 teardown() {
-  [ -n "${SOCKET:-}" ] && tmux -L "$SOCKET" kill-server 2>/dev/null
-  if [ -n "${TMUX_HOME:-}" ] && guard_home "$TMUX_HOME"; then
-    rm -rf "$TMUX_HOME"
-  fi
+  [ -n "${SOCKET:-}" ] && tmux -L "$SOCKET" kill-server >/dev/null 2>&1
   return 0
 }
 
-# Start a server from the repo's config against a disposable $HOME. The plugin
-# path resolves through that home's .config symlink, so the plugins already on
-# disk are used and nothing is cloned.
+# Start a server from the repo's config against the throwaway $HOME.
+#
+# stdout goes to /dev/null on purpose: the server daemonises and inherits it,
+# and a daemon holding the write end of bats's pipe means bats waits for an EOF
+# that never comes. That is a ten-minute hang on a runner, not a failure.
 start_tmux() {
-  # env, not a variable prefix: _timeout is a shell function and env cannot run
-  # one. new-session -d returns immediately, so no timeout is needed here.
-  HOME="$TMUX_HOME" env -u COLORTERM "$@" \
-    tmux -L "$SOCKET" -f "$REPO/config/tmux/tmux.conf" \
-    new-session -d -s probe 2>"$BATS_TEST_TMPDIR/stderr"
+  (
+    unset COLORTERM
+    for assignment in "$@"; do export "$assignment"; done
+    export HOME="$TMUX_HOME"
+    _timeout 30 tmux -L "$SOCKET" -f "$REPO/config/tmux/tmux.conf" \
+      new-session -d -s probe >/dev/null 2>"$BATS_TEST_TMPDIR/stderr"
+  )
 }
 
 show() {
-  HOME="$TMUX_HOME" tmux -L "$SOCKET" show -g "$1" 2>&1
+  HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" show -g "$1" 2>&1
 }
 
 @test "tmux: the config loads without tmux rejecting anything" {
@@ -48,7 +55,8 @@ show() {
   # source-file reports what start-up swallows, so this is where a stale option
   # actually shows itself.
   start_tmux
-  run env HOME="$TMUX_HOME" tmux -L "$SOCKET" source-file "$REPO/config/tmux/tmux.conf"
+  # _timeout first: it is a shell function, and env can only exec a binary.
+  run _timeout 15 env HOME="$TMUX_HOME" tmux -L "$SOCKET" source-file "$REPO/config/tmux/tmux.conf"
   [ -z "$output" ] || { echo "re-sourcing produced: $output"; return 1; }
 }
 
@@ -83,7 +91,7 @@ show() {
 @test "tmux: copying goes to the system clipboard" {
   start_tmux
   local n
-  n="$(HOME="$TMUX_HOME" tmux -L "$SOCKET" list-keys -T copy-mode-vi 2>/dev/null \
+  n="$(HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" list-keys -T copy-mode-vi 2>/dev/null \
     | grep -c 'copy-pipe-and-cancel pbcopy' || true)"
   [ "${n:-0}" -ge 2 ] \
     || { echo "expected y, Enter and mouse drag to pipe to pbcopy, found $n"; return 1; }
@@ -92,7 +100,7 @@ show() {
 @test "tmux: splits open in the current pane's directory" {
   start_tmux
   local n
-  n="$(HOME="$TMUX_HOME" tmux -L "$SOCKET" list-keys 2>/dev/null \
+  n="$(HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" list-keys 2>/dev/null \
     | grep -c 'pane_current_path' || true)"
   [ "${n:-0}" -ge 3 ] || { echo "expected |, - and c to use pane_current_path, found $n"; return 1; }
 }
@@ -103,7 +111,7 @@ show() {
   start_tmux COLORTERM=truecolor
   show terminal-features | grep -q "RGB" \
     || { echo "RGB not declared with COLORTERM=truecolor: $(show terminal-features)"; return 1; }
-  tmux -L "$SOCKET" kill-server 2>/dev/null
+  tmux -L "$SOCKET" kill-server >/dev/null 2>&1
 
   start_tmux
   run show terminal-features
@@ -121,4 +129,13 @@ show() {
   legacy="$(grep -cE "^[[:space:]]*set .*@tpm_plugins" "$REPO/config/tmux/tmux.conf" || true)"
   [ "$declared" -eq 3 ] || { echo "expected tpm, resurrect and continuum, found $declared"; return 1; }
   [ "$legacy" -eq 0 ] || { echo "the deprecated @tpm_plugins spelling is back"; return 1; }
+}
+
+@test "tmux: the tests themselves fetch nothing" {
+  # The bootstrap hook clones tpm when it is absent, over the network and into
+  # the working tree. A test that does that is a test that hangs on a runner.
+  start_tmux
+  local fetched
+  fetched="$(ls "$TMUX_HOME/.config/tmux/plugins" 2>/dev/null | tr '\n' ' ' | tr -s ' ')"
+  [ "$fetched" = "tpm " ] || { echo "these tests fetched: $fetched"; return 1; }
 }
