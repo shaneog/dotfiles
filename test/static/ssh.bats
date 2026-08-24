@@ -17,8 +17,16 @@ teardown() {
 }
 
 # Effective config for a host, as ssh itself resolves it (no network involved).
+# SSH_CONNECTION is cleared because the config now branches on it, and these
+# tests would otherwise report different answers when run over ssh.
 effective() {
-  HOME="$SSH_HOME" ssh -G -F "$REPO/ssh/config" "$1" 2>/dev/null
+  env -u SSH_CONNECTION HOME="$SSH_HOME" ssh -G -F "$REPO/ssh/config" "$1" 2>/dev/null
+}
+
+# The same, as it resolves inside an inbound ssh session.
+effective_in_ssh() {
+  SSH_CONNECTION="1.2.3.4 22 5.6.7.8 22" HOME="$SSH_HOME" \
+    ssh -G -F "$REPO/ssh/config" "$1" 2>/dev/null
 }
 
 @test "config parses and resolves" {
@@ -34,10 +42,16 @@ effective() {
   echo "$output" | grep -qx "tcpkeepalive no"
 }
 
-@test "no keyword is set twice" {
+@test "no keyword is set twice within one block" {
+  # Per block, not per file: IdentityAgent is deliberately set once for inbound
+  # ssh sessions and once for everything else, and ssh keeps the first match.
   local dupes
-  dupes="$(grep -vE '^\s*(#|$|Host |Include )' "$REPO/ssh/config" \
-    | awk '{print tolower($1)}' | sort | uniq -d)"
+  dupes="$(awk '
+    /^[[:space:]]*(#|$)/            { next }
+    /^[[:space:]]*Include[[:space:]]/ { next }
+    /^[[:space:]]*(Host|Match)[[:space:]]/ { block = $0; next }
+    { k = tolower($1); if (seen[block "\t" k]++) print (block == "" ? "top level" : block) " -> " k }
+  ' "$REPO/ssh/config")"
   [ -z "$dupes" ] || { echo "duplicated keywords: $dupes"; return 1; }
 }
 
@@ -67,6 +81,22 @@ effective() {
   # Setting IdentitiesOnly would restrict auth to IdentityFile entries, of which
   # there are none, so it must stay off for agent keys to be offered.
   echo "$output" | grep -qx "identitiesonly no"
+}
+
+@test "an inbound ssh session defers to the forwarded agent" {
+  # IdentityAgent overrides SSH_AUTH_SOCK, so a Host * path would send onward
+  # hops to 1Password's socket and block on an approval nobody can give. The
+  # literal string means "read the environment", which is what lib/1password.zsh
+  # deliberately leaves alone in the same situation.
+  run effective_in_ssh example.com
+  echo "$output" | grep -qx "identityagent SSH_AUTH_SOCK" \
+    || { echo "an inbound session would not use the forwarded agent: $(echo "$output" | grep -i identityagent)"; return 1; }
+}
+
+@test "a local session still uses 1Password's agent directly" {
+  run effective example.com
+  echo "$output" | grep -qi "^identityagent .*1password.*agent.sock" \
+    || { echo "local sessions lost the 1Password agent: $(echo "$output" | grep -i identityagent)"; return 1; }
 }
 
 @test "config-local can still redirect the agent" {

@@ -13,6 +13,15 @@ ServerAliveInterval 30
 # Conserve bandwith. (Compression is off by default.)
 Compression yes
 
+# Inside an inbound ssh session, defer to whatever the environment says the
+# agent is -- normally an agent the client forwarded. IdentityAgent overrides
+# SSH_AUTH_SOCK, so without this the Host * setting below would point onward
+# hops at 1Password's socket and wait for an approval nobody is there to give.
+# lib/1password.zsh declines to export the variable in the same situation.
+# The literal string SSH_AUTH_SOCK tells ssh to read it from the environment.
+Match exec "test -n \"$SSH_CONNECTION\""
+    IdentityAgent SSH_AUTH_SOCK
+
 Host *
     SendEnv LS_COLORS
 
