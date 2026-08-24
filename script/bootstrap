@@ -158,6 +158,27 @@ if [ -f "$HOME/.Brewfile" ]; then
   logk
 fi
 
+# Use Homebrew's zsh as the login shell, now that the Brewfile has installed it.
+#
+# This used to live in script/macos, which bootstrap runs before the Brewfile --
+# so on a new machine it pointed the login shell at a binary that did not exist
+# yet. Registered in /etc/shells and set with chsh rather than written into the
+# directory with dscl, because chsh validates the shell and some tools consult
+# that list before trusting one.
+brew_zsh="$(brew --prefix)/bin/zsh"
+current_shell="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
+if [ ! -x "$brew_zsh" ]; then
+  log "Leaving the login shell alone: $brew_zsh was not installed"
+elif [ "$current_shell" = "$brew_zsh" ]; then
+  log "Login shell is already $brew_zsh"
+else
+  log "Using Homebrew's zsh for the login shell:"
+  grep -qxF "$brew_zsh" /etc/shells \
+    || echo "$brew_zsh" | sudo_askpass tee -a /etc/shells >/dev/null
+  sudo_askpass chsh -s "$brew_zsh" "$USER"
+  logk
+fi
+
 # Run post-install dotfiles script
 run_dotfile_scripts script/after-setup
 

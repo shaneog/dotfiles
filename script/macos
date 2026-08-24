@@ -3,18 +3,39 @@
 # macOS system settings. Run by script/bootstrap on a new machine, and safe to
 # re-run afterwards -- every change is a `defaults write`, so it is idempotent.
 #
-# Deliberately no `set -e`: a key that a future macOS stops honouring should not
-# stop the rest from applying. That means the exit status says little, so the
-# provision workflow asserts a sample of the results with `defaults read`.
+#   script/macos                apply the settings
+#   script/macos --check        report which are not applied, change nothing
+#   script/macos --reset-dock   also clear the Dock's pinned icons
+#
+# The settings live in one table, so applying them, checking them and testing
+# them are the same list -- CI runs --check after applying, which is why nothing
+# needs a hand-maintained copy of the expected values.
+#
+# The login shell is no longer set here: it moved to script/bootstrap, which runs
+# after the Brewfile has installed the shell it points at.
+#
+# Deliberately no `set -e`: a key a future macOS stops honouring should not stop
+# the rest from applying. Failures are counted and reported rather than passing
+# silently.
 #
 # Two things worth knowing before re-running on a machine you have since set up
 # by hand:
 #
-#   - the Dock's icons are wiped (see persistent-apps below)
-#   - the login shell is set to Homebrew's zsh
+#   - the Dock's icons are wiped, but only with --reset-dock
 #
 # Settings marked (relaunch) need the owning app restarted, which the killall at
 # the bottom handles. Settings marked (logout) need a full logout or restart.
+
+
+CHECK_ONLY=""
+RESET_DOCK=""
+for arg in "$@"; do
+	case "$arg" in
+		--check)      CHECK_ONLY="1" ;;
+		--reset-dock) RESET_DOCK="1" ;;
+		*) echo "!!! unknown option: $arg" >&2; exit 1 ;;
+	esac
+done
 
 # Close System Settings, so an open pane cannot write its cached values back
 # over what we are about to change. Called "System Preferences" until Ventura
@@ -42,7 +63,9 @@ TOUCHED_DOMAINS=(
 	com.apple.Terminal
 )
 
-if [ -d "$BACKUP_DIR" ]; then
+if [ -n "$CHECK_ONLY" ]; then
+	: # --check changes nothing, including this
+elif [ -d "$BACKUP_DIR" ]; then
 	echo "Previous values already recorded in $BACKUP_DIR"
 else
 	echo "Recording the current values in $BACKUP_DIR:"
@@ -83,125 +106,108 @@ else
 	echo "  wrote $BACKUP_DIR/restore"
 fi
 
-# Use Homebrew's zsh as the login shell, rather than the older one macOS ships.
+
+###############################################################################
+# The settings                                                                #
+###############################################################################
+
+# domain|key|type|value|when|what it does
 #
-# Guarded because bootstrap runs this script *before* the Brewfile installs zsh,
-# so on a genuinely new machine the binary does not exist yet -- and pointing a
-# login shell at a missing binary is how you end up unable to open a terminal.
-# Re-running bootstrap once the Brewfile has been applied picks it up.
-#
-# Registered in /etc/shells and set with chsh rather than written straight into
-# the directory with dscl: chsh validates the shell, and some tools check that
-# list before trusting a shell.
-brew_zsh="$(brew --prefix)/bin/zsh"
-current_shell="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
-if [ ! -x "$brew_zsh" ]; then
-	echo "Skipping login shell: $brew_zsh is not installed yet (the Brewfile installs it)"
-elif [ "$current_shell" = "$brew_zsh" ]; then
-	echo "Login shell is already $brew_zsh"
-else
-	echo "Using Homebrew's zsh for the login shell:"
-	grep -qxF "$brew_zsh" /etc/shells || echo "$brew_zsh" | sudo tee -a /etc/shells >/dev/null
-	sudo chsh -s "$brew_zsh" "$USER"
+# "when" is when it takes effect: now, relaunch (of the owning app, which the
+# killall at the bottom handles), or logout.
+SETTINGS=(
+	"NSGlobalDomain|AppleInterfaceStyle|-string|Dark|logout|Dark mode"
+	"NSGlobalDomain|NSNavPanelExpandedStateForSaveMode|-bool|true|now|Expanded save panel"
+	"NSGlobalDomain|NSNavPanelExpandedStateForSaveMode2|-bool|true|now|Expanded save panel"
+	"NSGlobalDomain|PMPrintingExpandedStateForPrint|-bool|true|now|Expanded print panel"
+	"NSGlobalDomain|PMPrintingExpandedStateForPrint2|-bool|true|now|Expanded print panel"
+	"com.apple.print.PrintingPrefs|Quit When Finished|-bool|true|now|Quit the printer app when done"
+
+	"com.apple.dock|tilesize|-int|48|relaunch|Icon size"
+	"com.apple.dock|orientation|-string|right|relaunch|Dock on the right"
+	"com.apple.dock|autohide|-bool|true|relaunch|Auto-hide"
+	"com.apple.dock|autohide-delay|-float|0|relaunch|No delay before showing"
+	"com.apple.dock|autohide-time-modifier|-float|0|relaunch|No hide and show animation"
+	"com.apple.dock|showhidden|-bool|true|relaunch|Dim hidden apps"
+	"com.apple.dock|show-recents|-bool|false|relaunch|No recent applications"
+
+	"com.apple.finder|NewWindowTarget|-string|PfHm|relaunch|New windows open at home (PfHm)"
+	"com.apple.finder|NewWindowTargetPath|-string|file://${HOME}|relaunch|...which is this path"
+	"com.apple.finder|ShowStatusBar|-bool|true|relaunch|Status bar"
+	"com.apple.finder|ShowPathbar|-bool|true|relaunch|Path bar"
+	"com.apple.finder|_FXSortFoldersFirst|-bool|true|relaunch|Folders first when sorting"
+	"com.apple.finder|FXDefaultSearchScope|-string|SCcf|relaunch|Search the current folder (SCcf; SCev is this Mac)"
+	"com.apple.finder|FXPreferredViewStyle|-string|Nlsv|relaunch|List view (Nlsv; icnv, clmv, Flwv are the others)"
+
+	"com.apple.desktopservices|DSDontWriteNetworkStores|-bool|true|logout|No .DS_Store on network volumes"
+	"com.apple.desktopservices|DSDontWriteUSBStores|-bool|true|logout|No .DS_Store on USB volumes"
+
+	"com.apple.Terminal|StringEncodings|-array|4|relaunch|UTF-8 only"
+)
+
+# What `defaults read` gives back for a value, so what is wanted can be compared
+# with what is there instead of writing blindly every time.
+as_read() {
+	case "$1" in
+		-bool)  case "$2" in true|yes|1) echo 1 ;; *) echo 0 ;; esac ;;
+		-array) echo "($2)" ;;
+		*)      echo "$2" ;;
+	esac
+}
+
+applied=0
+changed=0
+failed=0
+drifted=0
+
+for setting in "${SETTINGS[@]}"; do
+	IFS="|" read -r domain key type value when what <<< "$setting"
+	# a couple of values mention $HOME
+	value="$(eval echo "\"$value\"")"
+
+	want="$(as_read "$type" "$value" | tr -d '[:space:]')"
+	have="$(defaults read "$domain" "$key" 2>/dev/null | tr -d '[:space:]')"
+
+	if [ "$want" = "$have" ]; then
+		applied=$((applied + 1))
+		continue
+	fi
+
+	if [ -n "$CHECK_ONLY" ]; then
+		drifted=$((drifted + 1))
+		printf '  not applied: %s %s is %s, wanted %s (%s)\n' \
+			"$domain" "$key" "${have:-unset}" "$want" "$what"
+		continue
+	fi
+
+	if defaults write "$domain" "$key" "$type" "$value" 2>/dev/null; then
+		changed=$((changed + 1))
+		printf '  %s (%s)\n' "$what" "$when"
+	else
+		failed=$((failed + 1))
+		printf '  FAILED: %s %s -- macOS may no longer honour it\n' "$domain" "$key"
+	fi
+done
+
+if [ -n "$CHECK_ONLY" ]; then
+	echo "$applied of ${#SETTINGS[@]} settings applied, $drifted not"
+	[ "$drifted" -eq 0 ] || exit 1
+	exit 0
 fi
 
-###############################################################################
-# General UI/UX                                                               #
-###############################################################################
-
-# Use Dark mode permanently (logout). Note that if appearance has ever been set
-# to "Auto", AppleInterfaceStyleSwitchesAutomatically wins over this, and would
-# need deleting as well.
-defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
-
-# Expand save panel by default
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
-
-# Expand print panel by default
-defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
-defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
-
-# Automatically quit printer app once the print jobs complete
-defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
+echo "$changed changed, $applied already applied, $failed failed"
 
 ###############################################################################
-# Dock                                                                        #
+# The Dock's pinned icons                                                     #
 ###############################################################################
 
-# Set the icon size of Dock items to 48 pixels
-defaults write com.apple.dock tilesize -int 48
-
-# Set the dock to the right side of the screen
-defaults write com.apple.dock orientation -string "right"
-
-# Wipe all app icons from the Dock (relaunch). This is why re-running bootstrap
-# on an established machine costs you whatever you have pinned since.
-defaults write com.apple.dock persistent-apps -array
-
-# Show only open applications in the Dock
-# defaults write com.apple.dock static-only -bool false
-
-# Remove the auto-hiding Dock delay
-defaults write com.apple.dock autohide-delay -float 0
-# Remove the animation when hiding/showing the Dock
-defaults write com.apple.dock autohide-time-modifier -float 0
-
-# Automatically hide and show the Dock
-defaults write com.apple.dock autohide -bool true
-
-# Make Dock icons of hidden applications translucent
-defaults write com.apple.dock showhidden -bool true
-
-# Don’t show recent applications in Dock
-defaults write com.apple.dock show-recents -bool false
-
-###############################################################################
-# Finder                                                                      #
-###############################################################################
-
-# Set $HOME as the default location for new Finder windows. "PfHm" is Finder's
-# code for the home folder; the path below is what it actually opens.
-defaults write com.apple.finder NewWindowTarget -string "PfHm"
-defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}"
-
-# Finder: show status bar
-defaults write com.apple.finder ShowStatusBar -bool true
-
-# Finder: show path bar
-defaults write com.apple.finder ShowPathbar -bool true
-
-# Keep folders on top when sorting by name
-defaults write com.apple.finder _FXSortFoldersFirst -bool true
-
-# Search the current folder by default rather than the whole Mac ("SCev" is
-# this Mac, "SCsp" the previous scope, "SCcf" the current folder).
-defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
-
-# Avoid creating .DS_Store files on network or USB volumes
-defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-
-# Use list view in all Finder windows by default. Four-character view codes:
-# "Nlsv" list, "icnv" icon, "clmv" column, "Flwv" gallery.
-defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
-
-###############################################################################
-# Terminal                                                                    #
-###############################################################################
-
-# Only use UTF-8 in Terminal.app. Spelled the way the domain really is: while
-# `defaults` matches domains case-insensitively, so com.apple.terminal would also
-# land, using one spelling keeps this greppable.
-defaults write com.apple.Terminal StringEncodings -array 4
-
-# Enable Secure Keyboard Entry in Terminal.app
-# See: https://security.stackexchange.com/a/47786/8918
-#
-# Terminal rewrites its own preferences when it quits, so this only sticks if
-# Terminal is not running when it is applied -- otherwise it gets overwritten
-# and has to be set from Terminal's own menu instead.
-defaults write com.apple.Terminal SecureKeyboardEntry -bool true
+# Not in the table because it is destructive rather than declarative: it clears
+# whatever you have pinned since. Opt in, because re-running bootstrap is cheap
+# now and losing the Dock every time is not a fair price for that.
+if [ -n "$RESET_DOCK" ]; then
+	echo "Clearing the Dock's pinned icons"
+	defaults write com.apple.dock persistent-apps -array
+fi
 
 # Use the Gotham profile in Terminal.app.
 #

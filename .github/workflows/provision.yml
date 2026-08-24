@@ -140,14 +140,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Run it
-        run: ./script/macos || true    # individual settings may not apply headless
-      - name: The settings it claims to set are set
-        run: |
-          set -x
-          [ "$(defaults read NSGlobalDomain AppleInterfaceStyle)" = "Dark" ]
-          [ "$(defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode)" = "1" ]
-          [ "$(defaults read com.apple.dock tilesize)" = "48" ]
-          [ "$(defaults read com.apple.dock orientation)" = "right" ]
+        run: ./script/macos
+      # --check reads the same table the apply pass used, so this covers every
+      # setting rather than a hand-picked four that drift out of step.
+      - name: Every setting it claims to apply is applied
+        run: ./script/macos --check
 
   remove:
     name: script/remove tears down

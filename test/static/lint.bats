@@ -88,12 +88,41 @@ load '../helpers/common'
   echo "$output" | grep -qx shellcheck
 }
 
-@test "script/macos only writes defaults to known domains" {
+@test "script/macos only touches known domains" {
   local known="NSGlobalDomain com.apple.desktopservices com.apple.dock com.apple.finder com.apple.print.PrintingPrefs com.apple.Terminal"
   local d
-  for d in $(grep -oE '^[[:space:]]*defaults write [A-Za-z0-9.-]+' "$REPO/script/macos" | awk '{print $3}' | sort -u); do
-    echo "$known" | grep -qw "$d" || { echo "unknown defaults domain: $d"; return 1; }
+  # the settings table
+  for d in $(grep -oE '^[[:space:]]+"[A-Za-z][A-Za-z0-9.]*\|' "$REPO/script/macos" \
+               | tr -d '"|[:blank:]' | sort -u); do
+    echo "$known" | grep -qw "$d" || { echo "unknown domain in the table: $d"; return 1; }
   done
+  # and anything written outside it
+  for d in $(grep -oE '^[[:space:]]*defaults write [A-Za-z0-9.-]+' "$REPO/script/macos" \
+               | awk '{print $3}' | sort -u); do
+    echo "$known" | grep -qw "$d" || { echo "unknown domain written directly: $d"; return 1; }
+  done
+}
+
+@test "every settings table entry is well formed" {
+  # A typo'd row would otherwise do nothing at all, quietly.
+  local line type when count=0
+  while IFS= read -r line; do
+    count=$((count + 1))
+    [ "$(echo "$line" | awk -F'|' '{print NF}')" -eq 6 ] \
+      || { echo "expected 6 fields: $line"; return 1; }
+    type="$(echo "$line" | cut -d'|' -f3)"
+    case "$type" in
+      -bool|-int|-float|-string|-array) ;;
+      *) echo "unknown type '$type' in: $line"; return 1 ;;
+    esac
+    when="$(echo "$line" | cut -d'|' -f5)"
+    case "$when" in
+      now|relaunch|logout) ;;
+      *) echo "unknown 'when' value '$when' in: $line"; return 1 ;;
+    esac
+  done < <(grep -E '^[[:space:]]+"[^"]*(\|[^"]*){5}"$' "$REPO/script/macos" \
+             | sed 's/^[[:space:]]*"//; s/"$//')
+  [ "$count" -ge 20 ] || { echo "only found $count settings, the table did not parse"; return 1; }
 }
 
 @test "workflows ask for no more than they need" {
