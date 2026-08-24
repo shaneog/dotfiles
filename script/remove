@@ -1,8 +1,31 @@
 #!/usr/bin/env bash
-# Completely remove all bootstrapped setup
+#
+# Remove these dotfiles.
+#
+# By default this undoes what this repo installed and nothing else: the symlinks
+# in $HOME, the clone at ~/.dotfiles, the caches its shell config generates, and
+# the login shell that script/macos changed. Homebrew, everything the Brewfile
+# installed, and the Command Line Tools are left alone -- the script used to take
+# all three out, which is a good deal more than "remove these dotfiles".
+#
+#   script/remove               the dotfiles
+#   script/remove --everything  ...and Homebrew, its packages, and the CLT
+#
+# Not undone either way: the settings script/macos wrote, because their previous
+# values are recorded nowhere. Shell history under $XDG_DATA_HOME/zsh is also
+# left alone, being yours rather than ours.
 set -e
 
-[[ "$1" = "--debug" || -o xtrace ]] && DEBUG="1"
+DEBUG=""
+EVERYTHING=""
+for arg in "$@"; do
+  case "$arg" in
+    --debug)      DEBUG="1" ;;
+    --everything) EVERYTHING="1" ;;
+    *) echo "!!! unknown option: $arg" >&2; exit 1 ;;
+  esac
+done
+[[ -o xtrace ]] && DEBUG="1"
 
 sudo_askpass() {
   if [ -n "$SUDO_ASKPASS" ]; then
@@ -98,41 +121,61 @@ groups | grep "$Q" -E "\b(admin)\b" || abort "Add $USER to the admin group."
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &
 
-echo "This will completely remove these dotfiles and return the system to its prior state"
+echo "This removes these dotfiles: the symlinks in \$HOME, the clone at"
+echo "\$HOME/.dotfiles, the caches the shell config generates, and the login"
+echo "shell that script/macos set."
+if [ -n "$EVERYTHING" ]; then
+  echo
+  echo "--everything was given, so this will ALSO uninstall Homebrew, every"
+  echo "package the Brewfile installed, and the Command Line Tools."
+fi
+echo
+echo "Left alone either way: the macOS settings script/macos wrote, and your"
+echo "shell history."
+echo
 
-read -r -p "Are you sure you? [y/N] " response
-if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
-then
-  echo "Please remove the added themes from Terminal.app manually."
+read -r -p "Are you sure? [y/N] " response
+if [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+  echo "Nothing done."
+  exit 0
+fi
 
-  # macOS Command Line Tools
+echo "Please remove the added themes from Terminal.app manually."
+
+# script/macos changed this, so it is ours to put back.
+log "Restoring the login shell"
+sudo_askpass dscl . -create "/Users/$USER" UserShell "/bin/zsh"
+
+log "Removing the caches this config generates"
+rm -rf "$HOME/.Brewfile.lock.json"
+rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/zinit"
+for cache in zsh zinit prezto fsh starship; do
+  rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/$cache"
+done
+
+log "Removing the clone and the links into it"
+rm -rf "$HOME/.dotfiles"
+# Deleting the clone leaves every symlink into it dangling, which is what makes
+# them safe to collect without a list of what was installed.
+find "$HOME" -maxdepth 1 -type l ! -exec test -e {} \; -delete
+
+if [ -n "$EVERYTHING" ]; then
   if [ -d "$(xcode-select -p)" ]; then
-    echo "Removing Command Line Tools..."
+    log "Removing the Command Line Tools"
     sudo rm -rf "$(xcode-select -p)"
   fi
 
-  # Homebrew
-  echo "Removing Homebrew brews..."
-  while [[ $(brew list --formula | wc -l) -ne 0 ]]; do
-    for EACH in $(brew list); do
-        brew uninstall --formula --force --ignore-dependencies "$EACH"
-    done
-  done
-  echo "Removing Homebrew casks..."
-  while [[ $(brew list --cask | wc -l) -ne 0 ]]; do
-    for EACH in $(brew list); do
-        brew uninstall --cask --force --ignore-dependencies "$EACH"
-    done
-  done
+  log "Uninstalling everything Homebrew installed"
+  formulae="$(brew list --formula || true)"
+  # shellcheck disable=SC2086
+  [ -n "$formulae" ] && brew uninstall --formula --force --ignore-dependencies $formulae || true
+  casks="$(brew list --cask || true)"
+  # shellcheck disable=SC2086
+  [ -n "$casks" ] && brew uninstall --cask --force --ignore-dependencies $casks || true
 
-  echo "Removing Homebrew..."
-  sudo_askpass dscl . -create "/Users/$USER" UserShell "/bin/zsh"
+  log "Uninstalling Homebrew"
   curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh | bash -s -- --force
   [ -d "/opt/homebrew" ] && sudo rm -rf /opt/homebrew
-
-  # dotfiles
-  echo "Removing dotfiles..."
-  rm -rf "$HOME/.Brewfile.lock.json" "$HOME/.local/" "$HOME/.cache/" "$HOME/.nodenv/" "$HOME/.vscode/" "$HOME/.zplug/"
-  rm -rf "$HOME/.dotfiles"
-  find "$HOME" -maxdepth 1 -type l ! -exec test -e {} \; -delete
 fi
+
+echo "Done."

@@ -167,6 +167,7 @@ jobs:
         run: |
           cd "$HOME_UNDER_TEST/.dotfiles"
           yes | HOME="$HOME_UNDER_TEST" ./script/remove || true
+
       - name: The dotfiles and their dangling links are gone
         run: |
           set -x
@@ -175,6 +176,22 @@ jobs:
             [ ! -L "$HOME_UNDER_TEST/$link" ] || {
               echo "$link survived as a dangling link"; exit 1; }
           done
+
+      # The whole point of the rescope: removing the dotfiles must not take the
+      # machine's toolchain with them.
+      - name: ...but Homebrew is untouched
+        run: |
+          command -v brew >/dev/null || { echo "default removal took Homebrew out"; exit 1; }
+          brew list --formula --versions git >/dev/null \
+            || { echo "default removal uninstalled packages"; exit 1; }
+
+      # Run from the workspace, since the clone it was installed from is gone.
+      - name: --everything does take Homebrew
+        run: yes | HOME="$HOME_UNDER_TEST" ./script/remove --everything || true
+
+      - name: Homebrew is gone
+        run: |
+          [ ! -x /opt/homebrew/bin/brew ] || { echo "--everything left Homebrew behind"; exit 1; }
 
   bootstrap:
     name: bootstrap end to end
