@@ -64,7 +64,7 @@ jobs:
       # The shell integration for these is wired up by config/zsh/lib, and the
       # Brewfile is what installs them, so the runner needs them too.
       - name: Install tooling
-        run: brew install bats-core direnv fzf starship zsh-patina
+        run: brew install bats-core direnv fd fzf ripgrep starship zsh-patina
 
       # The plugin set is defined by the zsh libs, so key the cache on them.
       - name: Restore plugin cache

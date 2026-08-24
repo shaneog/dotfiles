@@ -235,3 +235,19 @@ STUB
   echo "$output" | grep -q "cache=1"  || { echo "completion cache path is not ours: $output"; return 1; }
   [ "$strays" = 0 ] || { echo "something wrote a second completion dump"; return 1; }
 }
+
+@test "fzf's file command actually returns files" {
+  # This shipped broken: FZF_DEFAULT_COMMAND called rg, rg was in no Brewfile,
+  # and fzf treats a failing command as an empty result set -- so Ctrl-T quietly
+  # listed nothing on every machine. Asserting the widget exists was not enough,
+  # because the widget existed the whole time. Assert output instead.
+  command -v rg >/dev/null || skip "ripgrep not installed"
+  local home; home="$(make_home)"
+  run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+    USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
+    "$ZSH_BIN" -lic "cd $REPO && eval \"\$FZF_DEFAULT_COMMAND\" | wc -l"
+  guard_home "$home" && rm -rf "$home"
+  local lines; lines="$(echo "$output" | tr -d ' ' | grep -E '^[0-9]+$' | tail -1)"
+  [ -n "$lines" ] && [ "$lines" -gt 0 ] \
+    || { echo "fzf's file command produced no files: $output"; return 1; }
+}
