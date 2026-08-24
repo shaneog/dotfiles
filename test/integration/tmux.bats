@@ -80,10 +80,14 @@ show() {
   echo "$(show history-limit)" | grep -q "50000" || { echo "$(show history-limit)"; return 1; }
 }
 
-@test "tmux: the prefix indicator is inline, not a plugin" {
+@test "tmux: status-left carries the placeholder the prefix plugin fills in" {
+  # tpm is stubbed here, so the placeholder is still literal. That it survives
+  # is the point: the plugin interpolates over it at load, and a status-left
+  # without it silently loses the prefix, copy and sync indicators. The VM tier
+  # asserts the interpolated form, where the real plugin is installed.
   start_tmux
-  echo "$(show status-left)" | grep -q "client_prefix" \
-    || { echo "no prefix indicator in status-left: $(show status-left)"; return 1; }
+  echo "$(show status-left)" | grep -qF '#{prefix_highlight}' \
+    || { echo "no prefix_highlight placeholder in status-left: $(show status-left)"; return 1; }
   echo "$(show status-right)" | grep -qv "now_playing" \
     || { echo "status-right still calls the removed now-playing script"; return 1; }
 }
@@ -120,14 +124,17 @@ show() {
   return 0
 }
 
-@test "tmux: only the plugins with no built-in equivalent are declared" {
-  # A plugin here has to do something tmux cannot. The legacy @tpm_plugins
-  # spelling is checked for too, since tpm still honours it silently.
-  local declared legacy
-  declared="$(grep -c "^set -g @plugin" "$REPO/config/tmux/tmux.conf" || true)"
-  # An actual setting, not the comment explaining why it is gone.
+@test "tmux: the declared plugin set is the intended one" {
+  # Named rather than counted, so adding or dropping one is a deliberate edit to
+  # this list. The legacy @tpm_plugins spelling is checked for too, since tpm
+  # still honours it silently.
+  local declared expected legacy
+  declared="$(grep -oE "^set -g @plugin '[^']+'" "$REPO/config/tmux/tmux.conf" \
+    | sed -E "s/.*'(.*)'/\1/" | sort | tr '\n' ' ')"
+  expected="tmux-plugins/tmux-continuum tmux-plugins/tmux-prefix-highlight tmux-plugins/tmux-resurrect tmux-plugins/tpm "
+  [ "$declared" = "$expected" ] \
+    || { echo "declared plugins changed:"; echo "  got:      $declared"; echo "  expected: $expected"; return 1; }
   legacy="$(grep -cE "^[[:space:]]*set .*@tpm_plugins" "$REPO/config/tmux/tmux.conf" || true)"
-  [ "$declared" -eq 3 ] || { echo "expected tpm, resurrect and continuum, found $declared"; return 1; }
   [ "$legacy" -eq 0 ] || { echo "the deprecated @tpm_plugins spelling is back"; return 1; }
 }
 

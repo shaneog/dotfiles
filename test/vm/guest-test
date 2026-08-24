@@ -115,13 +115,29 @@ tmux -f "$HOME/.config/tmux/tmux.conf" new-session -d -s probe
 tmux_count=0
 for _ in $(seq 1 60); do
   tmux_count="$(find "$HOME/.config/tmux/plugins" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
-  [ "${tmux_count:-0}" -ge 3 ] && break
+  [ "${tmux_count:-0}" -ge 4 ] && break
   sleep 2
 done
-tmux kill-server 2>/dev/null || true
-[ "${tmux_count:-0}" -ge 3 ] \
+[ "${tmux_count:-0}" -ge 4 ] \
   || die "tmux installed $tmux_count plugin directories, expected tpm plus the configured ones"
 echo "    $tmux_count plugin directories"
+
+# The prefix plugin works by interpolating over #{prefix_highlight} in
+# status-left. A stub tpm cannot show that, so it is asserted here, where the
+# real plugin is installed: the placeholder must be gone and the three states
+# it reports must be present.
+status_left="$(tmux show -gv status-left 2>/dev/null || true)"
+tmux kill-server 2>/dev/null || true
+case "$status_left" in
+  *'#{prefix_highlight}'*) die "the prefix plugin never interpolated status-left" ;;
+esac
+for state in client_prefix pane_in_mode synchronize-panes; do
+  case "$status_left" in
+    *"$state"*) ;;
+    *) die "status-left is missing the $state indicator" ;;
+  esac
+done
+echo "    the prefix indicator reports prefix, copy and sync"
 
 say "a second login shell is silent"
 TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic 'true' 2>"$HOME/vmtest/second.err"
