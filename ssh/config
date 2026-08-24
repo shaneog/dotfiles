@@ -15,8 +15,18 @@ Compression yes
 
 Host *
     SendEnv LS_COLORS
-    AddKeysToAgent yes
-    UseKeychain yes
+
+    # Keys live in 1Password, never on disk, so authentication goes through its
+    # agent for every host. The path is the same on every Mac, and the setting is
+    # inert when 1Password is not installed.
+    #
+    # AddKeysToAgent and UseKeychain used to be here. Both are about on-disk keys
+    # and passphrases in the Apple keychain, which is the model this replaces.
+    #
+    # IdentitiesOnly is deliberately left alone: setting it would restrict
+    # authentication to keys named by IdentityFile, and there are none.
+    IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+
     ControlMaster auto
     ControlPath /tmp/ssh-%r@%h:%p.socket
     NoHostAuthenticationForLocalhost yes

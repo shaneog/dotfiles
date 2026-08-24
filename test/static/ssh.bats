@@ -59,3 +59,18 @@ effective() {
   run effective example.com
   echo "$output" | grep -qx "compression no"
 }
+
+@test "authentication goes through 1Password's agent, not keys on disk" {
+  run effective example.com
+  echo "$output" | grep -qi "^identityagent .*1password.*agent.sock" \
+    || { echo "no 1Password agent configured: $(echo "$output" | grep -i identityagent)"; return 1; }
+  # Setting IdentitiesOnly would restrict auth to IdentityFile entries, of which
+  # there are none, so it must stay off for agent keys to be offered.
+  echo "$output" | grep -qx "identitiesonly no"
+}
+
+@test "config-local can still redirect the agent" {
+  echo 'IdentityAgent /tmp/some-other-agent.sock' > "$SSH_HOME/.ssh/config-local"
+  run effective example.com
+  echo "$output" | grep -qx "identityagent /tmp/some-other-agent.sock"
+}
