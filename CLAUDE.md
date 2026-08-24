@@ -60,8 +60,12 @@ dependency that "must" have been inert wasn't.
 
 ## Habits
 
-- **Conventional Commits.** The message says why, and records the evidence: the
-  measurement, the before and after, what was actually checked.
+- **Conventional Commits, and short.** Subject, then a few lines at most: the
+  defect or the reason, not the process. No recounting of what was checked, no
+  repeating a comment that is already in the diff, and nothing about the author.
+  A number earns its place only when the claim would otherwise be arbitrary
+  ("550ms to 245ms"). Long bodies are for genuinely surprising failure modes,
+  and they are the exception.
 - **Comments explain the code as it is; what it used to be goes in the commit
   message.** A config file read in a year should not be a changelog. "Declared
   conditionally, because unconditional RGB breaks 256-color terminals" belongs in
