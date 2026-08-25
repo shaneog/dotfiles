@@ -233,16 +233,24 @@ STUB
   echo "$output" | grep -q "history_binding=1" || { echo "history bindings never arrived: $output"; return 1; }
 }
 
-@test "docker completion is generated from the installed CLI" {
-  command -v docker >/dev/null || skip "docker not installed"
-  # Replaces a plugin that cost 20ms per shell and vendored upstream's copy.
+@test "CLI completions are generated from the installed binaries" {
+  # No vendored copies: each CLI emits its own completion, cached on first use.
+  # Whichever of these is installed must produce one -- docker comes from
+  # OrbStack here and from the formula on a runner, and orb only from OrbStack.
   local home; home="$(make_home)"
-  # Arithmetic expansion, because BSD wc right-pads its output and GNU wc does
-  # not: the size is compared as a number rather than matched as text.
-  run run_login_shell "$home" 'print "file=$(( $(wc -c < ${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_docker) )) onfpath=$(print -l $fpath | grep -c zsh/completions)"'
+  local cli found=0
+  for cli in docker orb; do
+    command -v "$cli" >/dev/null || continue
+    found=$((found + 1))
+    run run_login_shell "$home" "print \"file=\$(( \$(wc -c < \${XDG_CACHE_HOME:-\$HOME/.cache}/zsh/completions/_$cli) )) onfpath=\$(print -l \$fpath | grep -c zsh/completions)\""
+    assert_contains "$output" "onfpath=1" "$cli's completion directory on fpath"
+    # A number, not a text match: BSD wc right-pads its output and GNU wc does not.
+    local size; size="$(printf '%s' "$output" | sed -n 's/.*file=\([0-9]*\).*/\1/p' | tail -1)"
+    [ "${size:-0}" -gt 100 ] \
+      || { echo "$cli's completion was not generated: $output"; return 1; }
+  done
   guard_home "$home" && rm -rf "$home"
-  echo "$output" | grep -q "onfpath=1" || { echo "not on fpath: $output"; return 1; }
-  echo "$output" | grep -qE "file=[0-9]{3,}" || { echo "completion not generated: $output"; return 1; }
+  [ "$found" -gt 0 ] || skip "neither docker nor orb is installed"
 }
 
 @test "completion styling is ours, and nothing of ours runs a second compinit" {

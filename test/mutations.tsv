@@ -17,3 +17,4 @@ script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comm
 script/brew-drift	s|comm -13 "\$WORK/installed-formulae"|comm -13 "$WORK/requested-formulae"|	test/unit/brew-drift.bats	not called absent	dependencies get reported as missing
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
+config/zsh/lib/orbstack.zsh	s|^cached_completion orb|# cached_completion orb|	test/integration/startup.bats	CLI completions	one of the CLI completions stops being generated

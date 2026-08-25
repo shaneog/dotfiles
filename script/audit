@@ -130,7 +130,8 @@ strip_comments() { grep -vE "^[[:space:]]*#"; }
     nvim) grep -q "^brew 'neovim'" Brewfile && continue ;;
     rg)   grep -q "^brew 'ripgrep'" Brewfile && continue ;;
     op)   grep -q "^cask '1password-cli'" Brewfile && continue ;;
-    docker) grep -q "^cask 'docker-desktop'" Brewfile && continue ;;
+    # OrbStack provides docker, kubectl and orb.
+    docker|kubectl|orb) grep -q "^cask 'orbstack'" Brewfile && continue ;;
   esac
   for d in /usr/bin /bin /usr/sbin /sbin; do
     [ -x "$d/$tool" ] && continue 2
@@ -160,7 +161,8 @@ for lib in config/zsh/lib/*.zsh; do
   case " $NOT_A_TOOL " in *" $tool "*) continue ;; esac
   grep -qE "^(brew|cask) '$tool'" Brewfile && continue
   case "$tool" in
-    docker) grep -q "^cask 'docker-desktop'" Brewfile && continue ;;
+    # OrbStack provides docker, kubectl and orb.
+    docker|kubectl|orb) grep -q "^cask 'orbstack'" Brewfile && continue ;;
   esac
   fail "$lib configures '$tool', which no Brewfile entry installs"
   orphans=$((orphans + 1))

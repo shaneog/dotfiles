@@ -94,7 +94,7 @@ EOF
 
 @test "audit: a renamed token fails" {
   # brew answers with a different token than it was asked for, which is what a
-  # rename looks like: windsurf -> devin-desktop, docker -> docker-desktop.
+  # rename looks like: windsurf -> devin-desktop.
   cat > "$STUBS/brew" <<'EOF'
 #!/bin/sh
 case "$1 $2" in
@@ -160,7 +160,7 @@ EOF
 }
 
 @test "audit: a formula whose binary has a different name is not reported missing" {
-  # nvim comes from neovim, rg from ripgrep, docker from docker-desktop. Getting
+  # nvim comes from neovim, rg from ripgrep, docker from orbstack. Getting
   # this wrong makes the check cry wolf on a correct Brewfile.
   printf "brew 'neovim'\n" >> "$FIX/Brewfile"
   # Named for the package, not the concept: the orphan check below keys on the
