@@ -17,8 +17,11 @@ on:
 permissions:
   contents: read
 
+# Keyed on the trigger as well as the ref. Superseding a push with a newer push
+# is the point; cancelling a push run because someone asked for a manual one is
+# not, and it left commits whose only completed run was the manual one.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
