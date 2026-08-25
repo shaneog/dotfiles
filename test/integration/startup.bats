@@ -126,8 +126,8 @@ STUB
   ln -s "$cfg" "$home/.config"
   ln -s "$cfg/zsh/.zshenv" "$home/.zshenv"
   mkdir -p "$home/.cache" "$home/.local/share"
-  [ -d "$REAL_HOME/.local/share/zinit" ] \
-    && ln -s "$REAL_HOME/.local/share/zinit" "$home/.local/share/zinit"
+  local snapshot
+  snapshot="$(plugin_cache)" && ln -s "$snapshot" "$home/.local/share/zinit"
 
   _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 \

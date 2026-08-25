@@ -27,6 +27,21 @@ guard_home() {
   esac
 }
 
+# A snapshot of the plugin cache, cloned once per bats invocation and shared by
+# every disposable home in it. The real cache is not linked: a test that
+# installed or updated a plugin would write into it, and results would depend on
+# what happened to be installed on the machine. Cloning 60MB on APFS costs about
+# a third of a second, once.
+plugin_cache() {
+  local snapshot="${BATS_SUITE_TMPDIR:?bats did not set BATS_SUITE_TMPDIR}/zinit"
+  local real="$REAL_HOME/.local/share/zinit"
+  if [ ! -d "$snapshot" ] && [ -d "$real" ]; then
+    cp -Rc "$real" "$snapshot" 2>/dev/null || cp -R "$real" "$snapshot"
+  fi
+  [ -d "$snapshot" ] || return 1
+  printf '%s' "$snapshot"
+}
+
 # A disposable $HOME with .config and .zshenv linked into the repo, i.e. what
 # script/setup would have produced. Echoes the path.
 make_home() {
@@ -36,9 +51,9 @@ make_home() {
   ln -s "$REPO/config" "$home/.config"
   ln -s "$REPO/config/zsh/.zshenv" "$home/.zshenv"
   mkdir -p "$home/.cache" "$home/.local/share"
-  # Reuse an existing plugin cache so tests don't re-clone zinit every run
-  if [ -d "$REAL_HOME/.local/share/zinit" ]; then
-    ln -s "$REAL_HOME/.local/share/zinit" "$home/.local/share/zinit"
+  local snapshot
+  if snapshot="$(plugin_cache)"; then
+    ln -s "$snapshot" "$home/.local/share/zinit"
   fi
   echo "$home"
 }
