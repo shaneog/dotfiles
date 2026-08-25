@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift
+.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift mutate
 
 test: test-static test-unit test-integration
 
@@ -35,3 +35,8 @@ audit:
 # list belongs to that something else.
 brew-drift:
 	./script/brew-drift
+
+# Breaks each thing in test/mutations.tsv and checks that the assertion named
+# beside it notices. Needs a clean tree: it edits tracked files in place.
+mutate:
+	./script/mutate

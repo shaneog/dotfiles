@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#
+# Breaks each thing in test/mutations.tsv on purpose and checks that the named
+# assertion notices. An assertion nobody has watched fail is not evidence, and
+# this is the difference between believing that and checking it.
+#
+# Refuses to run against a dirty tree: it edits tracked files in place, and a
+# restore that lost your work would be a poor trade for a green tick.
+
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+
+if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+	echo "The working tree is dirty. Commit or stash first: this edits tracked files."
+	exit 1
+fi
+
+caught=0
+missed=0
+FILTER="${1:-}"
+
+while IFS="$(printf '\t')" read -r file expr test_file filter note; do
+	case "${file:-#}" in ''|'#'*) continue ;; esac
+	if [ -n "$FILTER" ] && [ "${file#*"$FILTER"}" = "$file" ]; then continue; fi
+
+	backup="$(mktemp)"
+	cp "$file" "$backup"
+	# shellcheck disable=SC2064  # the paths are wanted as they are now
+	trap "cp '$backup' '$file'; rm -f '$backup'" EXIT
+
+	sed -i '' "$expr" "$file"
+	if git diff --quiet -- "$file"; then
+		printf '  ????  %-28s the mutation changed nothing (%s)\n' "$file" "$note"
+		missed=$((missed + 1))
+	elif bats "$test_file" --filter "$filter" >/dev/null 2>&1; then
+		printf '  MISS  %-28s %s\n' "$file" "$note"
+		printf '        nothing failed when: %s\n' "$expr"
+		missed=$((missed + 1))
+	else
+		printf '  ok    %-28s %s\n' "$file" "$note"
+		caught=$((caught + 1))
+	fi
+
+	cp "$backup" "$file"
+	rm -f "$backup"
+	trap - EXIT
+done < test/mutations.tsv
+
+printf '\n  %s caught, %s missed\n' "$caught" "$missed"
+[ "$missed" -eq 0 ] || exit 1

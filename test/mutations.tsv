@@ -1,0 +1,19 @@
+# Each row breaks something on purpose and names the assertion that must notice.
+# Tab separated: file, sed expression, test file, test filter, what it breaks.
+#
+# Every mutation here is a bug this repo actually shipped, or the failure mode a
+# test was written for. A row that stops failing means the assertion has gone
+# blind, which is worse than not having it.
+config/zsh/lib/fzf.zsh	s|'rg --files|'rgx --files|	test/integration/startup.bats	fzf's file command	fzf's backend is a tool nothing installs
+config/nvim/lua/plugins.lua	s|pcall(vim.treesitter.start)|-- pcall(vim.treesitter.start)|	test/integration/nvim.bats	treesitter highlights	nothing starts treesitter highlighting
+config/nvim/ftplugin/gitcommit.lua	s|"en_us"|"en_gb"|	test/integration/nvim.bats	commit message buffer	the spelling region drifts back to a guess
+config/tmux/tmux.conf	s|^set -g status-style|# set -g status-style|	test/integration/tmux.bats	status bar is gotham	the theme falls back to tmux's default green
+config/tmux/tmux.conf	s|@prefix_highlight_prefix_prompt '#{prefix}'|@prefix_highlight_prefix_prompt 'PREFIX'|	test/integration/tmux.bats	carries the placeholder	the prefix indicator stops naming the real key
+config/tmux/tmux.conf	s|#{prefix_highlight}||	test/integration/tmux.bats	carries the placeholder	status-left loses the plugin's placeholder
+ssh/config	s|^Match exec|# Match exec|	test/static/ssh.bats	inbound ssh session	an inbound session loses its forwarded agent
+config/zsh/lib/node.zsh	s|^if (( \$+functions\[nvm\]|if false \&\& (( $+functions[nvm]|	test/unit/guards.bats	defers entirely	our layer stops handing node over
+config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select|# removed|	test/integration/startup.bats	completion styling is ours	the completion styling disappears
+script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comments() { cat; }|	test/unit/audit.bats	prose mentioning	the audit reads comments as invocations
+script/brew-drift	s|comm -13 "\$WORK/installed-formulae"|comm -13 "$WORK/requested-formulae"|	test/unit/brew-drift.bats	not called absent	dependencies get reported as missing
+script/macos	s|^	if \[ -n "\$CHECK_ONLY" \]; then|	if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
+script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
