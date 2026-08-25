@@ -172,13 +172,14 @@ jobs:
           exit "$rc"
 
   # Breaks each thing in test/mutations.tsv and checks the named assertion
-  # notices. Weekly: an assertion that has gone blind is not urgent, but it is
-  # the kind of rot nothing else here would report.
+  # notices. Runs on every push and pull request, not weekly: the moment an
+  # assertion is worth re-checking is the change that touches it, and finding out
+  # on Monday that a test went blind on Tuesday is most of the value gone. It is
+  # deterministic and takes about as long as the integration tier.
   mutate:
     name: mutation manifest
     runs-on: macos-latest
     timeout-minutes: 30
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v7
       - name: Install tooling
