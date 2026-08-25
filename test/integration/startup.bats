@@ -237,7 +237,9 @@ STUB
   command -v docker >/dev/null || skip "docker not installed"
   # Replaces a plugin that cost 20ms per shell and vendored upstream's copy.
   local home; home="$(make_home)"
-  run run_login_shell "$home" 'print "file=$(wc -c < ${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_docker) onfpath=$(print -l $fpath | grep -c zsh/completions)"'
+  # Arithmetic expansion, because BSD wc right-pads its output and GNU wc does
+  # not: the size is compared as a number rather than matched as text.
+  run run_login_shell "$home" 'print "file=$(( $(wc -c < ${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_docker) )) onfpath=$(print -l $fpath | grep -c zsh/completions)"'
   guard_home "$home" && rm -rf "$home"
   echo "$output" | grep -q "onfpath=1" || { echo "not on fpath: $output"; return 1; }
   echo "$output" | grep -qE "file=[0-9]{3,}" || { echo "completion not generated: $output"; return 1; }
