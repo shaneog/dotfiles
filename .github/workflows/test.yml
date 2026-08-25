@@ -124,3 +124,20 @@ jobs:
         env:
           DOTFILES_COLD_CACHE: 1
         run: bats --print-output-on-failure test/integration/cold-cache.bats
+
+  # Breaks each thing in test/mutations.tsv and checks the named assertion
+  # notices. Weekly: an assertion that has gone blind is not urgent, but it is
+  # the kind of rot nothing else here would report.
+  mutate:
+    name: mutation manifest
+    runs-on: macos-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install tooling
+        run: brew install bats-core direnv docker fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+      - name: Warm the plugin cache
+        run: ZDOTDIR="$PWD/config/zsh" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic 'true'
+      - name: Every mutation must be caught
+        run: script/mutate
