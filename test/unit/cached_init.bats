@@ -26,7 +26,7 @@ call() {
 
 @test "generates the cache and reports its path" {
   run call
-  [ "$output" = "status=0 reply=$CACHE" ]
+  assert_equal "$output" "status=0 reply=$CACHE"
   [ -s "$CACHE" ]
   grep -q "FAKETOOL_INIT=1" "$CACHE"
 }
@@ -50,7 +50,7 @@ call() {
                       autoload -Uz cached_init
                       cached_init nope nope init zsh
                       print -r -- \"status=\$? reply=\$REPLY\""
-  [ "$output" = "status=1 reply=" ]
+  assert_equal "$output" "status=1 reply="
 }
 
 @test "leaves no partial cache behind when generation fails" {

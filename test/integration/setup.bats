@@ -63,7 +63,7 @@ snapshot() {
   run_setup
   [ -L "$FAKE_HOME/.zshenv" ]
   run cat "$FAKE_HOME"/.zshenv.bak.*
-  [ "$output" = "PRE-EXISTING" ]
+  assert_equal "$output" "PRE-EXISTING"
 }
 
 @test "is idempotent" {

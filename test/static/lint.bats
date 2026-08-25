@@ -51,7 +51,7 @@ load '../helpers/common'
   run git config --file "$REPO/config/git/config" --get gpg.ssh.allowedSignersFile
   [ "$status" -eq 0 ]
   run git config --file "$REPO/config/git/config" --get commit.gpgsign
-  [ "$output" = "true" ]
+  assert_equal "$output" "true"
 }
 
 @test "allowed signers file is well formed" {

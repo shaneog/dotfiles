@@ -59,11 +59,26 @@ jobs:
         run: bats --print-output-on-failure test/unit
 
   integration:
-    name: integration
+    # Layering onto a managed shell is what this repo is for, and it was only
+    # ever verified against one zsh. Both builds now, as the unit tier does.
+    name: integration (${{ matrix.zsh }} zsh)
     runs-on: macos-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - zsh: system
+            path: /bin/zsh
+          - zsh: homebrew
+            path: /opt/homebrew/bin/zsh
     steps:
       - uses: actions/checkout@v7
+      - name: Pin the zsh under test
+        run: |
+          if [ "${{ matrix.zsh }}" = "homebrew" ]; then brew install zsh; fi
+          "${{ matrix.path }}" --version
+          echo "ZSH_BIN=${{ matrix.path }}" >> "$GITHUB_ENV"
       # The shell integration for these is wired up by config/zsh/lib, and the
       # Brewfile is what installs them, so the runner needs them too.
       - name: Install tooling
@@ -74,8 +89,8 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.local/share/zinit
-          key: zinit-${{ runner.os }}-${{ hashFiles('config/zsh/lib/*.zsh', 'config/zsh/.zshrc') }}
-          restore-keys: zinit-${{ runner.os }}-
+          key: zinit-${{ runner.os }}-${{ matrix.zsh }}-${{ hashFiles('config/zsh/lib/*.zsh', 'config/zsh/.zshrc') }}
+          restore-keys: zinit-${{ runner.os }}-${{ matrix.zsh }}-
 
       # Populates ~/.local/share/zinit, which make_home links into each fake
       # $HOME. ZDOTDIR points at the repo, so $HOME is left untouched.

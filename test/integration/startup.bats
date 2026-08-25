@@ -4,6 +4,27 @@ bats_require_minimum_version 1.5.0
 
 load '../helpers/common'
 
+# The shared probe below is one login shell per configuration, captured once for
+# the whole file. Eight assertions read it; re-running the shell for each of them
+# cost about nine seconds and told us nothing new.
+setup_file() {
+  PROBE_HOME_WITH="$(make_home)" && install_base_layer "$PROBE_HOME_WITH"
+  PROBE_HOME_WITHOUT="$(make_home)"
+  export PROBE_HOME_WITH PROBE_HOME_WITHOUT
+  export PROBE_WITH="$BATS_FILE_TMPDIR/probe-with"
+  export PROBE_WITHOUT="$BATS_FILE_TMPDIR/probe-without"
+  run_login_shell "$PROBE_HOME_WITH" "$probe" > "$PROBE_WITH" 2>/dev/null
+  run_login_shell "$PROBE_HOME_WITHOUT" "$probe" > "$PROBE_WITHOUT" 2>/dev/null
+}
+
+teardown_file() {
+  local h
+  for h in "${PROBE_HOME_WITH:-}" "${PROBE_HOME_WITHOUT:-}"; do
+    [ -n "$h" ] && guard_home "$h" && rm -rf "$h"
+  done
+  return 0
+}
+
 setup() {
   HOME_WITH="$(make_home)"    && install_base_layer "$HOME_WITH"
   HOME_WITHOUT="$(make_home)"
@@ -51,14 +72,16 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 }
 
 @test "the base layer's own settings survive" {
-  run run_login_shell "$HOME_WITH" "$probe"
+  run cat "$PROBE_WITH"
   echo "$output" | grep -q "PROFILE_RAN=1 RC_RAN=1"
   echo "$output" | grep -q "PIP=/base/pip.conf"
-  echo "$output" | grep -qv "BASE_PATH=$"   # /base/rc-bin still on PATH
+  # Asserting the value, not the absence of an empty one: `grep -qv` passes as
+  # soon as any line lacks the pattern, so it never failed.
+  assert_contains "$output" "BASE_PATH=/base/rc-bin"
 }
 
 @test "our layer wins where it should" {
-  run run_login_shell "$HOME_WITH" "$probe"
+  run cat "$PROBE_WITH"
   echo "$output" | grep -q "STARSHIP=1"      # starship installed its precmd
   echo "$output" | grep -q "PURE_HOOKED=$"   # pure's hook was removed
   echo "$output" | grep -q "AUTOSUGGEST=1"   # exactly one autosuggester
@@ -67,30 +90,30 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 @test "the base layer keeps ownership of node" {
   # Our layer hands node over wholesale rather than half-shadowing it, and mise
   # cannot take it back: nvm's wrapper is a function, so it is found first.
-  run run_login_shell "$HOME_WITH" "$probe"
+  run cat "$PROBE_WITH"
   echo "$output" | grep -q "NODE=node: function"
   echo "$output" | grep -q "NPM_CACHE=unset"
 }
 
 @test "our own tooling activates when there is no base layer" {
-  run run_login_shell "$HOME_WITHOUT" "$probe"
+  run cat "$PROBE_WITHOUT"
   command -v mise >/dev/null && { echo "$output" | grep -q "MISE=1" \
     || { echo "mise never activated: $output"; return 1; } }
   echo "$output" | grep -q "PROFILE_RAN=no RC_RAN=no"
   echo "$output" | grep -q "STARSHIP=1"
-  echo "$output" | grep -q "NPM_CACHE=$HOME_WITHOUT/.local/share/npm"
+  echo "$output" | grep -q "NPM_CACHE=$PROBE_HOME_WITHOUT/.local/share/npm"
 }
 
 @test "PATH has no duplicates in either configuration" {
-  run run_login_shell "$HOME_WITH" "$probe"
+  run cat "$PROBE_WITH"
   echo "$output" | grep -q "PATH_DUPES=$"
-  run run_login_shell "$HOME_WITHOUT" "$probe"
+  run cat "$PROBE_WITHOUT"
   echo "$output" | grep -q "PATH_DUPES=$"
 }
 
 @test "ZDOTDIR points into the repo" {
-  run run_login_shell "$HOME_WITH" "$probe"
-  echo "$output" | grep -q "ZDOTDIR=$HOME_WITH/.config/zsh"
+  run cat "$PROBE_WITH"
+  echo "$output" | grep -q "ZDOTDIR=$PROBE_HOME_WITH/.config/zsh"
 }
 
 @test "a non-login interactive shell reads our .zprofile, not the base one" {
@@ -99,7 +122,7 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
   run --separate-stderr env -i HOME="$HOME_WITH" PATH="$PATH" \
     USER="${USER:-tester}" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 "$ZSH_BIN" -ic \
     'print "OURS=${LESSCHARSET:-no} BASE=${BASE_LAYER_PROFILE_RAN:-no}"'
-  [ "$output" = "OURS=utf-8 BASE=1" ]
+  assert_equal "$output" "OURS=utf-8 BASE=1"
 }
 
 @test "completions registered by the base layer survive our compinit" {

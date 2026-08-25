@@ -9,6 +9,38 @@ REAL_HOME="${REAL_HOME:-$HOME}"
 ZSH_BIN="${ZSH_BIN:-$(command -v zsh)}"
 export REPO REAL_HOME ZSH_BIN
 
+# Assertions that say what they were looking at. A bare `grep -q` failure prints
+# the line of test code and nothing else, which is a poor trade for two lines
+# here. `refute_contains` exists because `grep -qv` does not mean what it looks
+# like: on multi-line input it passes as soon as any one line lacks the pattern,
+# so it can never fail.
+assert_contains() {
+  local haystack="$1" needle="$2" what="${3:-the output}"
+  case "$haystack" in
+    *"$needle"*) return 0 ;;
+  esac
+  printf 'expected %s to contain: %s\nactual:\n%s\n' "$what" "$needle" "$haystack"
+  return 1
+}
+
+refute_contains() {
+  local haystack="$1" needle="$2" what="${3:-the output}"
+  case "$haystack" in
+    *"$needle"*)
+      printf 'expected %s not to contain: %s\nactual:\n%s\n' "$what" "$needle" "$haystack"
+      return 1
+      ;;
+  esac
+  return 0
+}
+
+assert_equal() {
+  local actual="$1" expected="$2" what="${3:-the output}"
+  [ "$actual" = "$expected" ] && return 0
+  printf 'expected %s to be: %s\nactual:   %s\n' "$what" "$expected" "$actual"
+  return 1
+}
+
 # GNU timeout, BSD gtimeout, or nothing (CI runners vary).
 _timeout() {
   local secs="$1"; shift

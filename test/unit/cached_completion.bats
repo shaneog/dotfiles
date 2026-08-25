@@ -25,7 +25,7 @@ call() {
 
 @test "writes the completion where compinit will find it" {
   run call
-  [ "$output" = "status=0 onfpath=1" ]
+  assert_equal "$output" "status=0 onfpath=1"
   grep -q "#compdef faketool" "$CACHE"
 }
 
@@ -59,5 +59,5 @@ STUB
                     autoload -Uz cached_completion
                     cached_completion nope nope completion zsh
                     print -r -- \"status=\$?\""
-  [ "$output" = "status=1" ]
+  assert_equal "$output" "status=1"
 }

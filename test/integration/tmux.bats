@@ -92,25 +92,35 @@ show() {
   # so the indicator cannot drift out of step with the actual key.
   echo "$(show @prefix_highlight_prefix_prompt)" | grep -qF '#{prefix}' \
     || { echo "the prefix prompt is hardcoded: $(show @prefix_highlight_prefix_prompt)"; return 1; }
-  echo "$(show status-right)" | grep -qv "now_playing" \
-    || { echo "status-right still calls the removed now-playing script"; return 1; }
+  refute_contains "$(show status-right)" "now_playing" "status-right"
 }
 
 @test "tmux: copying goes to the system clipboard" {
   start_tmux
-  local n
-  n="$(HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" list-keys -T copy-mode-vi 2>/dev/null \
-    | grep -c 'copy-pipe-and-cancel pbcopy' || true)"
-  [ "${n:-0}" -ge 2 ] \
-    || { echo "expected y, Enter and mouse drag to pipe to pbcopy, found $n"; return 1; }
+  # Named rather than counted: a count passes when a binding is lost and another
+  # is added.
+  local keys
+  keys="$(HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" list-keys -T copy-mode-vi 2>/dev/null || true)"
+  # Field-aware: list-keys pads its columns, so a fixed-string match on
+  # "copy-mode-vi y" never lines up.
+  local key
+  for key in y Enter MouseDragEnd1Pane; do
+    echo "$keys" | awk -v k="$key" \
+      '$3 == "copy-mode-vi" && $4 == k && /pbcopy/ { found = 1 } END { exit !found }' \
+      || { echo "$key does not copy to the clipboard"; return 1; }
+  done
 }
 
 @test "tmux: splits open in the current pane's directory" {
   start_tmux
-  local n
-  n="$(HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" list-keys 2>/dev/null \
-    | grep -c 'pane_current_path' || true)"
-  [ "${n:-0}" -ge 3 ] || { echo "expected |, - and c to use pane_current_path, found $n"; return 1; }
+  local keys
+  keys="$(HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" list-keys 2>/dev/null || true)"
+  local key
+  for key in '|' '-' c; do
+    echo "$keys" | awk -v k="$key" \
+      '$3 == "prefix" && $4 == k && /pane_current_path/ { found = 1 } END { exit !found }' \
+      || { echo "$key does not open in the current pane's directory"; return 1; }
+  done
 }
 
 @test "tmux: 24-bit color is declared only when the terminal claims it" {

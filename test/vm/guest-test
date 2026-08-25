@@ -106,9 +106,19 @@ echo "    $nvim_count plugins"
 # Parsers are the half that fails quietly: without tree-sitter-cli, install()
 # reports success and builds nothing, and highlighting simply never happens.
 parsers="$HOME/.local/share/nvim/site/parser"
-parser_count="$(find "$parsers" -name '*.so' 2>/dev/null | wc -l | tr -d ' ')"
-[ "${parser_count:-0}" -ge 10 ] || die "after-setup installed $parser_count treesitter parsers"
-echo "    $parser_count treesitter parsers"
+# Compared against the list the config asks for, rather than a number that
+# passes while the list shrinks.
+wanted="$(nvim --headless -c 'lua
+local seen = {}
+for _, p in pairs(require("parsers")) do seen[p] = true end
+local out = {}
+for p in pairs(seen) do out[#out + 1] = p end
+table.sort(out)
+io.stdout:write(table.concat(out, " "))' -c qa 2>/dev/null)"
+for parser in $wanted; do
+  [ -f "$parsers/$parser.so" ] || die "the $parser parser was never built"
+done
+echo "    $(printf '%s\n' $wanted | wc -l | tr -d ' ') treesitter parsers, all of them"
 
 say "tmux bootstraps its own plugins on first start"
 tmux -f "$HOME/.config/tmux/tmux.conf" new-session -d -s probe

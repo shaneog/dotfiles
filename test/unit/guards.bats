@@ -32,19 +32,19 @@ probe_lib() {
 
 @test "node: defers entirely when the base layer wraps node" {
   run probe_lib node.zsh 'nvm() { : }' 'print "cache=${NPM_CONFIG_CACHE:-unset}"'
-  [ "$output" = "cache=unset" ]
+  assert_equal "$output" "cache=unset"
 }
 
 @test "node: defers when only node or npm is wrapped" {
   run probe_lib node.zsh 'node() { : }' 'print "${NPM_CONFIG_CACHE:-unset}"'
-  [ "$output" = "unset" ]
+  assert_equal "$output" "unset"
   run probe_lib node.zsh 'npm() { : }' 'print "${NPM_CONFIG_CACHE:-unset}"'
-  [ "$output" = "unset" ]
+  assert_equal "$output" "unset"
 }
 
 @test "node: keeps npm's cache under XDG when nothing else owns node" {
   run probe_lib node.zsh '' 'print "${NPM_CONFIG_CACHE:-unset}"'
-  [ "$output" = "$FAKE_HOME/.local/share/npm" ]
+  assert_equal "$output" "$FAKE_HOME/.local/share/npm"
 }
 
 # --- mise -------------------------------------------------------------------
@@ -61,7 +61,7 @@ probe_lib() {
 echo 'MISE_ACTIVATED=yes'
 STUB
   run probe_lib mise.zsh '' 'print "activated=${MISE_ACTIVATED:-no}"'
-  [ "$output" = "activated=yes" ]
+  assert_equal "$output" "activated=yes"
 }
 
 @test "mise: does not displace a runtime the base layer wraps" {
@@ -174,12 +174,12 @@ run_zlogin() {
 
 @test "common: exports the editor and pager environment" {
   run probe_lib common.zsh '' 'print "${(t)EDITOR} ${(t)VISUAL} ${(t)PAGER} ${(t)LESS}"'
-  [ "$output" = "scalar-export scalar-export scalar-export scalar-export" ]
+  assert_equal "$output" "scalar-export scalar-export scalar-export scalar-export"
 }
 
 @test "common: VISUAL follows EDITOR rather than itself" {
   run probe_lib common.zsh '' 'print "$EDITOR/$VISUAL"'
-  [ "$output" = "nvim/nvim" ]
+  assert_equal "$output" "nvim/nvim"
 }
 
 # --- prompt under a dumb terminal -------------------------------------------
@@ -196,18 +196,18 @@ STUB
 @test "prompt: initialises starship on a capable terminal" {
   stub_starship
   run probe_lib prompt.zsh '' 'print "${STARSHIP_INIT_SOURCED:-no}"' TERM=xterm-256color
-  [ "$output" = "1" ]
+  assert_equal "$output" "1"
 }
 
 @test "prompt: leaves a dumb terminal alone" {
   stub_starship
   run probe_lib prompt.zsh '' 'print "${STARSHIP_INIT_SOURCED:-no}"' TERM=dumb
-  [ "$output" = "no" ]
+  assert_equal "$output" "no"
 }
 
 @test "prompt: no-op when starship is not installed" {
   run probe_lib prompt.zsh '' 'print "${STARSHIP_INIT_SOURCED:-no}"' TERM=xterm-256color
-  [ "$output" = "no" ]
+  assert_equal "$output" "no"
 }
 
 # --- 1password agent --------------------------------------------------------
@@ -236,10 +236,10 @@ teardown() {
   make_1p_socket
   run probe_lib 1password.zsh '' 'print "${SSH_AUTH_SOCK:-unset}"' \
     SSH_CONNECTION="10.0.0.1 22 10.0.0.2 22" SSH_AUTH_SOCK=/tmp/forwarded-agent
-  [ "$output" = "/tmp/forwarded-agent" ]
+  assert_equal "$output" "/tmp/forwarded-agent"
 }
 
 @test "1password: no-op when the agent is not enabled" {
   run probe_lib 1password.zsh '' 'print "${SSH_AUTH_SOCK:-unset}"'
-  [ "$output" = "unset" ]
+  assert_equal "$output" "unset"
 }
