@@ -128,17 +128,38 @@ jobs:
   cold:
     name: cold plugin cache
     runs-on: macos-latest
-    timeout-minutes: 30
+    # Its two assertions finish inside a minute. Anything beyond this is a hang,
+    # and there is no value in paying half an hour to find that out.
+    timeout-minutes: 10
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v7
       - name: Install tooling
         run: brew install bats-core direnv fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
       # Deliberately no plugin cache: installing from nothing is the point.
+      #
+      # Watchdogged and instrumented: this job has twice passed both assertions
+      # and then sat until its timeout, which reports as "cancelled" and tells
+      # you nothing. Something keeps a stream open; if it happens again the
+      # process list and the open descriptors say what.
       - name: Install from an empty cache
         env:
           DOTFILES_COLD_CACHE: 1
-        run: bats --print-output-on-failure test/integration/cold-cache.bats
+        run: |
+          set +e
+          bats --print-output-on-failure test/integration/cold-cache.bats &
+          bats_pid=$!
+          ( sleep 300; kill -9 "$bats_pid" 2>/dev/null ) &
+          watchdog=$!
+          wait "$bats_pid"
+          rc=$?
+          kill "$watchdog" 2>/dev/null
+          echo "bats exited with $rc"
+          echo "--- processes still alive"
+          ps -eo pid,ppid,etime,command | grep -vE "grep|ps -eo" | tail -25
+          echo "--- anything still holding this step's output"
+          lsof -p $$ 2>/dev/null | head -20
+          exit "$rc"
 
   # Breaks each thing in test/mutations.tsv and checks the named assertion
   # notices. Weekly: an assertion that has gone blind is not urgent, but it is

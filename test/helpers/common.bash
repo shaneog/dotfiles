@@ -134,10 +134,13 @@ run_login_shell() {
   # _timeout is a shell function, so it has to wrap env rather than the reverse
   _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
-    "$ZSH_BIN" -lic "$@" > "$captured"
+    "$ZSH_BIN" -lic "$@" > "$captured" 2> "$captured.err"
   status=$?
   cat "$captured"
-  rm -f "$captured"
+  # Replayed rather than passed through: a child that inherits stderr holds that
+  # pipe just as surely as stdout, and tests capture stderr separately.
+  cat "$captured.err" >&2
+  rm -f "$captured" "$captured.err"
   return "$status"
 }
 
