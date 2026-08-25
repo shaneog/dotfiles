@@ -124,10 +124,21 @@ stub_cmd() {
 run_login_shell() {
   local home="$1"; shift
   guard_home "$home" || return 1
+  # stdout goes to a file rather than straight to the caller. A login shell can
+  # leave a background process behind -- a plugin's daemon, say -- and anything
+  # inheriting the shell's stdout holds the write end of the caller's pipe, so a
+  # reader waits for an EOF that never arrives. That is a hang rather than a
+  # failure: a cold CI job sat for twenty-nine minutes on one.
+  local captured status
+  captured="$(mktemp)"
   # _timeout is a shell function, so it has to wrap env rather than the reverse
   _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
-    "$ZSH_BIN" -lic "$@"
+    "$ZSH_BIN" -lic "$@" > "$captured"
+  status=$?
+  cat "$captured"
+  rm -f "$captured"
+  return "$status"
 }
 
 # zsh cannot enable ZLE without a controlling terminal, so `"$ZSH_BIN" -ic` from a test

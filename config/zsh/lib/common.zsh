@@ -73,4 +73,8 @@ export LESS="-F -g -i -M -R -S -w -X -z-4"
 #
 # Backgrounded: it is a subprocess costing 8ms of every shell start, and nothing
 # in the rest of startup waits on the keys being loaded.
-(ssh-add --apple-load-keychain &) 2>/dev/null
+#
+# Fully detached, all three streams. A background child that keeps the shell's
+# stdout open holds the write end of whatever pipe the shell was started with,
+# and whatever is reading that pipe then waits on this rather than on the shell.
+(ssh-add --apple-load-keychain >/dev/null 2>&1 </dev/null &)

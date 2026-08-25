@@ -23,10 +23,19 @@ teardown() {
   return 0
 }
 
+# Same file-not-pipe capture as run_login_shell, and for the same reason: the
+# first shell on a machine with no plugins installed is exactly where a daemon
+# gets started, and this job has no warm-up step ahead of it.
 cold_shell() {
+  local captured status
+  captured="$(mktemp)"
   _timeout 600 env -i HOME="$COLD_HOME" PATH="$PATH" TERM=xterm-256color \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
-    "$ZSH_BIN" -lic "$@"
+    "$ZSH_BIN" -lic "$@" > "$captured"
+  status=$?
+  cat "$captured"
+  rm -f "$captured"
+  return "$status"
 }
 
 @test "installing from scratch runs every hook without error" {
