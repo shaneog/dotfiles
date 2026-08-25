@@ -149,16 +149,32 @@ jobs:
           set +e
           bats --print-output-on-failure test/integration/cold-cache.bats &
           bats_pid=$!
+          # Snapshot at 120s: the assertions finish inside a minute, so anything
+          # still alive then is what the job is waiting for. The watchdog fires
+          # at 300s.
+          (
+            sleep 120
+            echo "--- 120s in, still running: ps"
+            ps -eo pid,ppid,pgid,etime,stat,command \
+              | grep -E "zsh|bats|patina|zinit|ssh-add" | grep -v grep
+            echo "--- 120s in, bats descriptors"
+            lsof -c bats 2>/dev/null | head -25
+          ) &
+          sampler=$!
           ( sleep 300; kill -9 "$bats_pid" 2>/dev/null ) &
           watchdog=$!
           wait "$bats_pid"
           rc=$?
-          kill "$watchdog" 2>/dev/null
+          kill "$watchdog" "$sampler" 2>/dev/null
           echo "bats exited with $rc"
-          echo "--- processes still alive"
-          ps -eo pid,ppid,etime,command | grep -vE "grep|ps -eo" | tail -25
-          echo "--- anything still holding this step's output"
-          lsof -p $$ 2>/dev/null | head -20
+          echo "--- our processes, if any survived"
+          ps -eo pid,ppid,pgid,etime,stat,command \
+            | grep -E "zsh|bats|patina|zinit|starship|direnv|mise|ssh-add|git " \
+            | grep -v grep || echo "    none"
+          echo "--- what bats had open (sampled while it was alive is not possible; this is after)"
+          lsof -c bats 2>/dev/null | head -20 || echo "    bats is gone"
+          echo "--- descriptors this step still holds"
+          lsof -p $$ 2>/dev/null | awk '$4 ~ /^[0-9]/ {print "    " $4, $5, $9}' | head -20
           exit "$rc"
 
   # Breaks each thing in test/mutations.tsv and checks the named assertion
