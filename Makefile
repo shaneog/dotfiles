@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-vm lint audit brew-drift
+.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift
 
 test: test-static test-unit test-integration
 
@@ -12,6 +12,11 @@ test-unit:
 
 test-integration:
 	$(BATS) test/integration
+
+# Every plugin installed from nothing, which is when zinit's atclone hooks run.
+# Not part of `test`: slow and network bound. Runs weekly in CI.
+test-cold:
+	DOTFILES_COLD_CACHE=1 $(BATS) test/integration/cold-cache.bats
 
 # Deliberately not part of `test`: local only, needs Tart, and takes the better
 # part of an hour. The one thing CI cannot cover -- a genuinely fresh macOS.

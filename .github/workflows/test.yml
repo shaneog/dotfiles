@@ -67,7 +67,7 @@ jobs:
       # The shell integration for these is wired up by config/zsh/lib, and the
       # Brewfile is what installs them, so the runner needs them too.
       - name: Install tooling
-        run: brew install bats-core direnv fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+        run: brew install bats-core direnv docker fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
 
       # The plugin set is defined by the zsh libs, so key the cache on them.
       - name: Restore plugin cache
@@ -98,6 +98,29 @@ jobs:
             exit 1
           fi
 
-      # Startup timing is too noisy on shared runners to gate on.
+      # Startup timing is too noisy on a shared runner to gate a pull request, but
+      # the weekly run should still catch a threefold regression, so the budget is
+      # loose rather than absent.
       - name: Layering and setup behavior
-        run: SKIP_PERF=1 bats --print-output-on-failure test/integration
+        env:
+          SKIP_PERF: ${{ github.event_name == 'schedule' && '' || '1' }}
+          DOTFILES_STARTUP_BUDGET_MS: 1500
+        run: bats --print-output-on-failure test/integration
+
+  # Every plugin installed from nothing, which is the only time zinit's atclone
+  # hooks run. Weekly rather than per-push: it is slow and entirely network
+  # bound, and it is the one job whose failure means a new machine is broken.
+  cold:
+    name: cold plugin cache
+    runs-on: macos-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install tooling
+        run: brew install bats-core direnv fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+      # Deliberately no plugin cache: installing from nothing is the point.
+      - name: Install from an empty cache
+        env:
+          DOTFILES_COLD_CACHE: 1
+        run: bats --print-output-on-failure test/integration/cold-cache.bats
