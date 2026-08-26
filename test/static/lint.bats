@@ -220,3 +220,16 @@ load '../helpers/common'
   echo "$output" | grep -qE "[1-9][0-9]* commits scanned" \
     || { echo "gitleaks scanned no commits, so this proved nothing"; return 1; }
 }
+
+@test "BSD-only invocations name the BSD binary" {
+  # This repo is macOS-only, but a shell with GNU coreutils earlier on PATH --
+  # which a managed setup may well arrange -- turns `stat -f` into a filesystem
+  # query and makes `sed -i ''` read its expression as a filename. Both fail
+  # quietly enough to be mistaken for something else, so the flags that only BSD
+  # accepts must name /usr/bin explicitly.
+  local offenders
+  offenders="$(grep -rnE "(^|[^/n])\bsed -i ''|(^|[^/])\bstat -f " \
+    "$REPO/test" "$REPO/script" "$REPO/config" 2>/dev/null \
+    | grep -v "usr/bin/" | grep -v "lint.bats" || true)"
+  [ -z "$offenders" ] || { echo "unpinned BSD invocations:"; echo "$offenders"; return 1; }
+}

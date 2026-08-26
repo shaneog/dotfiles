@@ -76,13 +76,15 @@ snapshot() {
 
 @test "does not replace an already-correct .config symlink" {
   run_setup
-  local before; before="$(stat -f %i "$FAKE_HOME/.config")"
+  # /usr/bin/stat, not stat: with GNU coreutils first on PATH, -f means
+  # "filesystem" rather than "format" and this reads as an error.
+  local before; before="$(/usr/bin/stat -f %i "$FAKE_HOME/.config")"
   # a file only reachable through the link; a blind rm -r would take it out
   date > "$REPO/config/.setup-canary"
   run_setup
   [ -e "$FAKE_HOME/.config/.setup-canary" ]
   rm -f "$REPO/config/.setup-canary"
-  [ "$(stat -f %i "$FAKE_HOME/.config")" = "$before" ]
+  [ "$(/usr/bin/stat -f %i "$FAKE_HOME/.config")" = "$before" ]
 }
 
 @test "does not link the repo's own scaffolding into home" {

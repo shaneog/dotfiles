@@ -29,7 +29,10 @@ while IFS="$(printf '\t')" read -r file expr test_file filter note; do
 	# shellcheck disable=SC2064  # the paths are wanted as they are now
 	trap "cp '$backup' '$file'; rm -f '$backup'" EXIT
 
-	sed -i '' "$expr" "$file"
+	# /usr/bin/sed: GNU sed reads the '' as its script and the expression as a
+	# filename, so a mutation would silently not apply and every row would be
+	# reported caught.
+	/usr/bin/sed -i '' "$expr" "$file"
 	if git diff --quiet -- "$file"; then
 		printf '  ????  %-28s the mutation changed nothing (%s)\n' "$file" "$note"
 		missed=$((missed + 1))
