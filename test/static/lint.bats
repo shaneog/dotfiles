@@ -233,3 +233,16 @@ load '../helpers/common'
     | grep -v "usr/bin/" | grep -v "lint.bats" || true)"
   [ -z "$offenders" ] || { echo "unpinned BSD invocations:"; echo "$offenders"; return 1; }
 }
+
+@test "no test asserts with a bare negated command" {
+  # Regression: `! grep -q attach-session "$LOG"` passed while the log held
+  # exactly that. Bash exempts a !-negated command from errexit, so a failed one
+  # is ignored unless it happens to be the test's last line -- and then it breaks
+  # the moment a line is added below it. refute_contains fails from anywhere.
+  local offenders
+  offenders="$(grep -rn '^[[:space:]]*! ' "$REPO"/test/*/*.bats 2>/dev/null \
+    | grep -v 'lint.bats' || true)"
+  [ -z "$offenders" ] \
+    || { echo "negated assertions are inert unless last; use refute_contains:";
+         echo "$offenders"; return 1; }
+}

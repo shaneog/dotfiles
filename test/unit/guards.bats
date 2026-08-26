@@ -103,13 +103,12 @@ STUB
   # zsh-patina does the highlighting now, activated from .zshrc. Two plugins on
   # the same ZLE hook show up as flicker, so nothing here may load one.
   probe_lib common.zsh '' ':'
-  ! grep -qiE "syntax-highlighting" "$ZINIT_LOG" \
-    || { echo "common.zsh loaded a highlighter: $(cat "$ZINIT_LOG")"; return 1; }
+  refute_contains "$(cat "$ZINIT_LOG")" "syntax-highlighting" "the zinit log"
 }
 
 @test "common: skips its autosuggestions when already loaded" {
   probe_lib common.zsh '_zsh_autosuggest_start() { : }' ':'
-  ! grep -q "zsh-autosuggestions" "$ZINIT_LOG"
+  refute_contains "$(cat "$ZINIT_LOG")" "zsh-autosuggestions" "the zinit log"
 }
 
 @test "common: loads autosuggestions when nothing else provides them" {

@@ -52,7 +52,8 @@ assert_tmux() {
 
 @test "session name strips dots from the username" {
   autostart TERM_PROGRAM=Apple_Terminal
-  ! grep -q 'some.user' "$TMUX_LOG"
+  assert_tmux 'new-session -s someuser'
+  refute_contains "$(cat "$TMUX_LOG")" 'some.user' "the tmux log"
 }
 
 @test "uses the repo tmux.conf rather than the default" {
@@ -115,6 +116,10 @@ assert_tmux() {
 @test "never steals a session that already has a client" {
   STUB_HAS_SESSION=0 STUB_CLIENTS='/dev/ttys001: 1 [80x24 xterm]' \
     autostart TERM_PROGRAM=Apple_Terminal
-  ! grep -q 'attach-session' "$TMUX_LOG"
-  ! grep -q 'new-session' "$TMUX_LOG"
+  # refute_contains, not `! grep`: bash exempts a negated command from errexit,
+  # so a `! grep` that should fail is silently ignored unless it is the last line
+  # of the test. Regression: the attach-session check below was the second-last
+  # line and passed while the session was being stolen.
+  refute_contains "$(cat "$TMUX_LOG")" 'attach-session' "the tmux log"
+  refute_contains "$(cat "$TMUX_LOG")" 'new-session' "the tmux log"
 }
