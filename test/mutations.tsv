@@ -34,3 +34,6 @@ script/setup	s|^    if ls "$HOMEFILE"/id_\* >/dev/null 2>&1|    if false|	test/i
 script/setup	s|^        mv -v "$HOMEFILE" "$HOMEFILE.bak.*|        true|	test/integration/setup.bats	backs up a pre-existing directory instead of deleting it	a live directory is not moved aside first
 script/setup	s|^  if \[ -L "$HOMEFILE" \] && \[ "$HOMEFILE" -ef "$DIRFILE" \]|  if false|	test/integration/setup.bats	does not replace an already-correct .config symlink	a correct symlink is torn down and rebuilt
 config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.bats	every git config key	a git config key becomes one git silently ignores
+config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format " #I #W "|	test/integration/tmux.bats	a window with activity	an alerting window looks like every other window
+config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format "#[fg=colour11,bg=colour8] #I #W#F "|	test/integration/tmux.bats	a window with activity	an inline colour shadows the alert style again
+config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.bats	a zoomed pane	a zoomed pane leaves no trace in the status line

@@ -44,6 +44,19 @@ show() {
   HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" show -g "$1" 2>&1
 }
 
+tm() {
+  HOME="$TMUX_HOME" _timeout 15 tmux -L "$SOCKET" "$@"
+}
+
+# The entry the status line renders for one window, styles included. #{E:...}
+# expands the format the way the status bar does, which is the only place the
+# interaction between window-status-format and the -style options is visible.
+window_entry() {
+  local rendered; rendered="$(tm display-message -p '#{E:status-format[0]}')"
+  local seg="${rendered##*range=window|$1}"
+  printf '%s' "${seg%%pop-default*}"
+}
+
 @test "tmux: the config loads without tmux rejecting anything" {
   start_tmux
   local err
@@ -159,4 +172,43 @@ show() {
   local fetched
   fetched="$(ls "$TMUX_HOME/.config/tmux/plugins" 2>/dev/null | tr '\n' ' ' | tr -s ' ')"
   [ "$fetched" = "tpm " ] || { echo "these tests fetched: $fetched"; return 1; }
+}
+
+@test "tmux: a window with activity says so in the status line" {
+  # An inline #[fg=...] in window-status-format is applied after
+  # window-status-activity-style and overrides it, so the alert gets styled and
+  # then un-styled. Asserting the option is set proves nothing; this asserts
+  # what the status bar actually draws.
+  start_tmux
+  tm new-window -t probe: >/dev/null
+  tm select-window -t probe:1
+  tm send-keys -t probe:2 'printf "output\n"' Enter
+
+  local i=0
+  until [ "$(tm display-message -p -t probe:2 '#{window_activity_flag}')" = 1 ]; do
+    i=$((i + 1))
+    [ "$i" -lt 20 ] || { echo "window 2 never registered activity"; return 1; }
+    sleep 0.25
+  done
+
+  local flags entry
+  flags="$(tm display-message -p -t probe:2 '#{window_flags}')"
+  assert_contains "$flags" "#" "window 2's flags"
+
+  entry="$(window_entry 2)"
+  assert_contains "$entry" "$flags" "the status line entry for window 2"
+  assert_contains "$entry" "fg=colour4" "the alert colour on window 2"
+  # Anything that sets a colour after the alert style undoes it.
+  refute_contains "${entry#*fg=colour4}" "fg=colour" "window 2's entry after the alert style"
+}
+
+@test "tmux: a zoomed pane is visible in the current window's entry" {
+  # #F is always '*' for the current window, so the zoom flag is conditional
+  # rather than free. Both states are checked: a flag that is always shown is as
+  # useless as one that never is.
+  start_tmux
+  tm split-window -t probe:1 >/dev/null
+  refute_contains "$(window_entry 1)" "Z" "the unzoomed window 1 entry"
+  tm resize-pane -t probe:1 -Z
+  assert_contains "$(window_entry 1)" "Z" "the zoomed window 1 entry"
 }
