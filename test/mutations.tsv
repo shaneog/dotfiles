@@ -39,3 +39,4 @@ config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window
 config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.bats	a zoomed pane	a zoomed pane leaves no trace in the status line
 config/tmux/tmux.conf	s|^setw -g automatic-rename-format .*|setw -g automatic-rename-format '#{pane_current_command}'|	test/integration/tmux.bats	named for its directory	every window is named for its command again
 config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename off|	test/integration/tmux.bats	named for its directory	windows stop being named at all
+config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename off|	test/integration/tmux.bats	follows a cd	the name stops tracking the shell into a repo

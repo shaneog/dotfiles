@@ -193,6 +193,22 @@ wait_for() {  # window, format, expected
     || { echo "named [$(tm display-message -p -t "$w" '#{window_name}')], expected some-repo"; return 1; }
 }
 
+@test "tmux: the name follows a cd" {
+  # The case that matters in use: a window opens in $HOME, so the name is only
+  # useful if it tracks the shell into a repo. `zsh -f` for the pane, because a
+  # shell loading this repo's config spends its first seconds installing plugins
+  # and the keys below would be typed before there is a prompt to take them.
+  start_tmux
+  mkdir -p "$BATS_TEST_TMPDIR/home-ish" "$BATS_TEST_TMPDIR/some-service"
+  local w
+  w="$(tm new-window -P -F '#{window_id}' -c "$BATS_TEST_TMPDIR/home-ish" zsh -f)"
+  wait_for "$w" '#{window_name}' 'home-ish' || { echo "the window never auto-named"; return 1; }
+
+  tm send-keys -t "$w" "cd $BATS_TEST_TMPDIR/some-service" Enter
+  wait_for "$w" '#{window_name}' 'some-service' \
+    || { echo "after cd the name is still [$(tm display-message -p -t "$w" '#{window_name}')]"; return 1; }
+}
+
 @test "tmux: a name given by hand is not overwritten" {
   # tmux turns automatic-rename off for a window renamed by hand. Asserted as
   # behaviour rather than as the option: a deliberate name that reverts on the
