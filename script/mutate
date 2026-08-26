@@ -29,6 +29,23 @@ while IFS="$(printf '\t')" read -r file expr test_file filter note; do
 	# shellcheck disable=SC2064  # the paths are wanted as they are now
 	trap "cp '$backup' '$file'; rm -f '$backup'" EXIT
 
+	# The filter has to match a test before anything is broken. bats exits
+	# non-zero when it matches nothing, and the branch below reads any non-zero
+	# as "the assertion caught it" -- so a typo in this manifest would certify a
+	# test that never ran, which is the exact failure this script exists to find.
+	# Captured, not piped: `grep -q` closes the pipe on its first match, bats
+	# takes SIGPIPE, and `set -o pipefail` then reports the whole pipeline as
+	# failed -- which reads as "no test matched" for every row.
+	plan="$(bats "$test_file" --filter "$filter" 2>&1 || true)"
+	if ! printf '%s\n' "$plan" | grep -q '^1\.\.[1-9]'; then
+		printf '  BROKEN %-27s no test matches "%s" in %s\n' "$file" "$filter" "$test_file"
+		missed=$((missed + 1))
+		cp "$backup" "$file"
+		rm -f "$backup"
+		trap - EXIT
+		continue
+	fi
+
 	# /usr/bin/sed: GNU sed reads the '' as its script and the expression as a
 	# filename, so a mutation would silently not apply and every row would be
 	# reported caught.
