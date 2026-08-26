@@ -174,6 +174,41 @@ window_entry() {
   [ "$fetched" = "tpm " ] || { echo "these tests fetched: $fetched"; return 1; }
 }
 
+# tmux settles a window name on its own clock, so the value has to be polled;
+# reading it once asserts against whatever was there a moment ago.
+wait_for() {  # window, format, expected
+  local i=0
+  until [ "$(tm display-message -p -t "$1" "$2")" = "$3" ]; do
+    i=$((i + 1))
+    [ "$i" -lt 24 ] || return 1
+    sleep 0.25
+  done
+}
+
+@test "tmux: a window is named for its directory" {
+  start_tmux
+  mkdir -p "$BATS_TEST_TMPDIR/some-repo"
+  local w; w="$(tm new-window -P -F '#{window_id}' -c "$BATS_TEST_TMPDIR/some-repo")"
+  wait_for "$w" '#{window_name}' 'some-repo' \
+    || { echo "named [$(tm display-message -p -t "$w" '#{window_name}')], expected some-repo"; return 1; }
+}
+
+@test "tmux: a name given by hand is not overwritten" {
+  # tmux turns automatic-rename off for a window renamed by hand. Asserted as
+  # behaviour rather than as the option: a deliberate name that reverts on the
+  # next cd is worse than no automatic naming at all.
+  start_tmux
+  mkdir -p "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after"
+  local w; w="$(tm new-window -P -F '#{window_id}' -c "$BATS_TEST_TMPDIR/before")"
+  wait_for "$w" '#{window_name}' 'before' || { echo "the window never auto-named"; return 1; }
+
+  tm rename-window -t "$w" mine
+  tm respawn-pane -k -t "$w" -c "$BATS_TEST_TMPDIR/after"
+  wait_for "$w" '#{b:pane_current_path}' 'after' \
+    || { echo "the pane never moved directory"; return 1; }
+  assert_equal "$(tm display-message -p -t "$w" '#{window_name}')" 'mine' "the window name"
+}
+
 @test "tmux: a window with activity says so in the status line" {
   # An inline #[fg=...] in window-status-format is applied after
   # window-status-activity-style and overrides it, so the alert gets styled and

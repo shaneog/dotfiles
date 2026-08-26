@@ -37,3 +37,5 @@ config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.ba
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format " #I #W "|	test/integration/tmux.bats	a window with activity	an alerting window looks like every other window
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format "#[fg=colour11,bg=colour8] #I #W#F "|	test/integration/tmux.bats	a window with activity	an inline colour shadows the alert style again
 config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.bats	a zoomed pane	a zoomed pane leaves no trace in the status line
+config/tmux/tmux.conf	s|^setw -g automatic-rename-format .*|setw -g automatic-rename-format '#{pane_current_command}'|	test/integration/tmux.bats	named for its directory	every window is named for its command again
+config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename off|	test/integration/tmux.bats	named for its directory	windows stop being named at all
