@@ -246,3 +246,68 @@ load '../helpers/common'
     || { echo "negated assertions are inert unless last; use refute_contains:";
          echo "$offenders"; return 1; }
 }
+
+@test "every git config key is one git or the pager actually reads" {
+  # git silently ignores a key it does not recognise, so a typo or a since-renamed
+  # variable is indistinguishable from a working setting. Regression: format.pretty
+  # was set here for years, making a non-standard format the default for every
+  # `git log` -- which is how gitleaks came to scan zero commits and report no
+  # leaks found.
+  #
+  # Checked against `git help --config`, i.e. git's own list for the installed
+  # version, so a variable renamed upstream shows up on the next brew upgrade.
+  local known="$BATS_TEST_TMPDIR/known"
+  git help --config > "$known" 2>/dev/null && [ -s "$known" ] \
+    || skip "this git cannot list its config variables"
+
+  local offenders
+  offenders="$(awk '
+    # Pass 1: git s own list. Entries with a <placeholder> become patterns.
+    NR == FNR {
+      key = tolower($1)
+      if (key ~ /[<*]/) {
+        gsub(/\./, "\\.", key); gsub(/<[^>]*>/, "[^.]+", key); gsub(/\*/, "[^.]+", key)
+        pat[++np] = "^" key "$"
+      } else known[key] = 1
+      next
+    }
+
+    # Read elsewhere than git, verified against each reader own documentation:
+    # filter.<driver>.process and .required are in gitattributes(5) rather than
+    # config.txt, and color.diff-highlight.* is read by diff-so-fancy.
+    function allowed(k) {
+      return k == "filter.lfs.process" || k == "filter.lfs.required" \
+          || k ~ /^color\.diff-highlight\./
+    }
+
+    # Pass 2: our config.
+    {
+      line = $0
+      sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
+      if (line == "" || line ~ /^[#;]/) next
+
+      if (line ~ /^\[[A-Za-z0-9.-]+([ \t]+"[^"]*")?\][ \t]*$/) {
+        sec = line; sub(/^\[/, "", sec); sub(/\][ \t]*$/, "", sec)
+        if (match(sec, /"[^"]*"/)) {
+          subsec = substr(sec, RSTART + 1, RLENGTH - 2)
+          base = substr(sec, 1, RSTART - 1); sub(/[ \t]+$/, "", base)
+          sec = base "." subsec
+        }
+        section = tolower(sec)
+        next
+      }
+
+      if (match(line, /^[A-Za-z][A-Za-z0-9-]*[ \t]*=/)) {
+        k = substr(line, 1, RLENGTH); sub(/[ \t]*=$/, "", k)
+        full = section "." tolower(k)
+        if (full in known || allowed(full)) next
+        for (i = 1; i <= np; i++) if (full ~ pat[i]) next
+        print "  line " FNR ": " full
+      }
+    }
+  ' "$known" "$REPO/config/git/config")"
+
+  [ -z "$offenders" ] || {
+    echo "git does not recognise these keys, so they do nothing:"
+    echo "$offenders"; return 1; }
+}

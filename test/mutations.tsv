@@ -33,3 +33,4 @@ script/setup	s|^ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"|ln -sfv "$HO
 script/setup	s|^    if ls "$HOMEFILE"/id_\* >/dev/null 2>&1|    if false|	test/integration/setup.bats	leaves an ssh directory holding a private key alone	an ssh directory with a key is replaced by a symlink
 script/setup	s|^        mv -v "$HOMEFILE" "$HOMEFILE.bak.*|        true|	test/integration/setup.bats	backs up a pre-existing directory instead of deleting it	a live directory is not moved aside first
 script/setup	s|^  if \[ -L "$HOMEFILE" \] && \[ "$HOMEFILE" -ef "$DIRFILE" \]|  if false|	test/integration/setup.bats	does not replace an already-correct .config symlink	a correct symlink is torn down and rebuilt
+config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.bats	every git config key	a git config key becomes one git silently ignores
