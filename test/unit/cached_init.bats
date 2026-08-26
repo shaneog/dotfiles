@@ -64,3 +64,16 @@ STUB
   [ ! -e "$CACHE" ]
   [ -z "$(find "$FAKE_HOME/.cache/zsh/init" -name 'faketool.zsh.*' 2>/dev/null)" ]
 }
+
+@test "reports failure when the tool succeeds but writes nothing" {
+  # An empty init script is worse than none: it is cached, sourced, and the tool
+  # silently does not work. Exit status alone does not catch this.
+  stub_cmd faketool <<'STUB'
+#!/bin/sh
+echo "called" >> "$LOG"
+exit 0
+STUB
+  run call
+  echo "$output" | grep -q "status=1" || { echo "$output"; return 1; }
+  [ ! -e "$CACHE" ] || { echo "an empty init script was cached"; return 1; }
+}

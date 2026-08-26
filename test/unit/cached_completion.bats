@@ -61,3 +61,16 @@ STUB
                     print -r -- \"status=\$?\""
   assert_equal "$output" "status=1"
 }
+
+@test "reports failure when the tool succeeds but writes nothing" {
+  # An empty _tool on fpath shadows nothing and completes nothing: tab just
+  # stops working for that command, with no error anywhere.
+  stub_cmd faketool <<'STUB'
+#!/bin/sh
+echo "called" >> "$LOG"
+exit 0
+STUB
+  run call
+  echo "$output" | grep -q "status=1" || { echo "$output"; return 1; }
+  [ ! -e "$CACHE" ] || { echo "an empty completion was cached"; return 1; }
+}
