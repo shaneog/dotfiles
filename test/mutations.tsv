@@ -19,3 +19,17 @@ script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& fal
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
 config/zsh/lib/orbstack.zsh	s|^cached_completion docker|# cached_completion docker|	test/integration/startup.bats	CLI completions	a CLI completion stops being generated (docker: present everywhere the tests run)
 config/zsh/lib/homebrew.zsh	s|^alias brewup|# alias brewup|	test/integration/startup.bats	brew maintenance alias	the brew maintenance alias disappears
+config/zsh/autoload/cached_init	s|\[\[ ! -s $file \|\| $bin -nt $file \]\]|[[ ! -s $file ]]|	test/unit/cached_init.bats	regenerates when the tool is newer	an upgraded tool keeps the stale cache
+config/zsh/autoload/cached_init	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
+config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/cached_completion.bats	writes the completion where compinit will find it	the completion is generated but never on fpath
+config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
+config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects
+config/zsh/autoload/randommac	s|^  sudo networksetup -setairportpower "$iface" on$|  true|	test/unit/randommac.bats	restores power if setting the address fails	a failure leaves the interface powered down
+config/zsh/autoload/tmux_autostart	s|== "Apple_Terminal"|!= "nothing"|	test/unit/tmux_autostart.bats	does not fire when TERM_PROGRAM is unset	the allowlist becomes a denylist
+config/zsh/autoload/tmux_autostart	s|^  \[\[ -z "$($tmux_cmd list-clients.*|  true|	test/unit/tmux_autostart.bats	never steals a session that already has a client	a session in use elsewhere is stolen
+config/zsh/autoload/tmux_autostart	s|tmux -f "${XDG_CONFIG_HOME}/tmux/tmux.conf"|tmux|	test/unit/tmux_autostart.bats	uses the repo tmux.conf rather than the default	the autostarted session ignores this repo
+test/helpers/common.bash	s@/tmp/\*|/private/var/folders/\*|/var/folders/\*) return 0@*) return 0@	test/unit/harness.bats	guard_home refuses anything outside a temp directory	the harness would accept the real home
+script/setup	s|^ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"|ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"; ln -sfv "$HOME/.config/zsh/.zshrc" "$HOME/.zshrc"|	test/integration/setup.bats	never creates the four externally managed shell files	setup takes over a file the base layer owns
+script/setup	s|^    if ls "$HOMEFILE"/id_\* >/dev/null 2>&1|    if false|	test/integration/setup.bats	leaves an ssh directory holding a private key alone	an ssh directory with a key is replaced by a symlink
+script/setup	s|^        mv -v "$HOMEFILE" "$HOMEFILE.bak.*|        true|	test/integration/setup.bats	backs up a pre-existing directory instead of deleting it	a live directory is not moved aside first
+script/setup	s|^  if \[ -L "$HOMEFILE" \] && \[ "$HOMEFILE" -ef "$DIRFILE" \]|  if false|	test/integration/setup.bats	does not replace an already-correct .config symlink	a correct symlink is torn down and rebuilt
