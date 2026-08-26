@@ -48,7 +48,8 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "STARSHIP=$+functions[prompt_starship_precmd]"
        print "PURE_HOOKED=$precmd_functions[(r)prompt_pure_precmd]"
        print "AUTOSUGGEST=$+functions[_zsh_autosuggest_start]"
-       print "BASE_PATH=$path[(r)/base/rc-bin]"'
+       print "BASE_PATH=$path[(r)/base/rc-bin]"
+       print "BREWUP=${aliases[brewup]:-unset}"'
 
 @test "startup is silent on stderr with a base layer" {
   run --separate-stderr run_login_shell "$HOME_WITH" 'true'
@@ -286,4 +287,13 @@ STUB
   local lines; lines="$(echo "$output" | tr -d ' ' | grep -E '^[0-9]+$' | tail -1)"
   [ -n "$lines" ] && [ "$lines" -gt 0 ] \
     || { echo "fzf's file command produced no files: $output"; return 1; }
+}
+
+@test "the brew maintenance alias survives prezto's own brew aliases" {
+  # prezto's homebrew module is sourced after alias.zsh and owns brewc, brewi,
+  # brewl, brewo, brews, brewu and brewx. This alias is defined after that
+  # snippet for exactly that reason, so the assertion is that ours is what a real
+  # shell ends up with -- not merely that the line exists in a file.
+  run cat "$PROBE_WITH"
+  assert_contains "$output" "BREWUP=brew update; brew upgrade; brew cleanup; brew doctor"
 }
