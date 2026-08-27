@@ -40,3 +40,5 @@ config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.b
 config/tmux/tmux.conf	s|^setw -g automatic-rename-format .*|setw -g automatic-rename-format '#{pane_current_command}'|	test/integration/tmux.bats	named for its directory	every window is named for its command again
 config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename off|	test/integration/tmux.bats	named for its directory	windows stop being named at all
 config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename off|	test/integration/tmux.bats	follows a cd	the name stops tracking the shell into a repo
+test/integration/perf.bats	s|DOTFILES_STARTUP_BUDGET_MS:-200|DOTFILES_STARTUP_BUDGET_MS:-1|	test/integration/perf.bats	starts within budget	the startup budget stops being enforced
+test/integration/perf.bats	s|DOTFILES_NONINTERACTIVE_BUDGET_MS:-50|DOTFILES_NONINTERACTIVE_BUDGET_MS:-1|	test/integration/perf.bats	near-free	the non-interactive budget stops being enforced

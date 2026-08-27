@@ -85,7 +85,7 @@ jobs:
       # The shell integration for these is wired up by config/zsh/lib, and the
       # Brewfile is what installs them, so the runner needs them too.
       - name: Install tooling
-        run: brew install bats-core direnv docker fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+        run: brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
 
       # The plugin set is defined by the zsh libs, so key the cache on them.
       - name: Restore plugin cache
@@ -116,13 +116,16 @@ jobs:
             exit 1
           fi
 
-      # Startup timing is too noisy on a shared runner to gate a pull request, but
-      # the weekly run should still catch a threefold regression, so the budget is
-      # loose rather than absent.
+      # Startup timing is too noisy on a shared runner to gate every push, so the
+      # perf tier runs on the weekly schedule and on demand -- not never, which is
+      # what gating it on 'schedule' alone amounted to while no schedule had yet
+      # fired. The ceilings are the runner's own, measured there; a runner is
+      # several times slower than the machine this repo is used on.
       - name: Layering and setup behavior
         env:
-          SKIP_PERF: ${{ github.event_name == 'schedule' && '' || '1' }}
+          SKIP_PERF: ${{ github.event_name == 'push' && '1' || '' }}
           DOTFILES_STARTUP_BUDGET_MS: 1500
+          DOTFILES_NONINTERACTIVE_BUDGET_MS: 200
         run: bats --print-output-on-failure test/integration
 
   # Every plugin installed from nothing, which is the only time zinit's atclone
@@ -183,7 +186,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install tooling
-        run: brew install bats-core direnv docker fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+        run: brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
       - name: Warm the plugin cache
         run: ZDOTDIR="$PWD/config/zsh" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic 'true'
       - name: Every mutation must be caught
