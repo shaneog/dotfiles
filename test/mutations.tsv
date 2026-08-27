@@ -47,3 +47,6 @@ config/tmux/tmux.conf	s|^setw -g mode-keys vi|# gone|	test/integration/tmux.bats
 config/tmux/tmux.conf	s|^set -g status-keys emacs|# gone|	test/integration/tmux.bats	key tables	the command prompt follows $EDITOR into vi keys
 config/tmux/tmux.conf	s|^set -g default-command zsh|# gone|	test/integration/tmux.bats	runs the shell	panes run the login shell instead of zsh
 config/tmux/tmux.conf	s|^bind h select-pane -L|# gone|	test/integration/tmux.bats	movement and resizing	a pane movement binding disappears
+config/nvim/lua/options.lua	s|^opt.undofile = true|-- gone|	test/integration/nvim.bats	undo history	undo history stops surviving a reopen
+config/nvim/lua/options.lua	s|^opt.termguicolors|-- opt.termguicolors|	test/integration/nvim.bats	24-bit	nvim sends 24-bit escapes regardless of the terminal
+config/nvim/lua/options.lua	s|opt.grepprg = "rg --vimgrep"|-- gone|	test/integration/nvim.bats	ignore files	:grep searches ignored files again

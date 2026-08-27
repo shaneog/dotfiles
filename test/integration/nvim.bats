@@ -9,15 +9,21 @@ load '../helpers/common'
 # editor that comes out of it actually works: the colorscheme applied, parsers
 # built, highlighting attached, and the surround keys still tpope's.
 #
-# The data directory is keyed on the lockfile and the parser list and cached in
-# $TMPDIR, because building eleven parsers takes about a minute. Delete it to
-# force a fresh provision.
+# The data directory is cached in $TMPDIR, because building eleven parsers takes
+# about a minute. Delete it to force a fresh provision.
+#
+# The key covers only what provisioning depends on -- the lockfile, the plugin
+# specs, the parser list, and the bootstrap -- not every file under config/nvim.
+# Hashing all of them meant editing an option, which installs nothing, threw the
+# cache away and rebuilt every parser.
 
 setup_file() {
   command -v nvim >/dev/null 2>&1 || return 0
 
   local key
-  key="$(find "$REPO/config/nvim" -type f -exec cat {} + 2>/dev/null | shasum | cut -c1-12)"
+  key="$(cat "$REPO/config/nvim/init.lua" "$REPO/config/nvim/lua/plugins.lua" \
+             "$REPO/config/nvim/lua/parsers.lua" "$REPO/config/nvim/lazy-lock.json" \
+             2>/dev/null | shasum | cut -c1-12)"
   export NVIM_DATA="${TMPDIR:-/tmp}/dotfiles-nvim-$key"
   export NVIM_HOME="$NVIM_DATA/home"
   # A *copy* of the config, not the repo. lazy.nvim writes lazy-lock.json next to
@@ -26,9 +32,14 @@ setup_file() {
   # tracked file with whichever lazy commit was stable that day.
   export NVIM_CONFIG="$NVIM_DATA/config"
 
+  # The config is re-copied every run even when the data directory is reused:
+  # the copy is what nvim reads, so a cached one is a stale one, and a change to
+  # an option would be tested against the previous version of itself.
+  mkdir -p "$NVIM_HOME" "$NVIM_CONFIG"
+  rm -rf "$NVIM_CONFIG/nvim"
+  cp -R "$REPO/config/nvim" "$NVIM_CONFIG/nvim"
+
   if [ ! -d "$NVIM_DATA/nvim/lazy/lazy.nvim" ]; then
-    mkdir -p "$NVIM_HOME" "$NVIM_CONFIG"
-    cp -R "$REPO/config/nvim" "$NVIM_CONFIG/nvim"
     HOME="$NVIM_HOME" XDG_CONFIG_HOME="$NVIM_CONFIG" XDG_DATA_HOME="$NVIM_DATA" \
       XDG_STATE_HOME="$NVIM_DATA/state" XDG_CACHE_HOME="$NVIM_DATA/cache" \
       _timeout 900 "$REPO/script/after-setup" >"$NVIM_DATA/provision.log" 2>&1 || true
@@ -131,4 +142,55 @@ setup() {
     tostring(vim.g.loaded_python3_provider), tostring(vim.g.loaded_ruby_provider),
     tostring(vim.g.loaded_node_provider), tostring(vim.g.loaded_perl_provider)))' -c qa
   echo "$output" | grep -q "py=0 rb=0 node=0 perl=0" || { echo "$output"; return 1; }
+}
+
+@test "nvim: 24-bit colour is enabled only when the terminal claims it" {
+  # The same decision tmux makes, and for the same reason: sending 24-bit escapes
+  # to a terminal that only advertises 256 is what an older client over ssh gets.
+  COLORTERM=truecolor run probe -c 'lua io.stdout:write("tgc=" .. tostring(vim.o.termguicolors))' -c qa
+  echo "$output" | grep -q "tgc=true" \
+    || { echo "COLORTERM=truecolor did not enable termguicolors: $output"; return 1; }
+
+  COLORTERM= run probe -c 'lua io.stdout:write("tgc=" .. tostring(vim.o.termguicolors))' -c qa
+  echo "$output" | grep -q "tgc=false" \
+    || { echo "termguicolors was on with no COLORTERM: $output"; return 1; }
+}
+
+@test "nvim: undo history survives closing the file" {
+  # undofile. Asserted by undoing an edit in a *later* nvim: without the option
+  # the second one starts with an empty undo tree and the u does nothing.
+  local f="$BATS_TEST_TMPDIR/undome.txt"
+  printf 'first\nsecond\n' > "$f"
+  run probe -c "edit $f" -c 'normal! ggdd' -c 'write' -c qa
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  grep -q '^first$' "$f" && { echo "the edit did not happen, so the undo proves nothing"; return 1; }
+
+  run probe -c "edit $f" -c 'normal! u' -c 'write' -c qa
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  grep -q '^first$' "$f" \
+    || { echo "undo did not reach across sessions: $(cat "$f")"; return 1; }
+}
+
+@test "nvim: :grep respects ignore files" {
+  # grepprg. Neovim's own default is already `rg --vimgrep -uu`, and -uu means
+  # "search ignored and hidden files too" -- so what this repo's setting actually
+  # changes is that :grep skips what an ignore file excludes. A search that finds
+  # everything either way would not notice the setting at all.
+  local hay="$BATS_TEST_TMPDIR/haystack"
+  mkdir -p "$hay"
+  printf 'the needle is here\n' > "$hay/visible.txt"
+  printf 'the needle is here too\n' > "$hay/ignored.txt"
+  # .ignore rather than .gitignore: ripgrep honours it with or without a git repo.
+  printf 'ignored.txt\n' > "$hay/.ignore"
+
+  run probe -c "silent grep! needle $hay" \
+    -c 'lua local q = vim.fn.getqflist()
+        local names = {}
+        for _, e in ipairs(q) do names[#names + 1] = vim.fn.fnamemodify(e.filename or vim.api.nvim_buf_get_name(e.bufnr), ":t") end
+        io.stdout:write("hits=" .. table.concat(names, ","))' -c qa
+  echo "$output" | grep -q "visible.txt" \
+    || { echo ":grep found nothing at all: $output"; return 1; }
+  echo "$output" | grep -q "ignored.txt" \
+    && { echo ":grep searched an ignored file, so -uu is still in effect: $output"; return 1; }
+  return 0
 }
