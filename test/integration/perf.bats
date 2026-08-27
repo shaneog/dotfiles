@@ -43,7 +43,7 @@ teardown() {
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   local mean_ms
   mean_ms="$(python3 -c "import json,sys; print(round(json.load(open(sys.argv[1]))['results'][0]['mean']*1000))" "$json")"
-  echo "mean startup: ${mean_ms}ms (budget ${BUDGET_MS}ms)"
+  echo "mean startup: ${mean_ms}ms (budget ${BUDGET_MS}ms)" >&3
   [ "$mean_ms" -lt "$BUDGET_MS" ] || { echo "over budget"; return 1; }
 }
 
@@ -54,6 +54,6 @@ teardown() {
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   local mean_ms
   mean_ms="$(python3 -c "import json,sys; print(round(json.load(open(sys.argv[1]))['results'][0]['mean']*1000))" "$json")"
-  echo "mean non-interactive startup: ${mean_ms}ms (budget ${NONINTERACTIVE_BUDGET_MS}ms)"
+  echo "mean non-interactive startup: ${mean_ms}ms (budget ${NONINTERACTIVE_BUDGET_MS}ms)" >&3
   [ "$mean_ms" -lt "$NONINTERACTIVE_BUDGET_MS" ] || { echo "over budget"; return 1; }
 }
