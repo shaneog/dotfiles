@@ -89,7 +89,7 @@ Two suites are opt-in, being slow or noisy:
 
 ```sh
 DOTFILES_COLD_CACHE=1 make test-integration   # install from an empty plugin cache
-SKIP_PERF=1 make test-integration             # (default in CI) skip startup timing
+SKIP_PERF=1 make test-integration             # skip startup timing (CI skips it on push)
 ```
 
 The suite has to pass under **bash 3.2**, which is what a stock Mac and the CI
@@ -149,9 +149,12 @@ weekly and on demand, since they otherwise only ever run on a new machine.
 
 ## ZSH Performance
 
-Currently **~200ms** for an interactive login shell in isolation, and ~320ms on
-a machine that also has a managed shell setup layered underneath. Measured with
-`hyperfine`, and guarded by a budget in `test/integration/perf.bats`:
+Currently **~146ms** for an interactive login shell in isolation, and ~330ms on
+a machine that also has a managed shell setup layered underneath — that setup
+costs more than this repo does, and none of it is this repo's to reclaim.
+
+Measured with `hyperfine` and guarded by a budget in
+`test/integration/perf.bats`, which prints what it measured on every run:
 
 ```sh
 hyperfine --warmup 3 'zsh -lic exit'

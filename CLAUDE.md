@@ -30,7 +30,10 @@ loads afterwards and wins where it should.
   fronting `PATH`.
 - **Runtimes are mise's**, and no tools are declared globally: a base layer's
   wrappers are shell functions, found before anything mise adds to `PATH`.
-- **Startup cost is a feature**, roughly 250ms, budgeted in the perf tier. Defer
+- **Startup cost is a feature**: ~145ms for this repo alone, which is the number
+  the perf tier measures and gates. A machine with a managed base layer beneath
+  it is ~330ms — the base layer costs more than this repo does, and that half is
+  not ours to fix, so quote the isolated number when talking about this repo. Defer
   with zinit turbo (`wait lucid`), cache tool init with `cached_init`, and
   measure before claiming a win.
 
