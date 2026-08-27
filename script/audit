@@ -173,6 +173,42 @@ done
 
 printf '\n== Summary\n'
 printf '  %s failures, %s warnings\n' "$FAILURES" "$WARNINGS"
+# ------------------------------------------------------- scheduled workflows
+
+head2 "Scheduled workflows are still firing"
+# Everything that notices rot here runs on a cron, and a cron that stops firing
+# is silent: GitHub disables schedules on a repository with no pushes for 60
+# days, which is a normal state for personal dotfiles. So the schedules are
+# themselves checked, from a run that is not on one.
+SCHEDULE_GRACE_DAYS=10
+if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
+  SKIPPED="$SKIPPED gh-schedules"
+  printf '  ----  not checked: gh is unavailable or not authenticated\n'
+else
+  # /bin/date: -v is BSD-only, and GNU date earlier on PATH reads it as a file.
+  cutoff="$(/bin/date -v-"${SCHEDULE_GRACE_DAYS}"d +%Y-%m-%d)"
+  for wf in .github/workflows/*.yml; do
+    grep -qE '^[[:space:]]*schedule:' "$wf" || continue
+    name="$(basename "$wf")"
+    recent="$(gh run list --workflow "$name" --event schedule --created ">=$cutoff" \
+      --limit 1 --json databaseId --jq 'length' 2>/dev/null)"
+    if [ "${recent:-0}" -gt 0 ]; then
+      ok "$name fired on schedule since $cutoff"
+      continue
+    fi
+    ever="$(gh run list --workflow "$name" --event schedule --limit 1 \
+      --json databaseId --jq 'length' 2>/dev/null)"
+    added="$(git log -1 --format=%cs -- "$wf" 2>/dev/null)"
+    if [ "${ever:-0}" -gt 0 ]; then
+      warn "$name has not fired on schedule since before $cutoff"
+    elif [ -n "$added" ] && [ "$added" \< "$cutoff" ]; then
+      warn "$name has never fired on schedule, and its cron was added $added"
+    else
+      ok "$name added $added, first scheduled run still pending"
+    fi
+  done
+fi
+
 [ -z "$SKIPPED" ] || printf '  NOT CHECKED:%s\n' "$SKIPPED"
 [ "$FAILURES" -eq 0 ] || exit 1
 exit 0

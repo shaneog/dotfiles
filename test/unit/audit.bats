@@ -60,9 +60,25 @@ stub_gh_ok() {
 case "$1" in
   auth) exit 0 ;;
   api)  printf 'false\t2026-08-01\n' ;;
+  # `run list` is asked twice per workflow: once bounded by --created, once not.
+  run)
+    case "$*" in
+      *--created*) printf '%s\n' "${STUB_RECENT:-0}" ;;
+      *)           printf '%s\n' "${STUB_EVER:-0}" ;;
+    esac ;;
 esac
 EOF
   chmod +x "$STUBS/gh"
+}
+
+# A workflow that runs on a cron, which is what the schedule section looks for.
+given_scheduled_workflow() {
+  mkdir -p "$FIX/.github/workflows"
+  printf 'on:\n  schedule:\n    - cron: %s0 7 * * 1%s\n' "'" "'" > "$FIX/.github/workflows/weekly.yml"
+}
+
+audit_gh() {
+  ( cd "$FIX" && PATH="$STUBS:$PATH" STUB_RECENT="$1" STUB_EVER="$2" ./script/audit )
 }
 
 audit() {
@@ -190,4 +206,34 @@ EOF
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   echo "$output" | grep -q "NOT CHECKED" \
     || { echo "a skipped section must be announced: $output"; return 1; }
+}
+
+@test "audit: a cron that has stopped firing warns" {
+  # The failure this exists for: GitHub disables schedules on a repository with
+  # no pushes for 60 days, and every rot check here runs on one. A dead cron is
+  # silent -- the workflow simply never runs again.
+  given_scheduled_workflow
+  run audit_gh 0 1
+  [ "$status" -eq 0 ] || { echo "a warning must not fail the run: $output"; return 1; }
+  echo "$output" | grep -q "has not fired on schedule since before" \
+    || { echo "a dead cron went unreported: $output"; return 1; }
+}
+
+@test "audit: a cron that is still firing is not reported" {
+  given_scheduled_workflow
+  run audit_gh 1 1
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -q "weekly.yml fired on schedule since" \
+    || { echo "$output"; return 1; }
+  echo "$output" | grep -q "has not fired" \
+    && { echo "a live cron was reported as dead: $output"; return 1; }
+  return 0
+}
+
+@test "audit: a cron too new to have fired yet is not a warning" {
+  given_scheduled_workflow
+  run audit_gh 0 0
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -q "first scheduled run still pending" \
+    || { echo "$output"; return 1; }
 }

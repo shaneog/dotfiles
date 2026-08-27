@@ -42,3 +42,4 @@ config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename of
 config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename off|	test/integration/tmux.bats	follows a cd	the name stops tracking the shell into a repo
 test/integration/perf.bats	s|DOTFILES_STARTUP_BUDGET_MS:-200|DOTFILES_STARTUP_BUDGET_MS:-1|	test/integration/perf.bats	starts within budget	the startup budget stops being enforced
 test/integration/perf.bats	s|DOTFILES_NONINTERACTIVE_BUDGET_MS:-50|DOTFILES_NONINTERACTIVE_BUDGET_MS:-1|	test/integration/perf.bats	near-free	the non-interactive budget stops being enforced
+script/audit	s|warn "$name has not fired on schedule since before $cutoff"|ok "$name"|	test/unit/audit.bats	a cron that has stopped firing warns	a dead cron is reported as healthy
