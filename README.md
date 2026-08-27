@@ -85,6 +85,21 @@ Layering is covered by a fixture that impersonates a managed shell setup owning
 `~/.zprofile` and `~/.zshrc`, so the tests behave the same on a machine that has
 no such setup, and both configurations are asserted.
 
+`script/sweep` asks the opposite question to the mutation manifest. Instead of
+"does this assertion still work", it comments out each line of config in turn and
+reports the ones no test notices — a setting that could be deleted tomorrow
+without a single test complaining. It is local only and slow (roughly 12s a
+line), so it takes `--budget SECONDS` and resumes where the last run stopped:
+
+```sh
+make sweep                              # everything, 15 minutes' worth
+script/sweep config/tmux/tmux.conf      # one file
+```
+
+The tests it runs per file are declared in the script rather than derived from
+the filename: a `grep` for `plugins.lua` finds nothing, while `nvim.bats` clearly
+exercises it, and a `grep` for `fzf.zsh` finds only a fixture that names it.
+
 Two suites are opt-in, being slow or noisy:
 
 ```sh

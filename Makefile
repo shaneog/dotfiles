@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift mutate
+.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift mutate sweep
 
 test: test-static test-unit test-integration
 
@@ -35,6 +35,12 @@ audit:
 # list belongs to that something else.
 brew-drift:
 	./script/brew-drift
+
+# The inverse of mutate: comments out each line of config in turn and reports the
+# ones no test notices. Local only and slow (about 12s a line), so it takes a
+# time budget and resumes where it left off. Needs a clean tree.
+sweep:
+	./script/sweep
 
 # Breaks each thing in test/mutations.tsv and checks that the assertion named
 # beside it notices. Needs a clean tree: it edits tracked files in place.

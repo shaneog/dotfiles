@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+#
+# Which lines of config is no test protecting?
+#
+# test/mutations.tsv answers the opposite question -- does this assertion still
+# work -- one hand-written row at a time, and 39 rows against 175 assertions is a
+# sample. This walks the config instead: comment out one line, run the tests that
+# could notice, and record whether any of them did. A line nothing notices is a
+# setting that could be deleted tomorrow without a single test complaining.
+#
+# usage: script/sweep [--budget SECONDS] [--out FILE] [FILE...]
+#        script/sweep --all
+#
+# Resumable: lines already in the output file are not repeated, so a budget that
+# runs out is picked up by the next run.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+
+BUDGET=900
+OUT="${TMPDIR:-/tmp}/dotfiles-sweep.tsv"
+ALL=""
+TARGETS=""
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--budget) BUDGET="$2"; shift 2 ;;
+		--out)    OUT="$2"; shift 2 ;;
+		--all)    ALL=1; shift ;;
+		-h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+		*)        TARGETS="$TARGETS $1"; shift ;;
+	esac
+done
+
+# A run killed outright -- SIGKILL, a harness timeout, a closed laptop -- leaves
+# the file it was mutating commented and its backup beside it. Recover from that
+# before the dirty-tree check, which would otherwise be the only report and would
+# send you to `git checkout`, discarding the backup that holds the real content.
+for stale in $(git ls-files -o --exclude-standard | grep '\.sweep-backup$'); do
+	original="${stale%.sweep-backup}"
+	echo "Recovering $original from a killed run"
+	cp "$stale" "$original" && rm -f "$stale"
+done
+
+if [ -n "$(git status --porcelain)" ]; then
+	echo "The working tree is dirty. Commit or stash first: this edits tracked files."
+	exit 1
+fi
+
+# Which tests could possibly notice a change to a given file. Declared rather
+# than derived: a grep for the filename finds fixtures that merely name it and
+# misses the tests that exercise it without ever saying its name.
+#
+# Deliberately generous. A map that is too narrow reports a protected line as
+# unprotected, which is the expensive mistake -- it sends you writing a test that
+# already exists.
+tests_for() {
+	case "$1" in
+		config/zsh/*)   echo "test/unit/guards.bats test/integration/startup.bats" ;;
+		config/tmux/*)  echo "test/integration/tmux.bats test/unit/tmux_autostart.bats" ;;
+		config/nvim/*)  echo "test/integration/nvim.bats" ;;
+		config/git/*)   echo "test/static/lint.bats test/integration/startup.bats" ;;
+		ssh/*)          echo "test/static/ssh.bats test/integration/setup.bats" ;;
+		*)              echo "" ;;
+	esac
+}
+
+# Files that are data rather than behaviour: a line here is an ignore pattern or
+# a keyboard mapping, not a setting a test could assert. Excluded out loud, so
+# the summary cannot be mistaken for full coverage.
+excluded() {
+	case "$1" in
+		config/git/ignore)              echo "ignore patterns, not behaviour" ;;
+		config/karabiner/karabiner.json) echo "JSON: no comment syntax to mutate with" ;;
+		*.md|*.txt|*.json)              echo "not executable config" ;;
+		*)                              echo "" ;;
+	esac
+}
+
+comment_prefix() {
+	case "$1" in
+		*.lua) echo "--" ;;
+		*)     echo "#" ;;
+	esac
+}
+
+# A mutation that stops the file parsing proves nothing: the tests fail because
+# the syntax broke, not because the setting mattered. Where a parser is cheap,
+# ask it first.
+parses() {
+	case "$1" in
+		*.zsh|*/.zshrc|*/.zshenv|*/.zprofile|*/.zlogin|config/zsh/autoload/*)
+			zsh -n "$1" 2>/dev/null ;;
+		*.lua)
+			if command -v nvim >/dev/null 2>&1; then
+				nvim --headless -u NONE \
+					-c "lua local f = loadfile('$1'); vim.cmd(f and 'q' or 'cq')" 2>/dev/null
+			fi ;;
+		*) return 0 ;;
+	esac
+}
+
+candidates() {
+	if [ -n "$ALL" ]; then
+		git ls-files config ssh
+	else
+		echo $TARGETS
+	fi
+}
+
+: > "$OUT.new"
+[ -f "$OUT" ] && cp "$OUT" "$OUT.new"
+mv "$OUT.new" "$OUT"
+
+started=$(date +%s)
+swept=0; noticed=0; unprotected=0; invalid=0; unreached=0
+printf '\n'
+
+for file in $(candidates); do
+	[ -f "$file" ] || continue
+
+	reason="$(excluded "$file")"
+	if [ -n "$reason" ]; then
+		printf '  ----  %-40s excluded: %s\n' "$file" "$reason"
+		continue
+	fi
+
+	mapped="$(tests_for "$file")"
+	if [ -z "$mapped" ]; then
+		printf '  ????  %-40s no tests mapped: every line is unverified\n' "$file"
+		continue
+	fi
+
+	prefix="$(comment_prefix "$file")"
+	backup="$file.sweep-backup"
+	total_lines="$(grep -c '' "$file")"
+	printf '  ==    %s (%s)\n' "$file" "$(echo "$mapped" | tr ' ' ',')"
+
+	n=0
+	while [ "$n" -lt "$total_lines" ]; do
+		n=$((n + 1))
+		line="$(/usr/bin/sed -n "${n}p" "$file")"
+
+		# Blank, already a comment, or a line continuation: nothing to learn.
+		case "$line" in
+			''|[[:space:]]) continue ;;
+			"$prefix"*|" "*"$prefix"*) : ;;
+		esac
+		printf '%s' "$line" | grep -qE "^[[:space:]]*($prefix|$)" && continue
+		printf '%s' "$line" | grep -q '\\[[:space:]]*$' && continue
+		[ "$n" -gt 1 ] && /usr/bin/sed -n "$((n - 1))p" "$file" | grep -q '\\[[:space:]]*$' && continue
+
+		grep -q "^$file	$n	" "$OUT" 2>/dev/null && continue
+
+		if [ $(( $(date +%s) - started )) -ge "$BUDGET" ]; then
+			unreached=$((unreached + 1))
+			continue
+		fi
+
+		cp "$file" "$backup"
+		# EXIT as well as the signals: `set -u` tripping over a typo in here would
+		# otherwise leave a commented-out config behind and blame the config.
+		# shellcheck disable=SC2064
+		trap "cp '$backup' '$file'; rm -f '$backup'" EXIT
+		# shellcheck disable=SC2064
+		trap "cp '$backup' '$file'; rm -f '$backup'; exit 130" INT TERM
+		/usr/bin/sed -i '' "${n}s|^|$prefix |" "$file"
+
+		if ! parses "$file"; then
+			verdict="invalid"; invalid=$((invalid + 1))
+		elif bats $mapped >/dev/null 2>&1; then
+			verdict="UNPROTECTED"; unprotected=$((unprotected + 1))
+			printf '  ??    %-4s %s\n' "$n" "$(printf '%s' "$line" | cut -c1-72)"
+		else
+			verdict="noticed"; noticed=$((noticed + 1))
+		fi
+
+		cp "$backup" "$file"; rm -f "$backup"; trap - EXIT INT TERM
+		printf '%s\t%s\t%s\t%s\n' "$file" "$n" "$verdict" "$line" >> "$OUT"
+		swept=$((swept + 1))
+	done
+done
+
+printf '\n  %s swept: %s noticed, %s unprotected, %s invalid mutations\n' \
+	"$swept" "$noticed" "$unprotected" "$invalid"
+[ "$unreached" -eq 0 ] \
+	|| printf '  %s lines not reached: the %ss budget ran out. Run again to continue.\n' \
+		"$unreached" "$BUDGET"
+printf '  results: %s\n' "$OUT"
