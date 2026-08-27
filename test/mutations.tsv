@@ -50,3 +50,6 @@ config/tmux/tmux.conf	s|^bind h select-pane -L|# gone|	test/integration/tmux.bat
 config/nvim/lua/options.lua	s|^opt.undofile = true|-- gone|	test/integration/nvim.bats	undo history	undo history stops surviving a reopen
 config/nvim/lua/options.lua	s|^opt.termguicolors|-- opt.termguicolors|	test/integration/nvim.bats	24-bit	nvim sends 24-bit escapes regardless of the terminal
 config/nvim/lua/options.lua	s|opt.grepprg = "rg --vimgrep"|-- gone|	test/integration/nvim.bats	ignore files	:grep searches ignored files again
+config/zsh/.zprofile	s|^  LANG='en_US.UTF-8'|  : |	test/integration/startup.bats	locale is en_US	the locale falls back to whatever the system picks
+config/zsh/.zprofile	s|^LC_TIME=$LANG|# gone|	test/integration/startup.bats	locale is en_US	one LC category stops following LANG
+config/zsh/.zprofile	s|^  (( ${path\[(Ie)$__dotfiles_dir\]} )).*|  :|	test/integration/startup.bats	added when absent	/usr/local stops being put back on PATH

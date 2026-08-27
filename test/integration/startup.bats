@@ -49,7 +49,9 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "PURE_HOOKED=$precmd_functions[(r)prompt_pure_precmd]"
        print "AUTOSUGGEST=$+functions[_zsh_autosuggest_start]"
        print "BASE_PATH=$path[(r)/base/rc-bin]"
-       print "BREWUP=${aliases[brewup]:-unset}"'
+       print "BREWUP=${aliases[brewup]:-unset}"
+       print "LANG=$LANG LC_ALL=$LC_ALL LC_TIME=$LC_TIME LC_COLLATE=$LC_COLLATE"
+       print "USRLOCAL=$path[(r)/usr/local/bin]:$path[(r)/usr/local/sbin]"'
 
 @test "startup is silent on stderr with a base layer" {
   run --separate-stderr run_login_shell "$HOME_WITH" 'true'
@@ -296,4 +298,40 @@ STUB
   # shell ends up with -- not merely that the line exists in a file.
   run cat "$PROBE_WITH"
   assert_contains "$output" "BREWUP=brew update; brew upgrade; brew cleanup; brew doctor"
+}
+
+@test "the locale is en_US in every category" {
+  # Found unprotected by script/sweep: eleven lines set LANG and each LC_
+  # category and nothing asserted any of them. A wrong locale is quiet until
+  # something sorts in a surprising order or a date comes out backwards.
+  local p
+  for p in "$PROBE_WITH" "$PROBE_WITHOUT"; do
+    run cat "$p"
+    local where; where="$(basename "$p")"
+    assert_contains "$output" "LANG=en_US.UTF-8" "$where"
+    assert_contains "$output" "LC_ALL=en_US.UTF-8" "$where"
+    assert_contains "$output" "LC_TIME=en_US.UTF-8" "$where"
+    assert_contains "$output" "LC_COLLATE=en_US.UTF-8" "$where"
+  done
+}
+
+@test "/usr/local/bin and /usr/local/sbin are added when absent" {
+  # Homebrew is under /opt on Apple silicon, so these hold whatever was installed
+  # outside it. Asserted against a PATH with them stripped: the ambient one
+  # already contains them, and run_login_shell passes the caller's PATH through,
+  # so the obvious version of this test could not fail.
+  local stripped saved="$PATH"
+  stripped="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vx '/usr/local/bin' \
+    | grep -vx '/usr/local/sbin' | paste -sd: -)"
+  # Whole elements, not substrings: a system PATH can hold a cryptex path that
+  # ends in usr/local/bin and is nothing to do with these two.
+  printf '%s' "$stripped" | tr ':' '\n' | grep -qx '/usr/local/bin' \
+    && { echo "the PATH under test still contains /usr/local/bin"; return 1; }
+
+  PATH="$stripped"
+  run run_login_shell "$HOME_WITHOUT" 'print "USRLOCAL=$path[(r)/usr/local/bin]:$path[(r)/usr/local/sbin]"'
+  PATH="$saved"
+
+  assert_contains "$output" "USRLOCAL=/usr/local/bin:/usr/local/sbin" \
+    "a login shell started without them on PATH"
 }
