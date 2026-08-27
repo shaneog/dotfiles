@@ -80,5 +80,7 @@ dependency that "must" have been inert wasn't.
 - **Never `git checkout --` or `git reset --hard` a file with uncommitted work.**
   Back it up with `cp` before mutating it for a test.
 - `make test` and `make audit` before committing; both must be clean.
-- `~/.gitconfig-user` is required and untracked — signing breaks without it.
-  Same for `~/.ssh/config-local` and `~/.zshrc.local`.
+- `~/.gitconfig-user` is required and untracked — git ignores a missing include
+  silently, so signing breaks with no error anywhere. It is the only file a new
+  machine has to be given by hand: `script/setup` writes `~/.ssh/config-local`
+  when it is absent, and `~/.zshrc.local` is sourced only if it exists.
