@@ -43,3 +43,7 @@ config/tmux/tmux.conf	s|^setw -g automatic-rename on|setw -g automatic-rename of
 test/integration/perf.bats	s|DOTFILES_STARTUP_BUDGET_MS:-200|DOTFILES_STARTUP_BUDGET_MS:-1|	test/integration/perf.bats	starts within budget	the startup budget stops being enforced
 test/integration/perf.bats	s|DOTFILES_NONINTERACTIVE_BUDGET_MS:-50|DOTFILES_NONINTERACTIVE_BUDGET_MS:-1|	test/integration/perf.bats	near-free	the non-interactive budget stops being enforced
 script/audit	s|warn "$name has not fired on schedule since before $cutoff"|ok "$name"|	test/unit/audit.bats	a cron that has stopped firing warns	a dead cron is reported as healthy
+config/tmux/tmux.conf	s|^setw -g mode-keys vi|# gone|	test/integration/tmux.bats	key tables	copy mode falls back to whatever $EDITOR implies
+config/tmux/tmux.conf	s|^set -g status-keys emacs|# gone|	test/integration/tmux.bats	key tables	the command prompt follows $EDITOR into vi keys
+config/tmux/tmux.conf	s|^set -g default-command zsh|# gone|	test/integration/tmux.bats	runs the shell	panes run the login shell instead of zsh
+config/tmux/tmux.conf	s|^bind h select-pane -L|# gone|	test/integration/tmux.bats	movement and resizing	a pane movement binding disappears

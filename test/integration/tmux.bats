@@ -87,7 +87,6 @@ window_entry() {
 @test "tmux: the basics are what this config asks for" {
   start_tmux
   echo "$(show prefix)" | grep -q "C-a" || { echo "$(show prefix)"; return 1; }
-  echo "$(show mode-keys)" | grep -q "vi" || { echo "$(show mode-keys)"; return 1; }
   echo "$(show default-terminal)" | grep -q "tmux-256color" \
     || { echo "terminal is not tmux-256color: $(show default-terminal)"; return 1; }
   echo "$(show history-limit)" | grep -q "50000" || { echo "$(show history-limit)"; return 1; }
@@ -262,4 +261,61 @@ wait_for() {  # window, format, expected
   refute_contains "$(window_entry 1)" "Z" "the unzoomed window 1 entry"
   tm resize-pane -t probe:1 -Z
   assert_contains "$(window_entry 1)" "Z" "the zoomed window 1 entry"
+}
+
+@test "tmux: the key tables do not depend on \$EDITOR" {
+  # tmux infers mode-keys and status-keys from $EDITOR, so each of these lines
+  # only proves itself in the environment where the inference disagrees with it.
+  # Regression: asserting mode-keys=vi with this repo's own EDITOR=nvim could not
+  # fail -- tmux reads the "vi" in "nvim" and defaults to vi anyway.
+  # VISUAL as well as EDITOR: tmux consults VISUAL first, so setting EDITOR
+  # alone leaves the inference intact and the assertion unable to fail.
+  start_tmux EDITOR=nano VISUAL=nano
+  assert_contains "$(show mode-keys)" "vi" "mode-keys with a non-vi editor"
+  tm kill-server 2>/dev/null || true
+
+  # And the reverse: with a vi-ish EDITOR tmux would default status-keys to vi,
+  # so emacs at the command prompt is this config's doing.
+  start_tmux EDITOR=nvim
+  assert_contains "$(show status-keys)" "emacs" "status-keys with a vi EDITOR"
+}
+
+@test "tmux: a pane runs the shell this repo configures" {
+  # default-command. Load-bearing rather than cosmetic: it is why a pane gets
+  # this repo's zsh config at all. SHELL is deliberately bash here -- with a zsh
+  # login shell tmux would run zsh regardless and the assertion could not fail.
+  #
+  # Read from the process rather than pane_current_command, which is unreliable
+  # while no client is attached.
+  start_tmux SHELL=/bin/bash
+  local pid comm
+  pid="$(tm display-message -p '#{pane_pid}')"
+  [ -n "$pid" ] || { echo "no pane pid"; return 1; }
+  comm="$(ps -o comm= -p "$pid" | tr -d ' ')"
+  assert_contains "$comm" "zsh" "the process running in the pane"
+}
+
+@test "tmux: pane movement and resizing are the vim keys" {
+  # Named rather than counted: a count still passes when one binding is lost and
+  # another gained.
+  start_tmux
+  local keys
+  keys="$(tm list-keys 2>/dev/null || true)"
+  local pair
+  for pair in "h select-pane -L" "j select-pane -D" "k select-pane -U" "l select-pane -R" \
+              "H resize-pane -L" "J resize-pane -D" "K resize-pane -U" "L resize-pane -R"; do
+    set -- $pair
+    # The key is the field after "prefix", not a fixed column: a repeatable
+    # binding carries -r before -T and shifts everything along.
+    echo "$keys" | awk -v k="$1" -v cmd="$2" -v dir="$3" \
+      '{ key = "" ; for (i = 1; i < NF; i++) if ($i == "prefix") key = $(i + 1) }
+       key == k && $0 ~ cmd && $0 ~ dir { found = 1 } END { exit !found }' \
+      || { echo "prefix $1 does not run $2 $3"; return 1; }
+  done
+
+  # C-a reaches the program inside the pane, which is the whole point of picking
+  # a prefix a shell also uses.
+  echo "$keys" | awk '{ key = "" ; for (i = 1; i < NF; i++) if ($i == "prefix") key = $(i + 1) }
+       key == "C-a" && /send-prefix/ { f = 1 } END { exit !f }' \
+    || { echo "prefix C-a does not send the prefix through"; return 1; }
 }
