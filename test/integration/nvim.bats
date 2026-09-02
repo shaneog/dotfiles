@@ -39,7 +39,15 @@ setup_file() {
   rm -rf "$NVIM_CONFIG/nvim"
   cp -R "$REPO/config/nvim" "$NVIM_CONFIG/nvim"
 
-  if [ ! -d "$NVIM_DATA/nvim/lazy/lazy.nvim" ]; then
+  # A file, not the directory. macOS prunes $TMPDIR every few days and removes
+  # files while leaving the directory tree standing, so `[ -d ... ]` is a cache
+  # hit on an empty skeleton: these tests failed with "module 'lazy' not found"
+  # after three days of not being run, against a lazy.nvim directory that still
+  # existed and had nothing in it. The sentinel is read on every run, so it
+  # survives for as long as the cache is genuinely in use.
+  if [ ! -r "$NVIM_DATA/nvim/lazy/lazy.nvim/lua/lazy/init.lua" ]; then
+    # Half-pruned is worse than absent: start from nothing.
+    rm -rf "$NVIM_DATA/nvim" "$NVIM_DATA/state" "$NVIM_DATA/cache"
     HOME="$NVIM_HOME" XDG_CONFIG_HOME="$NVIM_CONFIG" XDG_DATA_HOME="$NVIM_DATA" \
       XDG_STATE_HOME="$NVIM_DATA/state" XDG_CACHE_HOME="$NVIM_DATA/cache" \
       _timeout 900 "$REPO/script/after-setup" >"$NVIM_DATA/provision.log" 2>&1 || true
