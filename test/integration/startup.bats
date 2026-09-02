@@ -335,3 +335,29 @@ STUB
   assert_contains "$output" "USRLOCAL=/usr/local/bin:/usr/local/sbin" \
     "a login shell started without them on PATH"
 }
+
+@test "Homebrew is on PATH before .zshrc runs" {
+  # Regression, and one this repo's own layering hid. The shellenv lived in
+  # lib/homebrew.zsh, which .zshrc sources two thirds of the way down -- after
+  # the tmux autostart at the top asks $+commands[tmux]. With a managed base
+  # layer underneath, something else had already put Homebrew on PATH, so the
+  # ordering never mattered here; on a machine without one, the answer was 0 and
+  # tmux silently never started.
+  #
+  # A login *non-interactive* shell is the discriminator: zsh does not read
+  # .zshrc for one, so a tool found here can only have come from .zprofile.
+  [ -d /opt/homebrew ] || skip "no Homebrew at /opt/homebrew to find"
+  local stripped captured out
+  stripped="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v '^/opt/homebrew' | paste -sd: -)"
+  captured="$(mktemp)"
+  _timeout 60 env -i HOME="$HOME_WITHOUT" PATH="$stripped" TERM=xterm-256color \
+    USER="${USER:-tester}" "$ZSH_BIN" -l -c \
+    'print "prefix=${HOMEBREW_PREFIX:-unset} tmux=$+commands[tmux] zshrc=${__DOTFILES_ZSHRC:-no}"' \
+    > "$captured" 2>&1
+  out="$(cat "$captured")"; rm -f "$captured"
+
+  assert_contains "$out" "prefix=/opt/homebrew" "the login shell's Homebrew prefix"
+  assert_contains "$out" "tmux=1" "tmux on PATH before .zshrc"
+  # Without this the two above would not prove the ordering, only the outcome.
+  assert_contains "$out" "zshrc=no" "the shell that was measured"
+}

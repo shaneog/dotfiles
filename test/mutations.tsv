@@ -53,3 +53,5 @@ config/nvim/lua/options.lua	s|opt.grepprg = "rg --vimgrep"|-- gone|	test/integra
 config/zsh/.zprofile	s|^  LANG='en_US.UTF-8'|  : |	test/integration/startup.bats	locale is en_US	the locale falls back to whatever the system picks
 config/zsh/.zprofile	s|^LC_TIME=$LANG|# gone|	test/integration/startup.bats	locale is en_US	one LC category stops following LANG
 config/zsh/.zprofile	s|^  (( ${path\[(Ie)$__dotfiles_dir\]} )).*|  :|	test/integration/startup.bats	added when absent	/usr/local stops being put back on PATH
+config/zsh/.zprofile	s|^  path=("$HOMEBREW_PREFIX/bin".*|  :|	test/integration/startup.bats	before .zshrc runs	Homebrew lands on PATH too late for the tmux autostart
+config/zsh/.zprofile	s|^if \[ -z "${HOMEBREW_PREFIX}" \] && \[ -d "/opt/homebrew" \]; then|if [ -d "/opt/homebrew" ]; then|	test/unit/guards.bats	does not re-prepend	a base layer's own Homebrew order is overridden

@@ -84,17 +84,31 @@ STUB
     || { echo "mise displaced the base layer's node: $output"; return 1; }
 }
 
+# The Homebrew shellenv is in .zprofile, not in lib/homebrew.zsh: .zshrc's first
+# lines need Homebrew's binaries on PATH already. Same shape as probe_lib.
+probe_zprofile() {
+  local before="$1" after="$2"; shift 2
+  env -i HOME="$FAKE_HOME" PATH="${STUBS:+$STUBS:}/usr/bin:/bin" USER=tester \
+      XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$FAKE_HOME/.local/share" \
+      XDG_CACHE_HOME="$FAKE_HOME/.cache" "$@" \
+      "$ZSH_BIN" -fi -c "
+        $before
+        source '$REPO/config/zsh/.zprofile'
+        $after"
+}
+
 @test "homebrew: does not re-prepend when the base layer set HOMEBREW_PREFIX" {
   [ -d /opt/homebrew ] || skip "no /opt/homebrew on this machine"
-  run probe_lib homebrew.zsh '' 'print $PATH' HOMEBREW_PREFIX=/base/brew
-  [[ "$output" != *"/opt/homebrew/bin"* ]]
+  run probe_zprofile '' 'print $PATH' HOMEBREW_PREFIX=/base/brew
+  [[ "$output" != *"/opt/homebrew/bin"* ]] \
+    || { echo "re-prepended over the base layer's own order: $output"; return 1; }
 }
 
 @test "homebrew: sets up shellenv when nothing else did" {
   [ -d /opt/homebrew ] || skip "no /opt/homebrew on this machine"
-  run probe_lib homebrew.zsh '' 'print "${HOMEBREW_PREFIX:-unset} $PATH"'
-  [[ "$output" == "/opt/homebrew "* ]]
-  [[ "$output" == *"/opt/homebrew/bin"* ]]
+  run probe_zprofile '' 'print "${HOMEBREW_PREFIX:-unset} $PATH"'
+  [[ "$output" == "/opt/homebrew "* ]] || { echo "no prefix: $output"; return 1; }
+  [[ "$output" == *"/opt/homebrew/bin"* ]] || { echo "not on PATH: $output"; return 1; }
 }
 
 # --- syntax highlighting / autosuggestions ----------------------------------

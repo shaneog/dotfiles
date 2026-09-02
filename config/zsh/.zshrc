@@ -11,6 +11,9 @@ __DOTFILES_ZSHRC=1
 # doesn't pay for an init it is about to replace; the rest of this file runs on
 # detach. fpath is prepended again further down, which is where the rest of the
 # autoloaded functions are declared.
+#
+# Running this early means it can only see tools already on PATH: tmux comes
+# from Homebrew, so .zprofile has to have put Homebrew there. It does.
 fpath=($ZDOTDIR/autoload "${fpath[@]}")
 autoload -Uz tmux_autostart
 tmux_autostart

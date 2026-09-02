@@ -11,14 +11,8 @@ zinit snippet PZTM::homebrew
 # not failures, and a cleanup is still wanted when an upgrade fails.
 alias brewup='brew update; brew upgrade; brew cleanup; brew doctor'
 
-# Set homebrew shellenv, unless the base layer already did it
-if [ -z "${HOMEBREW_PREFIX}" ] && [ -d "/opt/homebrew" ]; then
-  HOMEBREW_PREFIX="/opt/homebrew";
-  HOMEBREW_CELLAR="/opt/homebrew/Cellar";
-  HOMEBREW_REPOSITORY="/opt/homebrew";
-  PATH="/opt/homebrew/bin:/opt/homebrew/sbin${PATH+:$PATH}";
-  MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
-  INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
-fi
-
-FPATH="${HOMEBREW_PREFIX}/share/zsh/site-functions:${FPATH}"
+# shellenv lives in .zprofile, not here: this file is sourced two thirds of the
+# way down .zshrc, and things above it -- the tmux autostart in particular --
+# test for Homebrew's binaries with $+commands.
+[[ -n "$HOMEBREW_PREFIX" ]] \
+  && FPATH="${HOMEBREW_PREFIX}/share/zsh/site-functions:${FPATH}"
