@@ -217,6 +217,10 @@ EOF
   [ "$status" -eq 0 ] || { echo "a warning must not fail the run: $output"; return 1; }
   echo "$output" | grep -q "has not fired on schedule since before" \
     || { echo "a dead cron went unreported: $output"; return 1; }
+  # Counted, not just printed. Regression: this section ran after the summary had
+  # already been printed, so a dead cron warned underneath "0 warnings".
+  echo "$output" | grep -q "0 failures, 1 warnings" \
+    || { echo "the warning never reached the summary: $output"; return 1; }
 }
 
 @test "audit: a cron that is still firing is not reported" {

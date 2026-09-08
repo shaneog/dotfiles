@@ -169,10 +169,6 @@ for lib in config/zsh/lib/*.zsh; do
 done
 [ "$orphans" -gt 0 ] || ok "every tool-specific lib has a package behind it"
 
-# ------------------------------------------------------------------------ result
-
-printf '\n== Summary\n'
-printf '  %s failures, %s warnings\n' "$FAILURES" "$WARNINGS"
 # ------------------------------------------------------- scheduled workflows
 
 head2 "Scheduled workflows are still firing"
@@ -209,6 +205,10 @@ else
   done
 fi
 
+# ------------------------------------------------------------------------ result
+
+printf '\n== Summary\n'
+printf '  %s failures, %s warnings\n' "$FAILURES" "$WARNINGS"
 [ -z "$SKIPPED" ] || printf '  NOT CHECKED:%s\n' "$SKIPPED"
 [ "$FAILURES" -eq 0 ] || exit 1
 exit 0
