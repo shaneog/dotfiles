@@ -330,3 +330,14 @@ load '../helpers/common'
   offenders="$(grep -rnE "tee +/etc/pam\.d/sudo($|[^_])" "$REPO/script" "$REPO/config" 2>/dev/null || true)"
   [ -z "$offenders" ] || { echo "writes /etc/pam.d/sudo directly:"; echo "$offenders"; return 1; }
 }
+
+@test "every mutation row has its five fields" {
+  # The manifest is tab separated and the sed expressions are full of
+  # punctuation, so a tab inside one silently shifts every field after it: the
+  # filter becomes nonsense and the row reports BROKEN rather than what it meant
+  # to test. Cheaper to say so here than to read it out of a mutation run.
+  local bad
+  bad="$(awk -F'\t' '!/^#/ && NF > 0 && NF != 5 { print "  " NR ": " NF " fields" }' \
+    "$REPO/test/mutations.tsv")"
+  [ -z "$bad" ] || { echo "malformed rows in test/mutations.tsv:"; echo "$bad"; return 1; }
+}
