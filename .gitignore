@@ -55,3 +55,6 @@ config/zsh/.zcompdump
 config/zsh/**/*.zwc*
 # completion dump some setups write into ${ZDOTDIR}
 config/zsh/.zcmpdump*
+
+# Cursor writes its CLI state here, and ~/.config is this repo.
+config/cursor/
