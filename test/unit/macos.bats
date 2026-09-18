@@ -24,6 +24,13 @@ setup() {
   : > "$STATE"
   : > "$LOG"
 
+  # A stand-in for /etc/pam.d/sudo_local.template, same shape as Apple's.
+  cat > "$MHOME/sudo_local.template" <<'TEMPLATE'
+# sudo_local: local config file which survives system update and is included for sudo
+# uncomment following line to enable Touch ID for sudo
+#auth       sufficient     pam_tid.so
+TEMPLATE
+
   cat > "$STUBS/defaults" <<'EOF'
 #!/bin/sh
 printf 'defaults %s\n' "$*" >> "$CALL_LOG"
@@ -76,6 +83,8 @@ macos() {
   _timeout 120 env -i HOME="$MHOME" PATH="$STUBS:/usr/bin:/bin" USER="${USER:-tester}" \
     XDG_DATA_HOME="$MHOME/.local/share" \
     CALL_LOG="$LOG" STATE_FILE="$STATE" REJECT_KEY="${REJECT_KEY:-}" \
+    PAM_SUDO_LOCAL="$MHOME/sudo_local" \
+    PAM_SUDO_TEMPLATE="${PAM_SUDO_TEMPLATE:-$MHOME/sudo_local.template}" \
     bash "$REPO/script/macos" "$@"
 }
 
@@ -173,4 +182,60 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   run macos --reset-dock
   grep -q "persistent-apps -array" "$LOG" \
     || { echo "--reset-dock did not clear the Dock"; return 1; }
+}
+
+@test "macos: Touch ID for sudo goes through Apple's hook, with sudo" {
+  # Authentication, not authorisation: this replaces the password prompt and
+  # grants nothing. sudo_local rather than /etc/pam.d/sudo, because Apple includes
+  # the former and an OS update overwrites the latter.
+  run macos
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  grep -qE '^auth[[:space:]]+sufficient[[:space:]]+pam_tid.so' "$MHOME/sudo_local" \
+    || { echo "pam_tid never reached sudo_local: $(cat "$MHOME/sudo_local" 2>&1)"; return 1; }
+  grep -q "^sudo tee .*sudo_local" "$LOG" \
+    || { echo "the file was written without sudo: $(cat "$LOG")"; return 1; }
+  # The machine's real PAM config is never a target, even under a stubbed sudo.
+  grep -qE "tee +/etc/pam.d/sudo($| )" "$LOG" \
+    && { echo "wrote /etc/pam.d/sudo itself"; return 1; }
+  return 0
+}
+
+@test "macos: --check reports Touch ID before it is configured, and writes nothing" {
+  run macos --check
+  echo "$output" | grep -q "not applied: pam sudo_local" || { echo "$output"; return 1; }
+  [ ! -e "$MHOME/sudo_local" ] || { echo "--check wrote the pam file"; return 1; }
+}
+
+@test "macos: the pam line is the one this OS ships, not a hand-written copy" {
+  # Against the real template on purpose: it is the only way to notice Apple
+  # respelling the line or moving the file. Everything else here is hermetic.
+  [ -r /etc/pam.d/sudo_local.template ] \
+    || skip "this macOS ships no /etc/pam.d/sudo_local.template"
+  PAM_SUDO_TEMPLATE=/etc/pam.d/sudo_local.template run macos
+  grep -qE '^auth[[:space:]]+sufficient[[:space:]]+pam_tid.so' "$MHOME/sudo_local" \
+    || { echo "Apple's template no longer yields the expected line: $(cat "$MHOME/sudo_local" 2>&1)"; return 1; }
+}
+
+@test "macos: the restore script undoes the Touch ID change" {
+  # The first run promises a way back. Before this, the one setting it could not
+  # undo was the PAM file -- the restore script never mentioned it.
+  run macos
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  local restore="$MHOME/.local/share/dotfiles/macos-defaults/restore"
+  [ -x "$restore" ] || { echo "no restore script"; return 1; }
+  grep -q "sudo rm -f .*sudo_local" "$restore" \
+    || { echo "restore does not remove the pam file it created:"; cat "$restore"; return 1; }
+}
+
+@test "macos: an existing sudo_local is kept, and the restore puts it back" {
+  # A machine that already had Touch ID configured, or had this file written by
+  # something else, must not lose it to a first run.
+  printf 'auth sufficient pam_something_else.so\n' > "$MHOME/sudo_local"
+  run macos
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  local dir="$MHOME/.local/share/dotfiles/macos-defaults"
+  grep -q "pam_something_else" "$dir/sudo_local" \
+    || { echo "the previous file was not recorded"; return 1; }
+  grep -q "sudo cp ./sudo_local" "$dir/restore" \
+    || { echo "restore does not put it back:"; cat "$dir/restore"; return 1; }
 }

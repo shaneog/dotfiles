@@ -41,6 +41,12 @@ for arg in "$@"; do
 	esac
 done
 
+# Apple's hook for local sudo PAM config. /etc/pam.d/sudo includes it, and it
+# survives OS updates -- an edit to /etc/pam.d/sudo itself does not. Overridable
+# so the tests can exercise this without touching the machine they run on.
+PAM_SUDO_LOCAL="${PAM_SUDO_LOCAL:-/etc/pam.d/sudo_local}"
+PAM_SUDO_TEMPLATE="${PAM_SUDO_TEMPLATE:-/etc/pam.d/sudo_local.template}"
+
 # Close System Settings, so an open pane cannot write its cached values back
 # over what we are about to change. Called "System Preferences" until Ventura
 # renamed it; the old name no longer resolves to anything.
@@ -74,6 +80,12 @@ elif [ -d "$BACKUP_DIR" ]; then
 else
 	echo "Recording the current values in $BACKUP_DIR:"
 	mkdir -p "$BACKUP_DIR"
+	# Not a defaults domain, so copied rather than exported. Reading it needs no
+	# sudo; only writing it does. A machine that already had Touch ID configured,
+	# or this file written by something else, keeps its copy.
+	if [ -r "$PAM_SUDO_LOCAL" ]; then
+		cp "$PAM_SUDO_LOCAL" "$BACKUP_DIR/sudo_local" && echo "  $PAM_SUDO_LOCAL"
+	fi
 	for domain in "${TOUCHED_DOMAINS[@]}"; do
 		if defaults export "$domain" "$BACKUP_DIR/$domain.plist" 2>/dev/null; then
 			echo "  $domain"
@@ -103,6 +115,11 @@ else
 				echo "defaults delete $domain 2>/dev/null || true  # was not set before"
 			fi
 		done
+		if [ -f "$BACKUP_DIR/sudo_local" ]; then
+			echo "sudo cp ./sudo_local $PAM_SUDO_LOCAL"
+		else
+			echo "sudo rm -f $PAM_SUDO_LOCAL  # no such file before"
+		fi
 		# shellcheck disable=SC2016  # written verbatim into the restore script
 		echo 'sudo chsh -s "$(cat ./login-shell)" "$USER"'
 		echo 'killall Dock Finder SystemUIServer 2>/dev/null || true'
@@ -166,13 +183,22 @@ SETTINGS=(
 	# only takes effect at the next boot. Handled by the nvram branch below so it
 	# stays in this one list and --check covers it too.
 	"nvram|StartupMute|-string|%01|reboot|No startup chime"
+
+	# Touch ID for sudo, which replaces the password prompt rather than removing
+	# the authorisation -- no NOPASSWD entry, no widened privileges. Same trick as
+	# the chime: a pam branch below keeps it in this one list.
+	"pam|sudo_local|-line|auth sufficient pam_tid.so|now|Touch ID for sudo"
 )
+
 
 # Most settings are preferences; the startup chime is an NVRAM variable. Both go
 # through these so the table stays one list.
 read_setting() {
 	if [ "$1" = "nvram" ]; then
 		nvram "$2" 2>/dev/null | awk '{print $2}'
+	elif [ "$1" = "pam" ]; then
+		# Only the active lines: the file Apple ships is mostly comment.
+		grep -h '^auth' "$PAM_SUDO_LOCAL" 2>/dev/null
 	else
 		defaults read "$1" "$2" 2>/dev/null
 	fi
@@ -181,6 +207,12 @@ read_setting() {
 write_setting() {
 	if [ "$1" = "nvram" ]; then
 		sudo nvram "$2=$4"
+	elif [ "$1" = "pam" ]; then
+		# Uncommented from Apple's own template rather than written out here, so
+		# the module line is always the one this OS version ships. pipefail makes
+		# a missing template a failure the loop counts, not a silent empty write.
+		sed -e 's/^#auth/auth/' "$PAM_SUDO_TEMPLATE" \
+			| sudo tee "$PAM_SUDO_LOCAL" >/dev/null
 	else
 		defaults write "$1" "$2" "$3" "$4"
 	fi

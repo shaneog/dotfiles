@@ -89,7 +89,9 @@ load '../helpers/common'
 }
 
 @test "script/macos only touches known domains" {
-  local known="NSGlobalDomain com.apple.desktopservices com.apple.dock com.apple.finder com.apple.print.PrintingPrefs com.apple.Terminal nvram"
+  # nvram and pam are pseudo-domains: settings that are not a `defaults write`
+  # but belong in the same table, so apply, --check and the tests stay one list.
+  local known="NSGlobalDomain com.apple.desktopservices com.apple.dock com.apple.finder com.apple.print.PrintingPrefs com.apple.Terminal nvram pam"
   local d
   # the settings table
   for d in $(grep -oE '^[[:space:]]+"[A-Za-z][A-Za-z0-9.]*\|' "$REPO/script/macos" \
@@ -113,6 +115,8 @@ load '../helpers/common'
     type="$(echo "$line" | cut -d'|' -f3)"
     case "$type" in
       -bool|-int|-float|-string|-array) ;;
+      # -line: a literal line in a config file, which the pam pseudo-domain uses.
+      -line) ;;
       *) echo "unknown type '$type' in: $line"; return 1 ;;
     esac
     when="$(echo "$line" | cut -d'|' -f5)"
@@ -310,4 +314,19 @@ load '../helpers/common'
   [ -z "$offenders" ] || {
     echo "git does not recognise these keys, so they do nothing:"
     echo "$offenders"; return 1; }
+}
+
+@test "the sudo PAM change targets Apple's include, not /etc/pam.d/sudo" {
+  # Two reasons this matters more than most one-line defaults. A malformed
+  # /etc/pam.d/sudo takes sudo with it, and an OS update overwrites that file
+  # anyway -- sudo_local exists precisely to be included from it and survive.
+  # The unit tests override the path so they can run without touching the
+  # machine, which leaves the default itself asserted only here.
+  grep -qE 'PAM_SUDO_LOCAL:-/etc/pam\.d/sudo_local"?\}' "$REPO/script/macos" \
+    || { echo "script/macos does not default to /etc/pam.d/sudo_local:";
+         grep -n "PAM_SUDO_LOCAL" "$REPO/script/macos"; return 1; }
+  # And nothing anywhere may write the file Apple owns.
+  local offenders
+  offenders="$(grep -rnE "tee +/etc/pam\.d/sudo($|[^_])" "$REPO/script" "$REPO/config" 2>/dev/null || true)"
+  [ -z "$offenders" ] || { echo "writes /etc/pam.d/sudo directly:"; echo "$offenders"; return 1; }
 }
