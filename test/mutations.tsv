@@ -58,3 +58,4 @@ config/zsh/.zprofile	s|^if \[ -z "${HOMEBREW_PREFIX}" \] && \[ -d "/opt/homebrew
 script/macos	s|sed -e 's/^#auth/auth/' "$PAM_SUDO_TEMPLATE"|cat "$PAM_SUDO_TEMPLATE"|	test/unit/macos.bats	Apple's hook	the pam_tid line is copied still commented out
 script/macos	s:| sudo tee "$PAM_SUDO_LOCAL" >/dev/null:> "$PAM_SUDO_LOCAL":	test/unit/macos.bats	Apple's hook	the PAM file is written without sudo
 script/macos	s|.*if \[ -f "$BACKUP_DIR/sudo_local" \]; then|if false; then|	test/unit/macos.bats	existing sudo_local is kept	a pre-existing PAM file is recorded but never restorable
+script/macos	s|PAM_SUDO_LOCAL:-/etc/pam.d/sudo_local|PAM_SUDO_LOCAL:-/etc/pam.d/sudo|	test/static/lint.bats	sudo PAM change	the OS-owned /etc/pam.d/sudo becomes the target
