@@ -107,6 +107,7 @@ macos() {
     PAM_SUDO_TEMPLATE="${PAM_SUDO_TEMPLATE:-$MHOME/sudo_local.template}" \
     PAM_REATTACH_SRC="${PAM_REATTACH_SRC:-$MHOME/absent/pam_reattach.so}" \
     PAM_REATTACH_DEST="${PAM_REATTACH_DEST:-$MHOME/pam/pam_reattach.so}" \
+    PAM_TRUST_DEST="${PAM_TRUST_DEST-1}" \
     bash "$REPO/script/macos" "$@"
 }
 
@@ -310,4 +311,22 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" run macos --check
   [ "$status" -eq 1 ] || { echo "a stale copy went unreported: $output"; return 1; }
   echo "$output" | grep -q "stale-module-copy" || { echo "$output"; return 1; }
+}
+
+@test "macos: a module path that is not root-owned is refused" {
+  # The one test that does not set PAM_TRUST_DEST, so it runs the real check.
+  # Fail safe: a module anyone can replace in sudo's stack is a passwordless
+  # path to root, which is worse than typing a password. /usr/local/lib is
+  # admin-writable on any Mac that once ran Homebrew there.
+  mkdir -p "$MHOME/brewlib" "$MHOME/writable/pam"
+  chmod 0775 "$MHOME/writable"
+  printf 'module\n' > "$MHOME/brewlib/pam_reattach.so"
+
+  PAM_TRUST_DEST="" PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" \
+    PAM_REATTACH_DEST="$MHOME/writable/pam/pam_reattach.so" run macos
+  echo "$output" | grep -q "Not loading pam_reattach" || { echo "$output"; return 1; }
+  refute_contains "$(cat "$MHOME/sudo_local")" "pam_reattach" "the PAM file"
+  # And nothing is copied there either, which a later run might then trust.
+  [ ! -e "$MHOME/writable/pam/pam_reattach.so" ] \
+    || { echo "copied the module under a directory that is not root-owned"; return 1; }
 }

@@ -59,13 +59,51 @@ PAM_SUDO_TEMPLATE="${PAM_SUDO_TEMPLATE:-/etc/pam.d/sudo_local.template}"
 PAM_REATTACH_SRC="${PAM_REATTACH_SRC:-$(brew --prefix 2>/dev/null)/lib/pam/pam_reattach.so}"
 PAM_REATTACH_DEST="${PAM_REATTACH_DEST:-/usr/local/lib/pam/pam_reattach.so}"
 
+# Every directory above the module counts as much as the module itself: anything
+# that can rename /usr/local/lib can substitute the pam directory under it, and
+# whatever is inside then runs as root on the next sudo. Only components that
+# already exist are checked -- the ones this script creates it creates root-owned.
+#
+# /usr/bin/stat: -f is BSD-only, and GNU stat earlier on PATH reads it as a
+# format string for a filesystem.
+pam_path_is_root_owned() {
+	local p="$1" owner perms
+	while [ "$p" != "/" ] && [ -n "$p" ]; do
+		if [ -e "$p" ]; then
+			owner="$(/usr/bin/stat -f '%u' "$p" 2>/dev/null)"
+			perms="$(/usr/bin/stat -f '%Lp' "$p" 2>/dev/null)"
+			[ "$owner" = "0" ] || return 1
+			[ $(( 0"${perms:-777}" & 022 )) -eq 0 ] || return 1
+		fi
+		p="$(dirname "$p")"
+	done
+}
+
 # The reattach line only when there is a module to load. script/bootstrap runs
 # this before the Brewfile, so a new machine gets working Touch ID immediately
 # and the tmux half on the next run, rather than a file naming a module that is
 # not there yet.
-if [ -r "$PAM_REATTACH_SRC" ] || [ -r "$PAM_REATTACH_DEST" ]; then
+# PAM_TRUST_DEST exists for the tests, which cannot create a root-owned
+# directory under $TMPDIR. It changes what this script decides, not what sudo
+# accepts, and anyone able to set it for a run could edit this file instead. The
+# check itself is exercised by the test that expects a refusal.
+pam_dest_trusted() {
+	[ -n "${PAM_TRUST_DEST:-}" ] && return 0
+	pam_path_is_root_owned "$1"
+}
+
+if ! pam_dest_trusted "$PAM_REATTACH_DEST"; then
+	# Fail safe, and decided once: no Touch ID in tmux is a nuisance, whereas a
+	# module anyone can replace in sudo's stack is a way to become root without a
+	# password. Nothing is copied there either.
+	PAM_REATTACH_OK=""
+	PAM_WANT="auth sufficient pam_tid.so"
+	echo "Not loading pam_reattach: $PAM_REATTACH_DEST is not under a root-owned path"
+elif [ -r "$PAM_REATTACH_SRC" ] || [ -r "$PAM_REATTACH_DEST" ]; then
+	PAM_REATTACH_OK="1"
 	PAM_WANT="auth optional $PAM_REATTACH_DEST auth sufficient pam_tid.so"
 else
+	PAM_REATTACH_OK=""
 	PAM_WANT="auth sufficient pam_tid.so"
 fi
 
@@ -223,7 +261,8 @@ read_setting() {
 		grep -h '^auth' "$PAM_SUDO_LOCAL" 2>/dev/null
 		# A copy that no longer matches the module Homebrew has is drift too,
 		# and invisible in the file itself.
-		if [ -r "$PAM_REATTACH_SRC" ] && [ -r "$PAM_REATTACH_DEST" ] \
+		if [ -n "$PAM_REATTACH_OK" ] && [ -r "$PAM_REATTACH_SRC" ] \
+			&& [ -r "$PAM_REATTACH_DEST" ] \
 			&& ! cmp -s "$PAM_REATTACH_SRC" "$PAM_REATTACH_DEST"; then
 			echo "stale-module-copy"
 		fi
@@ -236,7 +275,7 @@ write_setting() {
 	if [ "$1" = "nvram" ]; then
 		sudo nvram "$2=$4"
 	elif [ "$1" = "pam" ]; then
-		if [ -r "$PAM_REATTACH_SRC" ]; then
+		if [ -n "$PAM_REATTACH_OK" ] && [ -r "$PAM_REATTACH_SRC" ]; then
 			sudo install -d -o root -g wheel -m 0755 "$(dirname "$PAM_REATTACH_DEST")" \
 				&& sudo install -o root -g wheel -m 0644 \
 					"$PAM_REATTACH_SRC" "$PAM_REATTACH_DEST" || return 1
@@ -246,7 +285,7 @@ write_setting() {
 		# order that works: it reattaches the session pam_tid then looks for.
 		{
 			grep -v '^#auth' "$PAM_SUDO_TEMPLATE"
-			if [ -r "$PAM_REATTACH_SRC" ] || [ -r "$PAM_REATTACH_DEST" ]; then
+			if [ -n "$PAM_REATTACH_OK" ]; then
 				printf 'auth       optional       %s\n' "$PAM_REATTACH_DEST"
 			fi
 			sed -n 's/^#\(auth.*pam_tid\.so\)$/\1/p' "$PAM_SUDO_TEMPLATE"
