@@ -59,3 +59,6 @@ script/macos	s|sed -e 's/^#auth/auth/' "$PAM_SUDO_TEMPLATE"|cat "$PAM_SUDO_TEMPL
 script/macos	s:| sudo tee "$PAM_SUDO_LOCAL" >/dev/null:> "$PAM_SUDO_LOCAL":	test/unit/macos.bats	Apple's hook	the PAM file is written without sudo
 script/macos	s|.*if \[ -f "$BACKUP_DIR/sudo_local" \]; then|if false; then|	test/unit/macos.bats	existing sudo_local is kept	a pre-existing PAM file is recorded but never restorable
 script/macos	s|PAM_SUDO_LOCAL:-/etc/pam.d/sudo_local|PAM_SUDO_LOCAL:-/etc/pam.d/sudo|	test/static/lint.bats	sudo PAM change	the OS-owned /etc/pam.d/sudo becomes the target
+script/macos	s|PAM_REATTACH_DEST:-/usr/local/lib/pam/pam_reattach.so|PAM_REATTACH_DEST:-/opt/homebrew/lib/pam/pam_reattach.so|	test/static/lint.bats	sudo PAM change	sudo's PAM stack loads a module from a writable prefix
+script/macos	s|-o root -g wheel -m 0644|-m 0644|	test/unit/macos.bats	root-owned copy	the PAM module copy is no longer root-owned
+script/macos	s|if \[ -r "$PAM_REATTACH_SRC" \] && \[ -r "$PAM_REATTACH_DEST" \]|if false|	test/unit/macos.bats	fallen behind	a stale module copy stops being noticed

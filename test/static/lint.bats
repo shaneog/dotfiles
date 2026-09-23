@@ -325,6 +325,15 @@ load '../helpers/common'
   grep -qE 'PAM_SUDO_LOCAL:-/etc/pam\.d/sudo_local"?\}' "$REPO/script/macos" \
     || { echo "script/macos does not default to /etc/pam.d/sudo_local:";
          grep -n "PAM_SUDO_LOCAL" "$REPO/script/macos"; return 1; }
+  # The PAM module must not be loaded out of Homebrew's prefix. /opt/homebrew is
+  # group-writable, and a module in sudo's stack runs as root, so a writable one
+  # is a passwordless path to root -- worse than the sudoers entry this avoids.
+  grep -qE 'PAM_REATTACH_DEST:-/usr/local/lib/pam/' "$REPO/script/macos" \
+    || { echo "the PAM module copy is not defaulting to a root-owned path:";
+         grep -n "PAM_REATTACH_DEST" "$REPO/script/macos"; return 1; }
+  grep -nE 'PAM_REATTACH_DEST:-.*(opt/homebrew|brew --prefix|HOMEBREW_PREFIX)' "$REPO/script/macos" \
+    && { echo "loads the PAM module from Homebrew's prefix"; return 1; }
+
   # And nothing anywhere may write the file Apple owns.
   local offenders
   offenders="$(grep -rnE "tee +/etc/pam\.d/sudo($|[^_])" "$REPO/script" "$REPO/config" 2>/dev/null || true)"

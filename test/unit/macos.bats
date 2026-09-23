@@ -71,6 +71,26 @@ EOF
   done
   # dscl has to answer: the capture pipes it into awk and writes the result.
   printf '#!/bin/sh\nprintf "dscl %%s\\n" "$*" >> "$CALL_LOG"\necho "UserShell: /bin/zsh"\n' > "$STUBS/dscl"
+  # Same reasoning as the sudo stub: it has to do the copy, or the pam branch
+  # looks like it worked while nothing moved. The -o/-g flags are dropped because
+  # a test cannot honour them; that they were passed is asserted from the log.
+  cat > "$STUBS/install" <<'INSTALL'
+#!/bin/sh
+printf 'install %s\n' "$*" >> "$CALL_LOG"
+dir=""; args=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -d) dir=1 ;;
+    -o|-g|-m) shift ;;
+    *) args="$args $1" ;;
+  esac
+  shift
+done
+if [ -n "$dir" ]; then mkdir -p $args; else
+  set -- $args; mkdir -p "$(dirname "$2")"; cp "$1" "$2"
+fi
+INSTALL
+
   # sudo has to run what it is given, or the nvram branch silently does nothing.
   printf '#!/bin/sh\nprintf "sudo %%s\\n" "$*" >> "$CALL_LOG"\nexec "$@"\n' > "$STUBS/sudo"
   # Not a desktop session, so the Terminal profile import stays out of the way.
@@ -85,6 +105,8 @@ macos() {
     CALL_LOG="$LOG" STATE_FILE="$STATE" REJECT_KEY="${REJECT_KEY:-}" \
     PAM_SUDO_LOCAL="$MHOME/sudo_local" \
     PAM_SUDO_TEMPLATE="${PAM_SUDO_TEMPLATE:-$MHOME/sudo_local.template}" \
+    PAM_REATTACH_SRC="${PAM_REATTACH_SRC:-$MHOME/absent/pam_reattach.so}" \
+    PAM_REATTACH_DEST="${PAM_REATTACH_DEST:-$MHOME/pam/pam_reattach.so}" \
     bash "$REPO/script/macos" "$@"
 }
 
@@ -238,4 +260,54 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
     || { echo "the previous file was not recorded"; return 1; }
   grep -q "sudo cp ./sudo_local" "$dir/restore" \
     || { echo "restore does not put it back:"; cat "$dir/restore"; return 1; }
+}
+
+@test "macos: without pam-reattach installed, only pam_tid is configured" {
+  # script/bootstrap runs this before the Brewfile, so a new machine must get
+  # working Touch ID now rather than a file naming a module that is not there.
+  run macos
+  grep -qE '^auth[[:space:]]+sufficient[[:space:]]+pam_tid.so' "$MHOME/sudo_local" \
+    || { echo "$(cat "$MHOME/sudo_local" 2>&1)"; return 1; }
+  grep -q pam_reattach "$MHOME/sudo_local" \
+    && { echo "named a module that is not installed"; return 1; }
+  run macos --check
+  [ "$status" -eq 0 ] || { echo "drifted against its own write: $output"; return 1; }
+}
+
+@test "macos: pam_reattach is loaded from a root-owned copy, ahead of pam_tid" {
+  # The order is load-bearing: pam_reattach reattaches this process to the GUI
+  # session, which is what pam_tid then looks for. Reversed, Touch ID in a tmux
+  # pane silently falls back to the password.
+  mkdir -p "$MHOME/brewlib"
+  printf 'module\n' > "$MHOME/brewlib/pam_reattach.so"
+  PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" run macos
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+
+  local file="$MHOME/sudo_local"
+  local reattach tid
+  reattach="$(grep -n pam_reattach "$file" | cut -d: -f1)"
+  tid="$(grep -n pam_tid "$file" | cut -d: -f1)"
+  [ -n "$reattach" ] || { echo "no reattach line: $(cat "$file")"; return 1; }
+  [ "$reattach" -lt "$tid" ] \
+    || { echo "pam_reattach must precede pam_tid: $(cat "$file")"; return 1; }
+
+  # Root-owned copy, not the group-writable prefix Homebrew installs into.
+  grep -q "^sudo install -o root -g wheel -m 0644 .*brewlib/pam_reattach.so $MHOME/pam/" "$LOG" \
+    || { echo "the module was not installed root-owned: $(grep install "$LOG")"; return 1; }
+  refute_contains "$(cat "$file")" "brewlib" "the PAM stack"
+}
+
+@test "macos: a module copy that has fallen behind is reported as drift" {
+  # `brew upgrade pam-reattach` leaves the root-owned copy stale, and nothing in
+  # the file itself changes, so --check has to compare the two.
+  mkdir -p "$MHOME/brewlib"
+  printf 'v1\n' > "$MHOME/brewlib/pam_reattach.so"
+  PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" run macos
+  PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" run macos --check
+  [ "$status" -eq 0 ] || { echo "drifted straight after applying: $output"; return 1; }
+
+  printf 'v2\n' > "$MHOME/brewlib/pam_reattach.so"
+  PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" run macos --check
+  [ "$status" -eq 1 ] || { echo "a stale copy went unreported: $output"; return 1; }
+  echo "$output" | grep -q "stale-module-copy" || { echo "$output"; return 1; }
 }

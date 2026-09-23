@@ -1,5 +1,9 @@
 # System
 brew 'mise'
+# Lets pam_tid reach the GUI session from a tmux pane, which is where every
+# shell here runs. Copied to a root-owned path by script/macos rather than
+# loaded from this prefix -- see the comment there.
+brew 'pam-reattach'
 
 # Shell
 brew 'zsh'

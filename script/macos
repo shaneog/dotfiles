@@ -47,6 +47,28 @@ done
 PAM_SUDO_LOCAL="${PAM_SUDO_LOCAL:-/etc/pam.d/sudo_local}"
 PAM_SUDO_TEMPLATE="${PAM_SUDO_TEMPLATE:-/etc/pam.d/sudo_local.template}"
 
+# pam_tid cannot reach the GUI session from inside tmux -- `launchctl managername`
+# in a pane answers Background -- and .zshrc puts every Terminal window in a tmux
+# session, so Touch ID there needs pam_reattach to bridge back to it.
+#
+# Loaded from a root-owned copy rather than from Homebrew's prefix, which is
+# group-writable: a PAM module in sudo's stack runs as root, so a writable one is
+# a way to become root without a password, which is worse than the NOPASSWD entry
+# this is meant to avoid. The copy is why `brew upgrade pam-reattach` wants this
+# script re-run, and why --check reports a copy that has fallen behind.
+PAM_REATTACH_SRC="${PAM_REATTACH_SRC:-$(brew --prefix 2>/dev/null)/lib/pam/pam_reattach.so}"
+PAM_REATTACH_DEST="${PAM_REATTACH_DEST:-/usr/local/lib/pam/pam_reattach.so}"
+
+# The reattach line only when there is a module to load. script/bootstrap runs
+# this before the Brewfile, so a new machine gets working Touch ID immediately
+# and the tmux half on the next run, rather than a file naming a module that is
+# not there yet.
+if [ -r "$PAM_REATTACH_SRC" ] || [ -r "$PAM_REATTACH_DEST" ]; then
+	PAM_WANT="auth optional $PAM_REATTACH_DEST auth sufficient pam_tid.so"
+else
+	PAM_WANT="auth sufficient pam_tid.so"
+fi
+
 # Close System Settings, so an open pane cannot write its cached values back
 # over what we are about to change. Called "System Preferences" until Ventura
 # renamed it; the old name no longer resolves to anything.
@@ -187,7 +209,7 @@ SETTINGS=(
 	# Touch ID for sudo, which replaces the password prompt rather than removing
 	# the authorisation -- no NOPASSWD entry, no widened privileges. Same trick as
 	# the chime: a pam branch below keeps it in this one list.
-	"pam|sudo_local|-line|auth sufficient pam_tid.so|now|Touch ID for sudo"
+	"pam|sudo_local|-line|$PAM_WANT|now|Touch ID for sudo"
 )
 
 
@@ -199,6 +221,12 @@ read_setting() {
 	elif [ "$1" = "pam" ]; then
 		# Only the active lines: the file Apple ships is mostly comment.
 		grep -h '^auth' "$PAM_SUDO_LOCAL" 2>/dev/null
+		# A copy that no longer matches the module Homebrew has is drift too,
+		# and invisible in the file itself.
+		if [ -r "$PAM_REATTACH_SRC" ] && [ -r "$PAM_REATTACH_DEST" ] \
+			&& ! cmp -s "$PAM_REATTACH_SRC" "$PAM_REATTACH_DEST"; then
+			echo "stale-module-copy"
+		fi
 	else
 		defaults read "$1" "$2" 2>/dev/null
 	fi
@@ -208,11 +236,21 @@ write_setting() {
 	if [ "$1" = "nvram" ]; then
 		sudo nvram "$2=$4"
 	elif [ "$1" = "pam" ]; then
-		# Uncommented from Apple's own template rather than written out here, so
-		# the module line is always the one this OS version ships. pipefail makes
-		# a missing template a failure the loop counts, not a silent empty write.
-		sed -e 's/^#auth/auth/' "$PAM_SUDO_TEMPLATE" \
-			| sudo tee "$PAM_SUDO_LOCAL" >/dev/null
+		if [ -r "$PAM_REATTACH_SRC" ]; then
+			sudo install -d -o root -g wheel -m 0755 "$(dirname "$PAM_REATTACH_DEST")" \
+				&& sudo install -o root -g wheel -m 0644 \
+					"$PAM_REATTACH_SRC" "$PAM_REATTACH_DEST" || return 1
+		fi
+		# Apple's template supplies the pam_tid line, so its spelling is always
+		# the one this OS ships. pam_reattach goes ahead of it, which is the
+		# order that works: it reattaches the session pam_tid then looks for.
+		{
+			grep -v '^#auth' "$PAM_SUDO_TEMPLATE"
+			if [ -r "$PAM_REATTACH_SRC" ] || [ -r "$PAM_REATTACH_DEST" ]; then
+				printf 'auth       optional       %s\n' "$PAM_REATTACH_DEST"
+			fi
+			sed -n 's/^#\(auth.*pam_tid\.so\)$/\1/p' "$PAM_SUDO_TEMPLATE"
+		} | sudo tee "$PAM_SUDO_LOCAL" >/dev/null
 	else
 		defaults write "$1" "$2" "$3" "$4"
 	fi
