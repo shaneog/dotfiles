@@ -330,3 +330,19 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   [ ! -e "$MHOME/writable/pam/pam_reattach.so" ] \
     || { echo "copied the module under a directory that is not root-owned"; return 1; }
 }
+
+@test "macos: a root-owned symlink to a writable target is refused" {
+  # /tmp is precisely this case: lrwxr-xr-x root:wheel pointing at a 1777
+  # directory. `stat -f` is lstat, so a check that asks only about the link sees
+  # 0755 root and trusts it -- which it did, until the target was checked too.
+  [ -L /tmp ] || skip "/tmp is not a symlink on this machine"
+  mkdir -p "$MHOME/brewlib"
+  printf 'module\n' > "$MHOME/brewlib/pam_reattach.so"
+
+  PAM_TRUST_DEST="" PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" \
+    PAM_REATTACH_DEST="/tmp/dotfiles-pam-test/pam_reattach.so" run macos
+  echo "$output" | grep -q "Not loading pam_reattach" || { echo "$output"; return 1; }
+  refute_contains "$(cat "$MHOME/sudo_local")" "pam_reattach" "the PAM file"
+  [ ! -e /tmp/dotfiles-pam-test ] \
+    || { rm -rf /tmp/dotfiles-pam-test; echo "created a directory under an untrusted path"; return 1; }
+}

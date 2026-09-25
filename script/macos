@@ -66,14 +66,34 @@ PAM_REATTACH_DEST="${PAM_REATTACH_DEST:-/usr/local/lib/pam/pam_reattach.so}"
 #
 # /usr/bin/stat: -f is BSD-only, and GNU stat earlier on PATH reads it as a
 # format string for a filesystem.
+#
+# Each component is checked twice, because the two answers differ for a symlink
+# and both matter. `stat -f` is lstat: it describes the link, so on its own it
+# would trust a root-owned symlink pointing at a world-writable directory --
+# /tmp is exactly that, a root-owned link to a 1777 target. `stat -Lf` is stat:
+# it describes the target, so on its own it would trust a link anyone can
+# repoint at somewhere harmless.
+pam_component_is_root_owned() {  # path, stat flag
+	local owner perms
+	owner="$(/usr/bin/stat "$2" '%u' "$1" 2>/dev/null)" || return 1
+	perms="$(/usr/bin/stat "$2" '%Lp' "$1" 2>/dev/null)" || return 1
+	[ "$owner" = "0" ] || return 1
+	# 8# rather than a leading zero: bash 3.2, which is what a stock Mac runs
+	# this with, rejects the quotes a "0$perms" form leaves inside the
+	# arithmetic. It failed closed -- every path looked untrusted -- so the
+	# reattach line would simply never have been written.
+	[ $(( 8#${perms:-777} & 8#22 )) -eq 0 ]
+}
+
 pam_path_is_root_owned() {
-	local p="$1" owner perms
+	local p="$1"
 	while [ "$p" != "/" ] && [ -n "$p" ]; do
-		if [ -e "$p" ]; then
-			owner="$(/usr/bin/stat -f '%u' "$p" 2>/dev/null)"
-			perms="$(/usr/bin/stat -f '%Lp' "$p" 2>/dev/null)"
-			[ "$owner" = "0" ] || return 1
-			[ $(( 0"${perms:-777}" & 022 )) -eq 0 ] || return 1
+		# -L as well as -e: a dangling symlink is not an absent component. It is
+		# one whose owner chooses what appears there the moment the target is
+		# created, and `stat -Lf` on it fails, which rejects the path.
+		if [ -e "$p" ] || [ -L "$p" ]; then
+			pam_component_is_root_owned "$p" -f  || return 1
+			pam_component_is_root_owned "$p" -Lf || return 1
 		fi
 		p="$(dirname "$p")"
 	done
