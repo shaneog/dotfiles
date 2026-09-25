@@ -62,6 +62,6 @@ script/macos	s|PAM_SUDO_LOCAL:-/etc/pam.d/sudo_local|PAM_SUDO_LOCAL:-/etc/pam.d/
 script/macos	s|PAM_REATTACH_DEST:-/usr/local/lib/pam/pam_reattach.so|PAM_REATTACH_DEST:-/opt/homebrew/lib/pam/pam_reattach.so|	test/static/lint.bats	sudo PAM change	sudo's PAM stack loads a module from a writable prefix
 script/macos	s|-o root -g wheel -m 0644|-m 0644|	test/unit/macos.bats	root-owned copy	the PAM module copy is no longer root-owned
 script/macos	s|echo "stale-module-copy"|:|	test/unit/macos.bats	fallen behind	a stale module copy stops being noticed
-script/macos	s|.*owner="$(/usr/bin/stat.*|owner=0|	test/unit/macos.bats	not root-owned is refused	every path looks root-owned, so an unsafe one is trusted
+script/macos	s|^pam_component_is_root_owned() {|pam_component_is_root_owned() { return 0;|	test/unit/macos.bats	not root-owned is refused	the ownership walk accepts every path
 script/macos	s|pam_component_is_root_owned "$p" -Lf|true|	test/unit/macos.bats	symlink to a writable target	only the symlink is checked, not what it points at
 script/macos	s|8#${perms:-777} & 8#22|0"${perms:-777}" \& 022|	test/unit/macos.bats	symlink to a writable target	the ownership arithmetic breaks under bash 3.2
