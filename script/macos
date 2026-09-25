@@ -85,6 +85,17 @@ pam_component_is_root_owned() {  # path, stat flag
 	[ $(( 8#${perms:-777} & 8#22 )) -eq 0 ]
 }
 
+# The walk is lexical: it goes up with dirname rather than following each
+# component to where it resolves. So if a component were itself a root-owned
+# symlink, this checks the link and its target -- but not the target's own
+# parents, where an attacker with write access could rename the target and put
+# something else in its place.
+#
+# Left as is deliberately. Reaching it needs root to have created a symlink
+# pointing into a user-writable tree, nothing on the default path is a symlink
+# at all, and a physical walk cannot be tested here: a test cannot create the
+# root-owned symlink that would demonstrate it. An untestable branch in this
+# function is the worse trade -- two bugs have already hidden in it.
 pam_path_is_root_owned() {
 	local p="$1"
 	while [ "$p" != "/" ] && [ -n "$p" ]; do
