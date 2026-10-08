@@ -14,6 +14,23 @@ load '../helpers/common'
 BUDGET_MS="${DOTFILES_STARTUP_BUDGET_MS:-200}"
 NONINTERACTIVE_BUDGET_MS="${DOTFILES_NONINTERACTIVE_BUDGET_MS:-50}"
 
+# hyperfine 2.0 moved the figures under summary.<metric>; 1.x carried mean on the
+# result itself, and CI runners can be a release behind, so read either. A schema
+# that moves again says so in one line: the KeyError traceback this replaced read
+# like a broken test rather than a changed tool.
+mean_ms() {
+  python3 - "$1" <<'PYTHON'
+import json, sys
+
+result = json.load(open(sys.argv[1]))["results"][0]
+figures = result.get("summary", {}).get("time_wall_clock") or result
+if "mean" not in figures or figures.get("unit", "second") != "second":
+    sys.exit("hyperfine's export schema changed: no mean in seconds, keys are "
+             + ", ".join(sorted(figures)))
+print(round(figures["mean"] * 1000))
+PYTHON
+}
+
 setup() {
   [ -z "$SKIP_PERF" ] || skip "SKIP_PERF set"
   if ! command -v hyperfine >/dev/null; then
@@ -42,7 +59,7 @@ teardown() {
         ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 $ZSH_BIN -lic exit"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   local mean_ms
-  mean_ms="$(python3 -c "import json,sys; print(round(json.load(open(sys.argv[1]))['results'][0]['mean']*1000))" "$json")"
+  mean_ms="$(mean_ms "$json")" || { echo "$mean_ms"; return 1; }
   echo "mean startup: ${mean_ms}ms (budget ${BUDGET_MS}ms)" >&3
   [ "$mean_ms" -lt "$BUDGET_MS" ] || { echo "over budget"; return 1; }
 }
@@ -53,7 +70,7 @@ teardown() {
     -- "env -i HOME=$FAKE_HOME PATH=$PATH $ZSH_BIN -c exit"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   local mean_ms
-  mean_ms="$(python3 -c "import json,sys; print(round(json.load(open(sys.argv[1]))['results'][0]['mean']*1000))" "$json")"
+  mean_ms="$(mean_ms "$json")" || { echo "$mean_ms"; return 1; }
   echo "mean non-interactive startup: ${mean_ms}ms (budget ${NONINTERACTIVE_BUDGET_MS}ms)" >&3
   [ "$mean_ms" -lt "$NONINTERACTIVE_BUDGET_MS" ] || { echo "over budget"; return 1; }
 }
