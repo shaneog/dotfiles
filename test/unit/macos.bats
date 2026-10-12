@@ -24,6 +24,10 @@ setup() {
   : > "$STATE"
   : > "$LOG"
 
+  # Empty by default: most tests run with the module absent, and a Brewfile that
+  # declares it would make every one of them emit the reminder.
+  : > "$MHOME/empty-brewfile"
+
   # A stand-in for /etc/pam.d/sudo_local.template, same shape as Apple's.
   cat > "$MHOME/sudo_local.template" <<'TEMPLATE'
 # sudo_local: local config file which survives system update and is included for sudo
@@ -108,6 +112,7 @@ macos() {
     PAM_REATTACH_SRC="${PAM_REATTACH_SRC:-$MHOME/absent/pam_reattach.so}" \
     PAM_REATTACH_DEST="${PAM_REATTACH_DEST:-$MHOME/pam/pam_reattach.so}" \
     PAM_TRUST_DEST="${PAM_TRUST_DEST-1}" \
+    PAM_BREWFILE="${PAM_BREWFILE:-$MHOME/empty-brewfile}" \
     bash "$REPO/script/macos" "$@"
 }
 
@@ -345,4 +350,21 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   refute_contains "$(cat "$MHOME/sudo_local")" "pam_reattach" "the PAM file"
   [ ! -e /tmp/dotfiles-pam-test ] \
     || { rm -rf /tmp/dotfiles-pam-test; echo "created a directory under an untrusted path"; return 1; }
+}
+
+@test "macos: a declared but uninstalled pam-reattach is reported" {
+  # The state this machine sat in for three weeks: pam_tid applied, the module
+  # never installed, Touch ID working outside tmux and nowhere else, and --check
+  # saying 33 of 33 because the wanted state adapts to what is present.
+  printf "brew 'pam-reattach'\n" > "$MHOME/Brewfile"
+  PAM_BREWFILE="$MHOME/Brewfile" run macos
+  echo "$output" | grep -q "pam-reattach is in the Brewfile but not installed" \
+    || { echo "$output"; return 1; }
+}
+
+@test "macos: a Brewfile that omits pam-reattach is not nagged about it" {
+  # Opting out is a decision, not drift. The reminder keys on the declaration.
+  printf "brew 'zsh'\n" > "$MHOME/Brewfile"
+  PAM_BREWFILE="$MHOME/Brewfile" run macos
+  refute_contains "$output" "pam-reattach is in the Brewfile" "the output"
 }

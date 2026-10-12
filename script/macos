@@ -58,6 +58,8 @@ PAM_SUDO_TEMPLATE="${PAM_SUDO_TEMPLATE:-/etc/pam.d/sudo_local.template}"
 # script re-run, and why --check reports a copy that has fallen behind.
 PAM_REATTACH_SRC="${PAM_REATTACH_SRC:-$(brew --prefix 2>/dev/null)/lib/pam/pam_reattach.so}"
 PAM_REATTACH_DEST="${PAM_REATTACH_DEST:-/usr/local/lib/pam/pam_reattach.so}"
+# Overridable for the tests, like the paths above.
+PAM_BREWFILE="${PAM_BREWFILE:-$(dirname "$0")/../Brewfile}"
 
 # Every directory above the module counts as much as the module itself: anything
 # that can rename /usr/local/lib can substitute the pam directory under it, and
@@ -136,6 +138,15 @@ elif [ -r "$PAM_REATTACH_SRC" ] || [ -r "$PAM_REATTACH_DEST" ]; then
 else
 	PAM_REATTACH_OK=""
 	PAM_WANT="auth sufficient pam_tid.so"
+	# Absent is the expected state on a new machine: script/bootstrap runs this
+	# before the Brewfile. Once the Brewfile declares it, absent is drift worth
+	# saying out loud -- Touch ID then works outside tmux and nowhere else, while
+	# --check reports every setting applied, because the wanted state adapts to
+	# what is installed.
+	if grep -q "^brew 'pam-reattach'" "$PAM_BREWFILE" 2>/dev/null; then
+		echo "pam-reattach is in the Brewfile but not installed:" \
+			"Touch ID will not work inside tmux. Run brew bundle, then this again."
+	fi
 fi
 
 # Close System Settings, so an open pane cannot write its cached values back
