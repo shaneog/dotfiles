@@ -18,7 +18,10 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 BUDGET=900
-OUT="${TMPDIR:-/tmp}/dotfiles-sweep.tsv"
+# Not $TMPDIR: macOS prunes it every few days, and it threw away the first
+# runs' results before a later run could build on them -- so coverage could
+# never accumulate, which is the whole point of the file.
+OUT="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sweep.tsv"
 ALL=""
 TARGETS=""
 
@@ -60,6 +63,7 @@ tests_for() {
 		config/tmux/*)  echo "test/integration/tmux.bats test/unit/tmux_autostart.bats" ;;
 		config/nvim/*)  echo "test/integration/nvim.bats" ;;
 		config/git/*)   echo "test/static/lint.bats test/integration/startup.bats" ;;
+		config/starship.toml) echo "test/integration/prompt.bats" ;;
 		ssh/*)          echo "test/static/ssh.bats test/integration/setup.bats" ;;
 		*)              echo "" ;;
 	esac
@@ -108,6 +112,7 @@ candidates() {
 	fi
 }
 
+mkdir -p "$(dirname "$OUT")"
 : > "$OUT.new"
 [ -f "$OUT" ] && cp "$OUT" "$OUT.new"
 mv "$OUT.new" "$OUT"
