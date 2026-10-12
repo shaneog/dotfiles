@@ -69,3 +69,4 @@ script/macos	s|if grep -q "^brew .pam-reattach." "$PAM_BREWFILE" 2>/dev/null; th
 script/audit	s@.*\[ -d config/nvim \] && grep.*@true@	test/unit/audit.bats	archived neovim plugin	neovim plugin upstreams stop being checked
 script/audit	s@warn "${line#  not applied: }"@:@	test/unit/audit.bats	machine that has drifted is reported	machine drift is read but never reported
 script/audit	s@done <<< "$(printf .%s..n. "$drift_output" | grep .not applied:.)"@done < /dev/null@	test/unit/audit.bats	machine that has drifted is reported	the drift lines stop being read at all
+config/starship.toml	s|^error_symbol = "\[➜\](red)".*|error_symbol = "[➜](green)"|	test/integration/prompt.bats	character module reflects the last exit status	a failed command still shows the success colour
