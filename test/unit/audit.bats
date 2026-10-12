@@ -241,3 +241,56 @@ EOF
   echo "$output" | grep -q "first scheduled run still pending" \
     || { echo "$output"; return 1; }
 }
+
+@test "audit: an archived neovim plugin fails too" {
+  # lazy.nvim pins its plugins in a committed lockfile and never updates itself,
+  # so an archived one would sit there untouched. The zinit list was checked for
+  # this from the start and the Lua specs were not.
+  mkdir -p "$FIX/config/nvim/lua"
+  printf 'return {\n  { "someone/dead.nvim" },\n}\n' > "$FIX/config/nvim/lua/plugins.lua"
+  cat > "$STUBS/gh" <<'EOF'
+#!/bin/sh
+case "$1" in
+  auth) exit 0 ;;
+  api)  printf 'true\t2026-08-01\n' ;;
+  run)  printf '0\n' ;;
+esac
+EOF
+  chmod +x "$STUBS/gh"
+  run audit
+  [ "$status" -eq 1 ] || { echo "an archived plugin must fail the run: $output"; return 1; }
+  echo "$output" | grep -q "someone/dead.nvim is archived upstream" || { echo "$output"; return 1; }
+}
+
+@test "audit: a machine that has drifted is reported, and counted" {
+  # The gap this closes: script/macos --check knows about a setting the OS reset
+  # or a PAM module copy left behind by an upgrade, and nothing ran it. The
+  # counting half matters too -- `warn` inside a piped while-loop increments in a
+  # subshell, so the summary would have said 0 warnings beneath two of them.
+  cat > "$FIX/script/macos" <<'EOF'
+#!/bin/sh
+echo "  not applied: com.apple.dock tilesize is 48, wanted 32 (icon size)"
+echo "  not applied: pam sudo_local is unset, wanted authsufficientpam_tid.so (Touch ID)"
+echo "31 of 33 settings applied, 2 not"
+exit 1
+EOF
+  chmod +x "$FIX/script/macos"
+  run audit
+  [ "$status" -eq 0 ] || { echo "drift is a warning, not a failure: $output"; return 1; }
+  echo "$output" | grep -q "com.apple.dock tilesize" || { echo "$output"; return 1; }
+  echo "$output" | grep -q "pam sudo_local is unset" || { echo "$output"; return 1; }
+  echo "$output" | grep -q "0 failures, 3 warnings" \
+    || { echo "the warnings never reached the summary: $output"; return 1; }
+}
+
+@test "audit: a machine with no drift is one ok line" {
+  cat > "$FIX/script/macos" <<'EOF'
+#!/bin/sh
+echo "33 of 33 settings applied, 0 not"
+EOF
+  chmod +x "$FIX/script/macos"
+  run audit
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -q "33 of 33 settings applied" || { echo "$output"; return 1; }
+  echo "$output" | grep -q "0 failures, 0 warnings" || { echo "$output"; return 1; }
+}

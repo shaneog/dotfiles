@@ -74,8 +74,12 @@ else
   cutoff="$(date -v-${STALE_AFTER_MONTHS}m +%Y-%m-%d 2>/dev/null || date -d "-${STALE_AFTER_MONTHS} months" +%Y-%m-%d)"
   {
     grep -rhoE "zinit (light|load) [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" config/zsh | awk '{print $3}'
-    grep -rhoE "https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git" config/zsh \
+    grep -rhoE "https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git" config/zsh config/nvim \
       | sed -e 's|https://github.com/||' -e 's|\.git$||'
+    # Neovim's plugin specs. lazy.nvim pins them in a committed lockfile and
+    # never updates itself, so an archived plugin here would sit untouched
+    # indefinitely -- the zinit list above had this covered and these did not.
+    [ -d config/nvim ] && grep -rhoE '"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"' config/nvim | tr -d '"'
     grep -rqE "PZTM::|PZT::" config/zsh && echo "sorin-ionescu/prezto"
   } | sort -u | while read -r repo; do
     [ -n "$repo" ] || continue
@@ -168,6 +172,37 @@ for lib in config/zsh/lib/*.zsh; do
   orphans=$((orphans + 1))
 done
 [ "$orphans" -gt 0 ] || ok "every tool-specific lib has a package behind it"
+
+# ------------------------------------------------------------- machine drift
+
+head2 "Settings this machine has drifted from"
+# The repo being right does not make the machine right. script/macos --check
+# reads the same table the apply pass writes, so this notices a setting the OS
+# reset, an upgrade that left a PAM module copy behind, or a tool declared in
+# the Brewfile and never installed.
+#
+# Skipped under CI, loudly: a runner has had none of this applied, so every
+# setting would read as drift and say nothing about the machine this is for.
+if [ -n "${CI:-}" ]; then
+  SKIPPED="$SKIPPED machine-drift"
+  printf '  ----  not checked: a CI runner has none of these settings applied\n'
+elif [ ! -x script/macos ]; then
+  SKIPPED="$SKIPPED machine-drift"
+  printf '  ----  not checked: script/macos is not here\n'
+else
+  drift_output="$(script/macos --check 2>&1)"
+  if [ $? -eq 0 ]; then
+    ok "$(printf '%s' "$drift_output" | tail -1)"
+  else
+    # A here-string, not a pipe: `warn` in a piped while-loop increments the
+    # counter in a subshell, and the summary would report none of them.
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      warn "${line#  not applied: }"
+    done <<< "$(printf '%s\n' "$drift_output" | grep 'not applied:')"
+    warn "$(printf '%s' "$drift_output" | tail -1)"
+  fi
+fi
 
 # ------------------------------------------------------- scheduled workflows
 
