@@ -81,8 +81,11 @@ audit_gh() {
   ( cd "$FIX" && PATH="$STUBS:$PATH" STUB_RECENT="$1" STUB_EVER="$2" ./script/audit )
 }
 
+# CI is unset unless a test sets it: the machine-drift section skips itself when
+# it sees CI, so inheriting the runner's would make those tests assert against a
+# section that never ran -- which is exactly how they first failed.
 audit() {
-  ( cd "$FIX" && PATH="$STUBS:$PATH" ./script/audit )
+  ( cd "$FIX" && PATH="$STUBS:$PATH" CI="${CI_OVERRIDE:-}" ./script/audit )
 }
 
 @test "audit: a healthy repo passes" {
@@ -293,4 +296,21 @@ EOF
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   echo "$output" | grep -q "33 of 33 settings applied" || { echo "$output"; return 1; }
   echo "$output" | grep -q "0 failures, 0 warnings" || { echo "$output"; return 1; }
+}
+
+@test "audit: the machine-drift section skips itself on a runner, out loud" {
+  # A runner has had none of these settings applied, so every one would read as
+  # drift and say nothing about the machine this repo is for. Skipped, and named
+  # in NOT CHECKED rather than quietly passing.
+  cat > "$FIX/script/macos" <<'EOF'
+#!/bin/sh
+echo "  not applied: com.apple.dock tilesize is 48, wanted 32 (icon size)"
+exit 1
+EOF
+  chmod +x "$FIX/script/macos"
+  CI_OVERRIDE=true run audit
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -q "not checked: a CI runner" || { echo "$output"; return 1; }
+  echo "$output" | grep -q "NOT CHECKED:.*machine-drift" || { echo "$output"; return 1; }
+  refute_contains "$output" "com.apple.dock tilesize" "the report"
 }

@@ -74,7 +74,9 @@ else
   cutoff="$(date -v-${STALE_AFTER_MONTHS}m +%Y-%m-%d 2>/dev/null || date -d "-${STALE_AFTER_MONTHS} months" +%Y-%m-%d)"
   {
     grep -rhoE "zinit (light|load) [A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" config/zsh | awk '{print $3}'
-    grep -rhoE "https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git" config/zsh config/nvim \
+    # 2>/dev/null: config/nvim is absent in the test fixtures, and a missing
+    # directory here is not worth a line of grep's stderr in the report.
+    grep -rhoE "https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git" config/zsh config/nvim 2>/dev/null \
       | sed -e 's|https://github.com/||' -e 's|\.git$||'
     # Neovim's plugin specs. lazy.nvim pins them in a committed lockfile and
     # never updates itself, so an archived plugin here would sit untouched
