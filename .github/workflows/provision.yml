@@ -150,9 +150,10 @@ jobs:
     name: remove tears down, then bootstrap rebuilds from nothing
     runs-on: macos-latest
     # Uninstalls every formula, then Homebrew, then installs Homebrew and the
-    # Brewfile back from nothing. The two halves each take what the other job
-    # takes on its own.
-    timeout-minutes: 75
+    # Brewfile back from nothing. Measured at 4.2 minutes once both halves were
+    # in place -- bottles and a warm cache make the rebuild cheap -- so 30 is
+    # generous without being the 75 this was first guessed at.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       # The repo has to live at ~/.dotfiles, as it does on a real machine: the
