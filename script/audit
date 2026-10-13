@@ -206,6 +206,32 @@ else
   fi
 fi
 
+# --------------------------------------------------------------- the vm tier
+
+head2 "The VM tier, which only runs locally"
+# A Tart VM on real macOS is the only test here that installs onto a genuinely
+# fresh machine, and it cannot be moved to CI: GitHub's macOS runners answer
+# kern.hv_support=0 and kern.hv_vmm_present=1, being VMs themselves. So it runs
+# when someone remembers, and it once went six weeks without anyone noticing.
+# `make test-vm` stamps a date on success; this is the part that notices.
+VM_STAMP="${VM_STAMP:-${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vm-last-run}"
+VM_STALE_AFTER_DAYS="${VM_STALE_AFTER_DAYS:-30}"
+if [ -n "${CI:-}" ]; then
+  SKIPPED="$SKIPPED vm-tier"
+  printf '  ----  not checked: the stamp is local, and a runner cannot run this tier\n'
+elif [ ! -f "$VM_STAMP" ]; then
+  warn "the VM tier has no recorded run: make test-vm"
+else
+  # /bin/date: -v is BSD-only, and GNU date earlier on PATH reads it as a file.
+  vm_cutoff="$(/bin/date -v-"${VM_STALE_AFTER_DAYS}"d +%Y-%m-%d)"
+  vm_last="$(cat "$VM_STAMP")"
+  if [ "$vm_last" \< "$vm_cutoff" ]; then
+    warn "the VM tier last passed $vm_last, over $VM_STALE_AFTER_DAYS days ago: make test-vm"
+  else
+    ok "the VM tier passed $vm_last"
+  fi
+fi
+
 # ------------------------------------------------------- scheduled workflows
 
 head2 "Scheduled workflows are still firing"

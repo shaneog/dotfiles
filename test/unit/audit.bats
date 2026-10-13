@@ -32,6 +32,10 @@ alias f='fzf'
 EOF
   : > "$FIX/config/git/config"
 
+  # A fresh VM stamp by default, so only the tests that care about staleness see
+  # a warning about it.
+  date +%Y-%m-%d > "$FIX/vm-last-run"
+
   stub_brew_ok
   stub_gh_ok
 }
@@ -77,15 +81,21 @@ given_scheduled_workflow() {
   printf 'on:\n  schedule:\n    - cron: %s0 7 * * 1%s\n' "'" "'" > "$FIX/.github/workflows/weekly.yml"
 }
 
+# Same environment as audit(), so a section that keys on CI or reads a local
+# stamp behaves the same whichever helper a test reaches for. Keeping only one of
+# them current is how the drift tests first went red on a runner.
 audit_gh() {
-  ( cd "$FIX" && PATH="$STUBS:$PATH" STUB_RECENT="$1" STUB_EVER="$2" ./script/audit )
+  ( cd "$FIX" && PATH="$STUBS:$PATH" CI="${CI_OVERRIDE:-}" \
+      VM_STAMP="${VM_STAMP:-$FIX/vm-last-run}" \
+      STUB_RECENT="$1" STUB_EVER="$2" ./script/audit )
 }
 
 # CI is unset unless a test sets it: the machine-drift section skips itself when
 # it sees CI, so inheriting the runner's would make those tests assert against a
 # section that never ran -- which is exactly how they first failed.
 audit() {
-  ( cd "$FIX" && PATH="$STUBS:$PATH" CI="${CI_OVERRIDE:-}" ./script/audit )
+  ( cd "$FIX" && PATH="$STUBS:$PATH" CI="${CI_OVERRIDE:-}" \
+      VM_STAMP="${VM_STAMP:-$FIX/vm-last-run}" ./script/audit )
 }
 
 @test "audit: a healthy repo passes" {
@@ -313,4 +323,28 @@ EOF
   echo "$output" | grep -q "not checked: a CI runner" || { echo "$output"; return 1; }
   echo "$output" | grep -q "NOT CHECKED:.*machine-drift" || { echo "$output"; return 1; }
   refute_contains "$output" "com.apple.dock tilesize" "the report"
+}
+
+@test "audit: a VM tier that has not run in a month warns" {
+  # It cannot be moved to CI -- GitHub's macOS runners are VMs and cannot host
+  # one -- so a stamp and this check are the only things that notice. It went six
+  # weeks unnoticed before they existed.
+  echo "2020-01-01" > "$FIX/vm-last-run"
+  run audit
+  [ "$status" -eq 0 ] || { echo "staleness is a warning, not a failure: $output"; return 1; }
+  echo "$output" | grep -q "last passed 2020-01-01, over 30 days ago" \
+    || { echo "$output"; return 1; }
+}
+
+@test "audit: a VM tier that has never run warns" {
+  VM_STAMP="$FIX/absent-stamp" run audit
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -q "no recorded run" || { echo "$output"; return 1; }
+}
+
+@test "audit: a VM tier that ran recently is one ok line" {
+  run audit
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -q "the VM tier passed" || { echo "$output"; return 1; }
+  refute_contains "$output" "no recorded run" "the report"
 }
