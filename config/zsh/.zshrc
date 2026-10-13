@@ -64,7 +64,9 @@ if [[ -d "$custom_lib" ]]; then
     source $file
    done
 fi
-unset custom_lib
+# The loop variable too: it was surviving into the interactive shell holding
+# the last lib sourced.
+unset custom_lib file
 
 # https://carlosbecker.com/posts/speeding-up-zsh
 # see glob details here: https://gist.github.com/ctechols/ca1035271ad134841284

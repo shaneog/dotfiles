@@ -51,7 +51,9 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "BASE_PATH=$path[(r)/base/rc-bin]"
        print "BREWUP=${aliases[brewup]:-unset}"
        print "LANG=$LANG LC_ALL=$LC_ALL LC_TIME=$LC_TIME LC_COLLATE=$LC_COLLATE"
-       print "USRLOCAL=$path[(r)/usr/local/bin]:$path[(r)/usr/local/sbin]"'
+       print "USRLOCAL=$path[(r)/usr/local/bin]:$path[(r)/usr/local/sbin]"
+       print "LEAKS=${custom_lib-unset}/${file-unset}"
+       print "STRAY_DUMPS=$(ls $ZDOTDIR/.zcompdump* $ZDOTDIR/.zcmpdump* 2>/dev/null | wc -l | tr -d " ")"'
 
 @test "startup is silent on stderr with a base layer" {
   run --separate-stderr run_login_shell "$HOME_WITH" 'true'
@@ -360,4 +362,56 @@ STUB
   assert_contains "$out" "tmux=1" "tmux on PATH before .zshrc"
   # Without this the two above would not prove the ordering, only the outcome.
   assert_contains "$out" "zshrc=no" "the shell that was measured"
+}
+
+@test "the lib loop leaves nothing behind" {
+  # custom_lib was unset and the loop variable was not: `file` survived into
+  # every interactive shell holding the last lib it sourced.
+  local p
+  for p in "$PROBE_WITH" "$PROBE_WITHOUT"; do
+    run cat "$p"
+    assert_contains "$output" "LEAKS=unset/unset" "$(basename "$p")"
+  done
+}
+
+@test "sourcing .zshrc twice is a no-op" {
+  # The guard on its first line. Nothing sourced it twice, so the guard could
+  # have been deleted with the suite still green.
+  #
+  # custom_lib is the observable: the body sets it and then unsets it, so a
+  # sentinel surviving means .zshrc returned early as intended.
+  run run_login_shell "$HOME_WITHOUT" \
+    'custom_lib=sentinel; source $ZDOTDIR/.zshrc; print "second=${custom_lib-gone}"'
+  assert_contains "$output" "second=sentinel" "re-sourcing .zshrc"
+}
+
+@test "the tmux autostart is actually called from .zshrc" {
+  # tmux_autostart has twelve assertions of its own, and nothing asserted .zshrc
+  # ever calls it: deleting the call left the entire suite green. The harness
+  # suppresses it everywhere else with ZSH_NO_TMUX_AUTOSTART, which is why this
+  # has its own shell rather than run_login_shell.
+  #
+  # A stub tmux, because a real one would take this shell over and the test would
+  # wait for a detach that never comes. HOMEBREW_PREFIX is set so .zprofile does
+  # not prepend Homebrew's bin and find the real tmux ahead of the stub.
+  local stubs="$BATS_TEST_TMPDIR/stubs" log="$BATS_TEST_TMPDIR/tmux.log"
+  mkdir -p "$stubs"
+  cat > "$stubs/tmux" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >> "$log"
+case "\$*" in *has-session*) exit 1 ;; esac
+exit 0
+EOF
+  chmod +x "$stubs/tmux"
+
+  local captured="$BATS_TEST_TMPDIR/shell.out"
+  _timeout 180 env -i HOME="$HOME_WITHOUT" PATH="$stubs:/usr/bin:/bin" \
+    TERM=xterm-256color USER="${USER:-tester}" TERM_PROGRAM=Apple_Terminal \
+    HOMEBREW_PREFIX=/nonexistent ZSH_NO_ZCOMPILE=1 \
+    "$ZSH_BIN" -lic 'exit' > "$captured" 2>&1 || true
+
+  [ -s "$log" ] \
+    || { echo "tmux was never invoked from .zshrc:"; cat "$captured"; return 1; }
+  grep -q "new-session -s" "$log" \
+    || { echo "no session was started: $(cat "$log")"; return 1; }
 }

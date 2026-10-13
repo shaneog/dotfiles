@@ -72,3 +72,6 @@ script/audit	s@.*done <<< .*@done < /dev/null@	test/unit/audit.bats	machine that
 config/starship.toml	s|^error_symbol = "\[➜\](red)".*|error_symbol = "[➜](green)"|	test/integration/prompt.bats	character module reflects the last exit status	a failed command still shows the success colour
 script/audit	s@.*if \[ "$vm_last" .< "$vm_cutoff" \]; then@if false; then@	test/unit/audit.bats	VM tier that has not run in a month	a VM tier gone stale reports as current
 script/audit	s@warn "the VM tier has no recorded run: make test-vm"@:@	test/unit/audit.bats	VM tier that has never run	a VM tier that never ran says nothing
+config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
+config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integration/startup.bats	twice is a no-op	the double-source guard goes
+config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
