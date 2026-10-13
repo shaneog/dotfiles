@@ -147,9 +147,12 @@ jobs:
         run: ./script/macos --check
 
   remove:
-    name: script/remove tears down
+    name: remove tears down, then bootstrap rebuilds from nothing
     runs-on: macos-latest
-    timeout-minutes: 45
+    # Uninstalls every formula, then Homebrew, then installs Homebrew and the
+    # Brewfile back from nothing. The two halves each take what the other job
+    # takes on its own.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
       # The repo has to live at ~/.dotfiles, as it does on a real machine: the
@@ -195,6 +198,44 @@ jobs:
       - name: Homebrew is gone
         run: |
           [ ! -x /opt/homebrew/bin/brew ] || { echo "--everything left Homebrew behind"; exit 1; }
+
+      # And now the half no other job can reach. Every runner image ships with
+      # Homebrew already installed, so bootstrap's install-it-from-scratch branch
+      # is never taken -- except here, on a machine this job has just stripped.
+      # The VM tier covers this on genuinely fresh macOS and stays the full local
+      # run; this is the part of it a runner can do, and it runs weekly rather
+      # than when someone remembers.
+      - name: Skip the casks
+        run: |
+          casks="$(grep -oE "^cask '[^']+'" Brewfile | cut -d\' -f2 | tr '\n' ' ')"
+          echo "HOMEBREW_BUNDLE_CASK_SKIP=$casks" >> "$GITHUB_ENV"
+
+      - name: Bootstrap a machine with no Homebrew at all
+        run: |
+          REBUILT_HOME="$RUNNER_TEMP/rebuilt"
+          echo "REBUILT_HOME=$REBUILT_HOME" >> "$GITHUB_ENV"
+          mkdir -p "$REBUILT_HOME"
+          ref="$(git rev-parse --abbrev-ref HEAD)"
+          [ "$ref" = "HEAD" ] && ref=""
+          HOME="$REBUILT_HOME" \
+            DOTFILES_URL="$GITHUB_WORKSPACE" \
+            DOTFILES_REF="$ref" \
+            ./script/bootstrap
+
+      - name: It installed Homebrew itself
+        run: |
+          [ -x /opt/homebrew/bin/brew ] \
+            || { echo "bootstrap did not install Homebrew on a machine without it"; exit 1; }
+          /opt/homebrew/bin/brew list --formula --versions starship >/dev/null \
+            || { echo "Homebrew came back but the Brewfile did not"; exit 1; }
+
+      - name: And the rebuilt machine has a working shell
+        run: |
+          HOME="$REBUILT_HOME" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
+            /opt/homebrew/bin/zsh -lic 'print "starship=$+functions[prompt_starship_precmd] fzf=$+functions[fzf-file-widget]"' \
+            | tee rebuilt.out
+          grep -q "starship=1 fzf=1" rebuilt.out \
+            || { echo "the rebuilt machine's shell is incomplete"; exit 1; }
 
   bootstrap:
     name: bootstrap end to end
