@@ -3,6 +3,14 @@
 # override them.
 Include ~/.ssh/config-local
 
+# OrbStack's `orb` host, for reaching its Linux machines over ssh. It must come
+# before any Host or Match block, or it would be included only under that
+# block's condition. The missing file is ignored where OrbStack is not
+# installed. Its host authenticates with a key OrbStack generates on disk; that
+# key only reaches OrbStack's own machines over loopback, the one exception to
+# keys living in 1Password.
+Include ~/.orbstack/ssh/config
+
 # Do not kill connection if route is down temporarily.
 TCPKeepAlive no
 

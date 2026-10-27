@@ -16,7 +16,7 @@ loads afterwards and wins where it should.
   setup creates are excluded through `.git/info/exclude` rather than
   `.gitignore`, so internal names never reach a tracked file.
 - **No private keys on disk, ever.** SSH auth and commit signing both go through
-  1Password's agent. `ssh/config` sets `IdentityAgent` for processes that never
+  1Password's agent. (OrbStack's loopback-only key is the one allowed exception.) `ssh/config` sets `IdentityAgent` for processes that never
   sourced a shell; `lib/1password.zsh` exports `SSH_AUTH_SOCK` for agent clients
   that never read `ssh_config`. Both are needed; neither replaces the other.
 
