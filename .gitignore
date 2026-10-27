@@ -48,6 +48,8 @@ config/homebrew/trust.json*
 
 # karabiner
 !config/karabiner
+# Karabiner snapshots karabiner.json here by itself; git history does that job
+config/karabiner/automatic_backups/
 
 # mise
 !config/mise
