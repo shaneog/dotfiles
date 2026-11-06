@@ -50,6 +50,11 @@ assert_tmux() {
   assert_tmux 'new-session -s someuser'
 }
 
+@test "starts a session from Ghostty" {
+  autostart TERM_PROGRAM=ghostty
+  assert_tmux 'new-session -s someuser'
+}
+
 @test "session name strips dots from the username" {
   autostart TERM_PROGRAM=Apple_Terminal
   assert_tmux 'new-session -s someuser'
@@ -73,7 +78,7 @@ assert_tmux() {
 
 @test "does not fire from other terminal emulators" {
   local prog
-  for prog in iTerm.app ghostty WezTerm WarpTerminal JetBrains-JediTerm tmux; do
+  for prog in iTerm.app WezTerm WarpTerminal JetBrains-JediTerm tmux; do
     : > "$TMUX_LOG"
     autostart TERM_PROGRAM="$prog"
     [ ! -s "$TMUX_LOG" ] || { echo "fired for $prog"; return 1; }
