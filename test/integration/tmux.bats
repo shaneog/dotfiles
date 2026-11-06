@@ -123,6 +123,47 @@ window_entry() {
   done
 }
 
+# Attach a client to a pty that stands in for the terminal, have a program in the
+# pane copy with OSC 52, and report whether the sequence came out the far side.
+# That is the whole path a copy from a remote Claude Code or nvim takes: tmux
+# only passes it on when it accepts it from the pane and believes the outer
+# terminal can take it.
+osc52_reaches_terminal() {
+  HOME="$TMUX_HOME" _timeout 30 python3 -I - "$SOCKET" "$REPO/config/tmux/tmux.conf" "$1" <<'PY'
+import os, pty, select, sys, time
+socket, conf, term = sys.argv[1:4]
+pid, fd = pty.fork()
+if pid == 0:
+    os.environ['TERM'] = term
+    os.environ.pop('TMUX', None)
+    os.execvp('tmux', ['tmux', '-L', socket, '-f', conf, 'new-session', 'sh', '-c',
+        "sleep 1; printf '\\033]52;c;%s\\a' $(printf copied | base64); sleep 2"])
+seen, deadline = b'', time.time() + 8
+while time.time() < deadline and b'\x1b]52;c;Y29waWVk' not in seen:
+    if select.select([fd], [], [], 0.2)[0]:
+        try:
+            seen += os.read(fd, 65536)
+        except OSError:
+            break
+sys.exit(0 if b'\x1b]52;c;Y29waWVk' in seen else 1)
+PY
+}
+
+@test "tmux: a program's OSC 52 copy reaches the terminal" {
+  command -v python3 >/dev/null 2>&1 || skip "NOT CHECKED: python3 is needed to drive a pty"
+  # TERM as Terminal.app sets it. tmux decides per client, from the outer TERM.
+  osc52_reaches_terminal xterm-256color \
+    || { echo "an OSC 52 copy from inside a pane never reached the terminal"; return 1; }
+}
+
+@test "tmux: a program's OSC 52 copy reaches Ghostty" {
+  command -v python3 >/dev/null 2>&1 || skip "NOT CHECKED: python3 is needed to drive a pty"
+  infocmp xterm-ghostty >/dev/null 2>&1 \
+    || skip "NOT CHECKED: no xterm-ghostty terminfo here (Ghostty is not installed)"
+  osc52_reaches_terminal xterm-ghostty \
+    || { echo "an OSC 52 copy from inside a pane never reached Ghostty"; return 1; }
+}
+
 @test "tmux: splits open in the current pane's directory" {
   start_tmux
   local keys

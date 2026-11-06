@@ -1,0 +1,55 @@
+# Ghostty configuration.
+#
+# Kept to what differs from Ghostty's defaults. OSC 52 clipboard writes, which
+# is how a program over ssh reaches the Mac's pasteboard, are allowed out of the
+# box (clipboard-write = allow), so there is nothing to turn on for that.
+
+# ------------------------------------------------------------------- font
+
+# The same face and size as the Terminal.app profile. Installed by the
+# font-fira-mono-nerd-font cask.
+font-family = FiraMono Nerd Font
+font-size = 14
+
+# ----------------------------------------------------------------- gotham
+#
+# Ghostty bundles no Gotham theme, so the palette is spelled out. Slots match
+# the Terminal.app profile in script/init/Gotham.terminal, because tmux.conf
+# colours its status line by ANSI index and expects the same mapping. The values
+# are upstream Gotham's sRGB hex: the .terminal file stores the same colours in
+# Generic RGB, so its raw numbers come out darker if copied across as they are.
+
+background = #0c1014
+foreground = #99d1ce
+cursor-color = #99d1ce
+selection-background = #245361
+
+palette = 0=#0c1014
+palette = 1=#c23127
+palette = 2=#2aa889
+palette = 3=#edb443
+palette = 4=#195466
+palette = 5=#4e5166
+palette = 6=#33859e
+palette = 7=#99d1ce
+palette = 8=#11151c
+palette = 9=#d26937
+palette = 10=#091f2e
+palette = 11=#245361
+palette = 12=#0a3749
+palette = 13=#888ca6
+palette = 14=#599cab
+palette = 15=#d3ebe9
+
+# ------------------------------------------------------------------ shell
+
+# Off. Ghostty injects it by pointing ZDOTDIR at its own directory for the first
+# shell, and ZDOTDIR is what this repo uses to layer over a managed setup. It
+# would buy little anyway: every shell here runs inside tmux, which the
+# injection never reaches.
+shell-integration = none
+
+# tmux is the reason a window has a process running, and closing the window
+# only detaches it. The Terminal.app profile lists tmux as safe to close for the
+# same reason.
+confirm-close-surface = false
