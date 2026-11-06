@@ -58,7 +58,7 @@ To ignore local changes to already committed files such as `.ssh/config-local`, 
 
 | Variable | Effect |
 | ------------- | ------------- |
-| `ZSH_NO_TMUX_AUTOSTART` | Don't attach a tmux session for this shell. Autostart only ever fires from Terminal.app, so editors, IDE terminals, ssh sessions and scripts are already left alone. |
+| `ZSH_NO_TMUX_AUTOSTART` | Don't attach a tmux session for this shell. Autostart only ever fires from Terminal.app or Ghostty, so editors, IDE terminals, ssh sessions and scripts are already left alone. |
 | `ZSH_NO_ZCOMPILE` | Skip the background compile of the completion dump. |
 | `DOTFILES_URL`, `DOTFILES_REF` | Where `script/bootstrap` installs from. |
 

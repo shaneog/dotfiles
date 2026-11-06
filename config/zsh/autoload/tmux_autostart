@@ -1,13 +1,14 @@
 # Attach to (or start) a personal tmux session.
 #
-# Deliberately an allowlist: only a real Terminal.app window qualifies, which
-# leaves IDE terminals, ssh sessions, scripts and tool-spawned shells alone.
+# Deliberately an allowlist: only a real Terminal.app or Ghostty window
+# qualifies, which leaves IDE terminals, ssh sessions, scripts and tool-spawned
+# shells alone.
 # TERM_PROGRAM is simply unset in most of those, so a denylist can't work.
 # Set ZSH_NO_TMUX_AUTOSTART to opt out for a single shell.
 
 [[ -o interactive ]]                        || return 0
 [[ -z "$TMUX" ]]                            || return 0
-[[ "$TERM_PROGRAM" == "Apple_Terminal" ]]   || return 0
+[[ "$TERM_PROGRAM" == (Apple_Terminal|ghostty) ]] || return 0
 [[ -z "$ZSH_NO_TMUX_AUTOSTART" ]]           || return 0
 (( $+commands[tmux] ))                      || return 0
 

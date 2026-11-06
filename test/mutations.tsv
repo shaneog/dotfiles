@@ -25,7 +25,8 @@ config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/
 config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
 config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects
 config/zsh/autoload/randommac	s|^  sudo networksetup -setairportpower "$iface" on$|  true|	test/unit/randommac.bats	restores power if setting the address fails	a failure leaves the interface powered down
-config/zsh/autoload/tmux_autostart	s|== "Apple_Terminal"|!= "nothing"|	test/unit/tmux_autostart.bats	does not fire when TERM_PROGRAM is unset	the allowlist becomes a denylist
+config/zsh/autoload/tmux_autostart	s|== (Apple_Terminal\|ghostty)|!= nothing|	test/unit/tmux_autostart.bats	does not fire when TERM_PROGRAM is unset	the allowlist becomes a denylist
+config/zsh/autoload/tmux_autostart	s/(Apple_Terminal|ghostty)/Apple_Terminal/	test/unit/tmux_autostart.bats	starts a session from Ghostty	Ghostty windows stop getting a session
 config/zsh/autoload/tmux_autostart	s|^  \[\[ -z "$($tmux_cmd list-clients.*|  true|	test/unit/tmux_autostart.bats	never steals a session that already has a client	a session in use elsewhere is stolen
 config/zsh/autoload/tmux_autostart	s|tmux -f "${XDG_CONFIG_HOME}/tmux/tmux.conf"|tmux|	test/unit/tmux_autostart.bats	uses the repo tmux.conf rather than the default	the autostarted session ignores this repo
 test/helpers/common.bash	s@/tmp/\*|/private/var/folders/\*|/var/folders/\*) return 0@*) return 0@	test/unit/harness.bats	guard_home refuses anything outside a temp directory	the harness would accept the real home
@@ -75,3 +76,6 @@ script/audit	s@warn "the VM tier has no recorded run: make test-vm"@:@	test/unit
 config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
 config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integration/startup.bats	twice is a no-op	the double-source guard goes
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
+config/tmux/tmux.conf	s|^set -g set-clipboard on|set -g set-clipboard off|	test/integration/tmux.bats	OSC 52 copy reaches the terminal	a copy from a remote program never reaches the Mac's pasteboard
+config/ghostty/config	s|^palette = 11=#245361|palette = 11=#0a3749|	test/static/ghostty.bats	every palette slot	two of Gotham's blues swap, and the status line with them
+config/ghostty/config	s|^font-family = .*|font-family = Fira Code|	test/static/ghostty.bats	the font is one the Brewfile installs	the font is one nothing installs
