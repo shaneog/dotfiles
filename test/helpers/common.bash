@@ -100,6 +100,26 @@ make_home() {
   echo "$home"
 }
 
+# What config/zsh/pins.zsh pins, as zsh reads it: "repository commit", one to a
+# line.
+pins() {
+  "$ZSH_BIN" -fc 'source $1
+    for repo commit in "${(@kv)DOTFILES_PINS}"; do print -r -- "$repo $commit"; done' \
+    zsh "$REPO/config/zsh/pins.zsh"
+}
+
+pinned_commit() {  # repository
+  pins | awk -v repo="$1" '$1 == repo { print $2 }'
+}
+
+# Where the checkout of a pinned repository lives.
+pin_checkout() {  # zinit's directory, repository
+  case "$2" in
+    zdharma-continuum/zinit) echo "$1/zinit" ;;
+    *)                       echo "$1/plugins/${2%%/*}---${2#*/}" ;;
+  esac
+}
+
 # Install a fake base layer into $1, impersonating a managed setup that owns
 # ~/.zprofile and ~/.zshrc. Keeps the layering tests hermetic: they behave
 # identically on a machine that has no such setup.

@@ -13,7 +13,8 @@ setup() {
 
 # probe_lib <lib> <code before source> <code after source> [VAR=val ...]
 # Sources one lib in a bare shell with zinit stubbed out, so the only thing
-# under test is the lib's own guard logic.
+# under test is the lib's own guard logic. The pins are the real ones, as
+# .zshrc has them by the time it reaches a lib.
 probe_lib() {
   local lib="$1" before="$2" after="$3"; shift 3
   env -i HOME="$FAKE_HOME" PATH="${STUBS:+$STUBS:}/usr/bin:/bin" USER=tester \
@@ -23,6 +24,7 @@ probe_lib() {
         fpath=($REPO/config/zsh/autoload \$fpath)
         autoload -Uz \$fpath[1]/*(.:t)
         zinit() { print -r -- \"zinit \$*\" >> \$ZINIT_LOG }
+        source '$REPO/config/zsh/pins.zsh'
         $before
         source '$REPO/config/zsh/lib/$lib'
         $after"

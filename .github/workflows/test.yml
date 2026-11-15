@@ -5,9 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
-  # Nothing here is pinned -- zinit takes whatever is on master and the Brewfile
-  # has no versions -- so upstream breakage would otherwise arrive silently, in a
-  # shell rather than in a notification.
+  # The Brewfile has no versions, so a tool that changed underneath this config
+  # would otherwise show up in a shell rather than in a notification.
   schedule:
     - cron: '23 7 * * 1'
 
@@ -87,12 +86,14 @@ jobs:
       - name: Install tooling
         run: brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
 
-      # The plugin set is defined by the zsh libs, so key the cache on them.
+      # The plugin set is defined by the zsh libs, and its commits by pins.zsh,
+      # so key the cache on them. A changed pin restores the previous cache, and
+      # the warm-up below moves it to the new commits as any machine would.
       - name: Restore plugin cache
         uses: actions/cache@v6
         with:
           path: ~/.local/share/zinit
-          key: zinit-${{ runner.os }}-${{ matrix.zsh }}-${{ hashFiles('config/zsh/lib/*.zsh', 'config/zsh/.zshrc') }}
+          key: zinit-${{ runner.os }}-${{ matrix.zsh }}-${{ hashFiles('config/zsh/lib/*.zsh', 'config/zsh/.zshrc', 'config/zsh/pins.zsh') }}
           restore-keys: zinit-${{ runner.os }}-${{ matrix.zsh }}-
 
       # Populates ~/.local/share/zinit, which make_home links into each fake
@@ -133,51 +134,13 @@ jobs:
           DOTFILES_STARTUP_BUDGET_MS: 400
         run: bats --print-output-on-failure test/integration
 
-  # Every plugin installed from nothing, which is the only time zinit's atclone
-  # hooks run. Weekly rather than per-push: it is slow and entirely network
-  # bound, and it is the one job whose failure means a new machine is broken.
+  # Every plugin installed from nothing. Weekly rather than per-push: it is slow
+  # and entirely network bound, and it is the one job whose failure means a new
+  # machine is broken. cold.yml also runs it for a pull request that moves a pin.
   cold:
     name: cold plugin cache
-    runs-on: macos-latest
-    # Its two assertions finish inside a minute. Anything beyond this is a hang,
-    # and there is no value in paying half an hour to find that out.
-    timeout-minutes: 10
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v7
-      - name: Install tooling
-        run: brew install bats-core direnv fd fzf mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
-      # zsh-patina's highlighter daemon, started before bats rather than by a
-      # shell under test. A daemon started from inside the harness is reparented
-      # holding the harness's descriptors, so bats-format-cat never sees EOF on
-      # its input and bats waits forever -- twice observed as a job that passed
-      # both assertions and then sat until its timeout. The other jobs are immune
-      # only because their plugin-cache warm-up happens to start it first.
-      #
-      # This starts a daemon, not a plugin cache: the install below is still from
-      # nothing, which is the point of the job.
-      - name: Start the highlighter daemon
-        run: zsh-patina start || true
-
-      # Deliberately no plugin cache: installing from nothing is the point. The
-      # watchdog stays as insurance against the next thing that lingers.
-      - name: Install from an empty cache
-        env:
-          DOTFILES_COLD_CACHE: 1
-        run: |
-          set +e
-          bats --print-output-on-failure test/integration/cold-cache.bats &
-          bats_pid=$!
-          ( sleep 300; kill -9 "$bats_pid" 2>/dev/null ) &
-          watchdog=$!
-          wait "$bats_pid"
-          rc=$?
-          kill "$watchdog" 2>/dev/null
-          echo "bats exited with $rc"
-          # If it ever lingers again, name what was still alive.
-          ps -eo pid,ppid,etime,command | grep -E "zsh|bats|patina" | grep -v grep \
-            || echo "    nothing of ours survived"
-          exit "$rc"
+    uses: ./.github/workflows/cold.yml
 
   # Breaks each thing in test/mutations.tsv and checks the named assertion
   # notices. Runs on every push and pull request, not weekly: the moment an

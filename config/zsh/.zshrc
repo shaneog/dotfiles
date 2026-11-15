@@ -36,14 +36,26 @@ unset __dotfiles_zdotdir
 declare -A ZINIT
 ZINIT[ZINIT_HOME]="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit"
 ZINIT[ZCOMPDUMP_PATH]=$ZSH_COMPDUMP
+# zinit and everything it loads run at the commits pins.zsh names.
+source "$ZDOTDIR/pins.zsh"
 # Check for and install if necessary
 if [[ ! -d $ZINIT[ZINIT_HOME] ]]; then
   echo "Installing zinit..."
   mkdir -p "$(dirname $ZINIT[ZINIT_HOME])"
   git clone -q https://github.com/zdharma-continuum/zinit.git "$ZINIT[ZINIT_HOME]"
 fi
+# Before zinit is sourced, so that the zinit that runs is the pinned one: on a
+# machine where a pin has changed, and on a new one, where the clone above is of
+# whatever is newest. By path, because a base layer's rc file may have replaced
+# fpath since it was set above.
+autoload -Uz "$ZDOTDIR/autoload/sync_pins" && sync_pins
 # Bootstrap zinit
 source "${ZINIT[ZINIT_HOME]}/zinit.zsh"
+# PZTM:: and PZT:: are zinit's shorthand for Prezto's master branch. Pointed at
+# the pinned commit instead, so that the modules named in lib/ and the ones
+# they pull in themselves all come from it.
+ZINIT_2MAP[PZT::]="https://raw.githubusercontent.com/sorin-ionescu/prezto/$DOTFILES_PINS[sorin-ionescu/prezto]/"
+ZINIT_2MAP[PZTM::]="${ZINIT_2MAP[PZT::]}modules/"
 
 # Load all the auto-completions, has to be done before any compdefs
 autoload -Uz _zinit

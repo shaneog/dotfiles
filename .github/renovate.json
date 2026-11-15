@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Proposes a new commit for a line of config/zsh/pins.zsh when the branch it names has moved. Nothing else in the repository is Renovate's to update.",
+  "enabledManagers": ["custom.regex"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "One pin per line: repository on GitHub, commit, and the branch that commit is on.",
+      "managerFilePatterns": ["/^config/zsh/pins\\.zsh$/"],
+      "matchStrings": [
+        "(?<depName>[\\w.-]+/[\\w.-]+)\\s+(?<currentDigest>[0-9a-f]{40})\\s+# (?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "git-refs",
+      "packageNameTemplate": "https://github.com/{{{depName}}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "One pull request a week for all of them. The plugins move every few days between them, and each change is a diff somebody has to read.",
+      "matchManagers": ["custom.regex"],
+      "groupName": "shell plugin pins",
+      "schedule": ["before 9am on monday"]
+    }
+  ]
+}
