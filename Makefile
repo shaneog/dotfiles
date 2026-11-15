@@ -13,7 +13,7 @@ test-unit:
 test-integration:
 	$(BATS) test/integration
 
-# Every plugin installed from nothing, which is when zinit's atclone hooks run.
+# Every plugin installed from nothing, the way a new machine's first shell does.
 # Not part of `test`: slow and network bound. Runs weekly in CI.
 test-cold:
 	DOTFILES_COLD_CACHE=1 $(BATS) test/integration/cold-cache.bats

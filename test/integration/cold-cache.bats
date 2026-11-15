@@ -2,10 +2,10 @@ bats_require_minimum_version 1.5.0
 
 load '../helpers/common'
 
-# A first shell on a brand new machine installs every plugin, and that is the
-# only time zinit's atclone hooks run -- so hook bugs are invisible on an
-# established machine and only bite on a fresh one. Slow and network-bound, so
-# opt in with DOTFILES_COLD_CACHE=1.
+# A first shell on a brand new machine installs zinit and every plugin, and
+# generates each tool's cached init. Nothing else runs that path, so a bug in it
+# is invisible on an established machine and only bites on a fresh one. Slow
+# and network-bound, so opt in with DOTFILES_COLD_CACHE=1.
 
 setup() {
   [ -n "${DOTFILES_COLD_CACHE:-}" ] || skip "set DOTFILES_COLD_CACHE=1 to run"
@@ -40,13 +40,13 @@ cold_shell() {
   return "$status"
 }
 
-@test "installing from scratch runs every hook without error" {
+@test "installing from scratch reports no error, and the next shell is silent" {
   run --separate-stderr cold_shell 'true'
   [ "$status" -eq 0 ]
-  # atclone hooks that fail leave these behind; zinit itself keeps going
+  # an install step that fails leaves these behind; zinit itself keeps going
   local bad
   bad="$(printf '%s\n' "$stderr" | grep -iE "permission denied|returned with 1[0-9][0-9]" || true)"
-  [ -z "$bad" ] || { echo "failing install hook: $bad"; return 1; }
+  [ -z "$bad" ] || { echo "failing install step: $bad"; return 1; }
 
   # a second shell, with everything installed, must be silent
   run --separate-stderr cold_shell 'true'
@@ -54,11 +54,12 @@ cold_shell() {
   [ -z "$noise" ] || { echo "unexpected stderr once installed: $noise"; return 1; }
 }
 
-@test "hook-generated integrations are actually live" {
+@test "the integrations a first shell generates are live" {
   cold_shell 'true' >/dev/null 2>&1
   run cold_shell 'print "direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget]"'
-  echo "$output" | grep -q "direnv=1"   # needs atclone to have produced zhook.zsh
-  echo "$output" | grep -q "fzf=1"      # needs key-bindings.zsh to have been sourced
+  # both come from cached_init, which has nothing cached on a new machine
+  echo "$output" | grep -q "direnv=1"
+  echo "$output" | grep -q "fzf=1"
 }
 
 @test "a new machine installs everything at the commit pins.zsh names" {
