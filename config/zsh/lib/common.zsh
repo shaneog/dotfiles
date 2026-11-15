@@ -3,6 +3,7 @@
 ##
 # Plugins
 ##
+zinit ice ver"$DOTFILES_PINS[zsh-users/zsh-completions]"
 zinit light zsh-users/zsh-completions
 
 # Highlighting is zsh-patina's, activated at the end of .zshrc. A base layer may
@@ -14,7 +15,7 @@ zinit light zsh-users/zsh-completions
 if (( ! $+functions[_zsh_autosuggest_start] )); then
 	# atload starts it by hand: deferred loading misses the precmd hook it
 	# normally relies on.
-	zinit ice wait lucid atload"_zsh_autosuggest_start"
+	zinit ice wait lucid ver"$DOTFILES_PINS[zsh-users/zsh-autosuggestions]" atload"_zsh_autosuggest_start"
 	zinit light zsh-users/zsh-autosuggestions
 fi
 

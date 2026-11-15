@@ -17,7 +17,7 @@ _dotfiles_history_substring_keys() {
 	bindkey -M vicmd "j" history-substring-search-down
 }
 
-zinit ice wait lucid atload"_dotfiles_history_substring_keys"
+zinit ice wait lucid ver"$DOTFILES_PINS[zsh-users/zsh-history-substring-search]" atload"_dotfiles_history_substring_keys"
 zinit light zsh-users/zsh-history-substring-search
 
 ##

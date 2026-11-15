@@ -288,6 +288,49 @@ STUB
   echo "$output" | grep -q "history_binding=1" || { echo "history bindings never arrived: $output"; return 1; }
 }
 
+@test "what a shell runs is what pins.zsh names" {
+  run_login_shell "$HOME_WITHOUT" 'true' >/dev/null 2>&1
+  # HEAD holds the commit when one is checked out, and a branch's name otherwise.
+  local zinit="$HOME_WITHOUT/.local/share/zinit" repo commit count=0
+  while read -r repo commit; do
+    [ "$repo" = sorin-ionescu/prezto ] && continue
+    assert_equal "$(cat "$(pin_checkout "$zinit" "$repo")/.git/HEAD")" "$commit" \
+      "what $repo has checked out"
+    count=$((count + 1))
+  done < <(pins)
+  [ "$count" -ge 5 ] || { echo "only $count pins were checked"; return 1; }
+
+  # Prezto's modules are downloaded files with no commit to ask for. This is
+  # where they would be fetched from; that they were is the cold-cache job's
+  # to show, because it takes the network.
+  local prezto; prezto="$(pinned_commit sorin-ionescu/prezto)"
+  run run_login_shell "$HOME_WITHOUT" 'print -r -- "MODULES=$ZINIT_2MAP[PZTM::] DEPENDENCIES=$ZINIT_2MAP[PZT::]"'
+  assert_contains "$output" "MODULES=https://raw.githubusercontent.com/sorin-ionescu/prezto/$prezto/modules/ "
+  assert_contains "$output" "DEPENDENCIES=https://raw.githubusercontent.com/sorin-ionescu/prezto/$prezto/"
+  assert_equal "$(cat "$zinit/snippets/.prezto-commit")" "$prezto" "the commit Prezto's modules are recorded at"
+}
+
+@test "a shell moves a plugin that is installed at another commit to its pin" {
+  # How a merged pin change reaches a machine that already has the plugin.
+  # In a copy of the plugin cache, since the other tests share the snapshot.
+  local home cache plugin
+  home="$(make_home)"
+  cache="$(plugin_cache)" || { echo "there is no plugin cache to copy"; return 1; }
+  rm "$home/.local/share/zinit"
+  cp -R "$cache" "$home/.local/share/zinit"
+  plugin="$(pin_checkout "$home/.local/share/zinit" zsh-users/zsh-autosuggestions)"
+  # One commit past wherever it is: certainly not the pin.
+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+    git -C "$plugin" -c user.name=tester -c user.email=tester@example.com \
+    commit -q --allow-empty -m "not the pin"
+
+  run --separate-stderr run_login_shell "$home" 'true'
+  local now; now="$(git -C "$plugin" rev-parse HEAD)"
+  guard_home "$home" && rm -rf "$home"
+  assert_equal "$now" "$(pinned_commit zsh-users/zsh-autosuggestions)" "the commit the plugin is at"
+  assert_contains "$output" "Moving zsh-users/zsh-autosuggestions to its pinned commit"
+}
+
 @test "CLI completions are generated from the installed binaries" {
   # No vendored copies: each CLI emits its own completion, cached on first use.
   # Whichever of these is installed must produce one -- docker comes from

@@ -11,7 +11,7 @@
 # Deferred: sourcing it eagerly cost 47ms of startup (237ms against 190ms),
 # which is absurd for something that only matters once you have typed a command.
 # Loading it after the first prompt brings that back to 197ms.
-zinit ice wait lucid
+zinit ice wait lucid ver"$DOTFILES_PINS[MichaelAquilina/zsh-you-should-use]"
 zinit light MichaelAquilina/zsh-you-should-use
 
 # Check external IP from command line

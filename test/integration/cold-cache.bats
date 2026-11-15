@@ -60,3 +60,28 @@ cold_shell() {
   echo "$output" | grep -q "direnv=1"   # needs atclone to have produced zhook.zsh
   echo "$output" | grep -q "fzf=1"      # needs key-bindings.zsh to have been sourced
 }
+
+@test "a new machine installs everything at the commit pins.zsh names" {
+  cold_shell 'true' >/dev/null 2>&1
+  # The commit itself, and not a branch whose tip is that commit today: HEAD
+  # names a branch for a plugin installed without its pin.
+  local zinit="$COLD_HOME/.local/share/zinit" repo commit count=0
+  while read -r repo commit; do
+    [ "$repo" = sorin-ionescu/prezto ] && continue
+    assert_equal "$(cat "$(pin_checkout "$zinit" "$repo")/.git/HEAD")" "$commit" \
+      "what $repo has checked out"
+    count=$((count + 1))
+  done < <(pins)
+  [ "$count" -ge 5 ] || { echo "only $count pins were checked"; return 1; }
+
+  # Prezto's modules are downloaded files, so compare them with the pinned
+  # commit's: one the config names, and one that a module asked for itself.
+  local prezto at file
+  prezto="$(pinned_commit sorin-ionescu/prezto)"
+  at="https://raw.githubusercontent.com/sorin-ionescu/prezto/$prezto/modules"
+  for file in "editor $zinit/snippets/PZTM::editor/PZTM::editor" \
+              "helper $zinit/snippets/PZT::modules--helper/init.zsh/init.zsh"; do
+    curl -fsSL "$at/${file%% *}/init.zsh" | cmp -s - "${file#* }" \
+      || { echo "${file#* } is not $at/${file%% *}/init.zsh"; return 1; }
+  done
+}

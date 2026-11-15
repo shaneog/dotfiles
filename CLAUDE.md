@@ -33,6 +33,10 @@ loads afterwards and wins where it should.
   `config/` and `ssh/`. Other tools' state stays out of the clone, so the index
   is the list of what is ours: a new tool's config has to be `git add`ed before
   `script/setup` will link it.
+- **Third-party shell code runs at a pinned commit.** `config/zsh/pins.zsh` is
+  the list, Renovate proposes the bumps, and the autoloaded `sync_pins` moves a
+  machine that already has the code. A new `zinit light` needs a line there and
+  `ver"$DOTFILES_PINS[...]"` on its ice; the static tier fails without both.
 - **Runtimes are mise's**, and no tools are declared globally: a base layer's
   wrappers are shell functions, found before anything mise adds to `PATH`.
 - **Startup cost is a feature**: ~145ms for this repo alone, which is the number

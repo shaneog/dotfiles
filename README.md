@@ -69,6 +69,19 @@ The following files allow for local overrides:
 | .ssh/config  | .ssh/config-local  |
 | .zshrc  | .zshrc.local  |
 
+### Plugin versions
+
+zinit, Prezto and the zsh plugins run at the commits listed in
+`config/zsh/pins.zsh`, one line each. Renovate opens one pull request, at most
+weekly, when any of their branches has moved (`.github/renovate.json`), and CI
+installs them from nothing at the proposed commits on that pull request.
+
+Nothing needs running after a pin changes. The next shell on each machine moves
+what it has installed to the new commits and says so once. `zinit update` does
+not move a pinned plugin; to try a newer commit, change its line.
+
+tmux's plugins are not pinned: tpm installs a branch, never a commit.
+
 ### Environment Knobs
 
 | Variable | Effect |

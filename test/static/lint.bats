@@ -22,6 +22,66 @@ load '../helpers/common'
   done
 }
 
+@test "every plugin zinit loads is pinned, and every pin is a plugin it loads" {
+  # `ver` is what installs a plugin at its pin, and it is an ice: it applies to
+  # the one load that follows it, so a plugin added without it tracks its
+  # default branch and nothing says so.
+  local pins="$REPO/config/zsh/pins.zsh" file n line repo ice problems="" loaded="" count=0
+  while IFS=: read -r file n line; do
+    repo="$(printf '%s\n' "$line" | awk '{ print $3 }')"
+    loaded="$loaded $repo"
+    count=$((count + 1))
+    ice="$(sed -n "$((n - 1))p" "$file")"
+    case "$ice" in
+      *"zinit ice"*"ver\"\$DOTFILES_PINS[$repo]\""*) ;;
+      *) problems="$problems
+  ${file#"$REPO"/}:$n loads $repo without ver\"\$DOTFILES_PINS[$repo]\" on the line above" ;;
+    esac
+    [ -n "$(pinned_commit "$repo")" ] || problems="$problems
+  $repo has no line in pins.zsh"
+  done < <(grep -rnE '^[[:space:]]*zinit (light|load) ' "$REPO/config/zsh")
+  [ "$count" -ge 4 ] || { echo "only found $count plugins, the search did not work"; return 1; }
+
+  # The other direction: a pin nothing loads is a line Renovate keeps bumping.
+  while read -r repo _; do
+    case "$repo" in zdharma-continuum/zinit|sorin-ionescu/prezto) continue ;; esac
+    case " $loaded " in
+      *" $repo "*) ;;
+      *) problems="$problems
+  $repo is pinned but no zinit light or zinit load names it" ;;
+    esac
+  done < <(pins)
+  [ -z "$problems" ] || { echo "pins and plugins disagree:$problems"; return 1; }
+}
+
+@test "Renovate reads the same pins the shell does" {
+  # Two readers of one file. zsh takes pins.zsh as an array and ignores the
+  # comments; Renovate takes it as text, through the pattern in renovate.json,
+  # and needs the branch in the comment. A line only zsh can read is a pin that
+  # is never updated, and nothing would report it.
+  local config="$REPO/.github/renovate.json" reads="$BATS_TEST_TMPDIR/renovate-reads"
+  run jq -e '.enabledManagers == ["custom.regex"]' "$config"
+  [ "$status" -eq 0 ] || { echo "Renovate is no longer limited to the pins"; return 1; }
+
+  jq -r '.customManagers[0] | .managerFilePatterns[0], .matchStrings[0]' "$config" \
+    | python3 -I -c '
+import re, sys
+file_pattern, pin_pattern = sys.stdin.read().splitlines()
+path = "config/zsh/pins.zsh"
+if not re.search(file_pattern.strip("/"), path):
+    sys.exit("the file pattern %s does not match %s" % (file_pattern, path))
+# Applied as Renovate applies it: to the whole file, with no multiline flag.
+pin = re.compile(pin_pattern.replace("(?<", "(?P<"))
+for found in pin.finditer(open(sys.argv[1]).read()):
+    if not found["currentValue"]:
+        sys.exit("no branch for " + found["depName"])
+    print(found["depName"], found["currentDigest"])
+' "$REPO/config/zsh/pins.zsh" > "$reads"
+
+  [ -s "$reads" ] || { echo "Renovate's pattern matches nothing in pins.zsh"; return 1; }
+  assert_equal "$(sort "$reads")" "$(pins | sort)" "what Renovate reads"
+}
+
 @test "bash scripts parse and pass shellcheck" {
   local f
   for f in "$REPO"/script/* "$REPO"/test/vm/*; do

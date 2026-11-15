@@ -2,7 +2,8 @@ version: 2
 
 updates:
   # Only the workflows' `uses:` refs. Nothing else here is a package ecosystem
-  # Dependabot understands: the Brewfile and the zsh plugins are not covered.
+  # Dependabot understands. The Brewfile is not covered, and the zsh plugins are
+  # Renovate's: see renovate.json.
   #
   # Worth knowing what this is and is not for: the refs are pinned to major tags,
   # which already float forward across patches, so this is not what keeps them
