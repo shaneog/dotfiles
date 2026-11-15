@@ -11,6 +11,11 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 
+# Lists handed from a pipeline to the loop that counts them. A directory of our
+# own, not fixed names in /tmp, which anyone can create first.
+SCRATCH="$(mktemp -d)" || exit 1
+trap 'rm -rf "$SCRATCH"' EXIT
+
 FAILURES=0
 WARNINGS=0
 SKIPPED=""
@@ -99,15 +104,14 @@ else
     else
       echo "OK|$repo ($pushed)"
     fi
-  done > /tmp/audit-upstreams.$$
+  done > "$SCRATCH/upstreams"
   while IFS='|' read -r verdict message; do
     case "$verdict" in
       FAIL) fail "$message" ;;
       WARN) warn "$message" ;;
       OK)   ok "$message" ;;
     esac
-  done < /tmp/audit-upstreams.$$
-  rm -f /tmp/audit-upstreams.$$
+  done < "$SCRATCH/upstreams"
 fi
 
 # ----------------------------------------------------- declared-dependency drift
@@ -143,15 +147,14 @@ strip_comments() { grep -vE "^[[:space:]]*#"; }
     [ -x "$d/$tool" ] && continue 2
   done
   echo "$tool"
-done > /tmp/audit-drift.$$
-if [ -s /tmp/audit-drift.$$ ]; then
+done > "$SCRATCH/drift"
+if [ -s "$SCRATCH/drift" ]; then
   while read -r tool; do
     fail "'$tool' is invoked by config/ but is in neither the Brewfile nor the base system"
-  done < /tmp/audit-drift.$$
+  done < "$SCRATCH/drift"
 else
   ok "every tool the config names is installed by something"
 fi
-rm -f /tmp/audit-drift.$$
 
 # ------------------------------------------- config for tools nothing installs
 

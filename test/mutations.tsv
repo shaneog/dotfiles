@@ -16,6 +16,7 @@ ssh/config	s|ControlPath ~/.ssh/cm-%C|ControlPath /tmp/ssh-%r@%h:%p.socket|	test
 config/zsh/lib/node.zsh	s|^if (( \$+functions\[nvm\]|if false \&\& (( $+functions[nvm]|	test/unit/guards.bats	defers entirely	our layer stops handing node over
 config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select|# removed|	test/integration/startup.bats	completion styling is ours	the completion styling disappears
 script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comments() { cat; }|	test/unit/audit.bats	prose mentioning	the audit reads comments as invocations
+script/audit	s|^trap 'rm -rf "$SCRATCH"' EXIT|:|	test/unit/audit.bats	TMPDIR says	each audit leaves its working directory behind
 script/brew-drift	s|comm -13 "\$WORK/installed-formulae"|comm -13 "$WORK/requested-formulae"|	test/unit/brew-drift.bats	not called absent	dependencies get reported as missing
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
