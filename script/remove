@@ -62,9 +62,22 @@ reset_debug() {
   fi
 }
 
+# Write the helper sudo calls to get the password, and the password beside it.
+#
+# The password is kept as data the helper prints, never pasted into the
+# helper's own text: inside a script even quoted text is still shell, so a
+# password containing $, ", \ or a backtick would be expanded when the helper
+# ran -- handing sudo the wrong password, and running whatever sat between the
+# backticks. The helper finds the file through its own $0, so no path is pasted
+# into it either.
+write_askpass() {  # helper path, password
+  ( umask 077; printf '%s\n' "$2" > "$1.secret" )
+  printf '#!/bin/bash\ncat "$0.secret"\n' > "$1"
+}
+
 # Initialise (or reinitialise) sudo to save unhelpful prompts later.
 sudo_init() {
-  local SUDO_PASSWORD SUDO_PASSWORD_SCRIPT
+  local SUDO_PASSWORD
 
   if ! sudo --validate --non-interactive &>/dev/null; then
     while true; do
@@ -79,17 +92,11 @@ sudo_init() {
     done
 
     clear_debug
-    SUDO_PASSWORD_SCRIPT="$(cat <<BASH
-#!/bin/bash
-echo "$SUDO_PASSWORD"
-BASH
-)"
-    unset SUDO_PASSWORD
     SUDO_ASKPASS_DIR="$(mktemp -d)"
     SUDO_ASKPASS="$(mktemp "$SUDO_ASKPASS_DIR"/remove-askpass-XXXXXXXX)"
     chmod 700 "$SUDO_ASKPASS_DIR" "$SUDO_ASKPASS"
-    bash -c "cat > '$SUDO_ASKPASS'" <<<"$SUDO_PASSWORD_SCRIPT"
-    unset SUDO_PASSWORD_SCRIPT
+    write_askpass "$SUDO_ASKPASS" "$SUDO_PASSWORD"
+    unset SUDO_PASSWORD
     reset_debug
 
     export SUDO_ASKPASS
@@ -111,6 +118,16 @@ log()   { sudo_refresh; echo "--> $*"; }
 logn()  { sudo_refresh; printf -- "--> %s " "$*"; }
 logk()  { echo "OK"; }
 
+
+# The Command Line Tools' directory, and nothing else. `xcode-select -p` names
+# whichever developer directory is active, and with the full Xcode selected that
+# is inside Xcode.app -- which --everything never offered to delete.
+command_line_tools_dir() {
+  local dir
+  dir="$(xcode-select -p 2>/dev/null)" || return 1
+  [ "$dir" = "/Library/Developer/CommandLineTools" ] || return 1
+  echo "$dir"
+}
 
 [ "$USER" = "root" ] && abort "Run bootstrap as yourself, not root."
 groups | grep -qE "\b(admin)\b" || abort "Add $USER to the admin group."
@@ -151,15 +168,27 @@ for cache in zsh zinit prezto fsh starship; do
 done
 
 log "Removing the clone and the links into it"
+# The links that resolve now and stop resolving once the clone is gone, which is
+# what makes them ours without a list of what was installed. One that is
+# already dangling -- pointing at a volume that is not mounted, say -- is
+# somebody else's, and is left alone.
+live_links=()
+for link in "$HOME"/.* "$HOME"/*; do
+  if [ -L "$link" ] && [ -e "$link" ]; then
+    live_links+=("$link")
+  fi
+done
 rm -rf "$HOME/.dotfiles"
-# Deleting the clone leaves every symlink into it dangling, which is what makes
-# them safe to collect without a list of what was installed.
-find "$HOME" -maxdepth 1 -type l ! -exec test -e {} \; -delete
+for link in "${live_links[@]}"; do
+  [ -e "$link" ] || rm -f "$link"
+done
 
 if [ -n "$EVERYTHING" ]; then
-  if [ -d "$(xcode-select -p)" ]; then
+  if clt="$(command_line_tools_dir)" && [ -d "$clt" ]; then
     log "Removing the Command Line Tools"
-    sudo rm -rf "$(xcode-select -p)"
+    sudo rm -rf "$clt"
+  else
+    log "Leaving the developer directory alone: it is not the Command Line Tools"
   fi
 
   log "Uninstalling everything Homebrew installed"

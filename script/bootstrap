@@ -52,9 +52,22 @@ reset_debug() {
   fi
 }
 
+# Write the helper sudo calls to get the password, and the password beside it.
+#
+# The password is kept as data the helper prints, never pasted into the
+# helper's own text: inside a script even quoted text is still shell, so a
+# password containing $, ", \ or a backtick would be expanded when the helper
+# ran -- handing sudo the wrong password, and running whatever sat between the
+# backticks. The helper finds the file through its own $0, so no path is pasted
+# into it either.
+write_askpass() {  # helper path, password
+  ( umask 077; printf '%s\n' "$2" > "$1.secret" )
+  printf '#!/bin/bash\ncat "$0.secret"\n' > "$1"
+}
+
 # Initialise (or reinitialise) sudo to save unhelpful prompts later.
 sudo_init() {
-  local SUDO_PASSWORD SUDO_PASSWORD_SCRIPT
+  local SUDO_PASSWORD
 
   if ! sudo --validate --non-interactive &>/dev/null; then
     while true; do
@@ -69,17 +82,11 @@ sudo_init() {
     done
 
     clear_debug
-    SUDO_PASSWORD_SCRIPT="$(cat <<BASH
-#!/bin/bash
-echo "$SUDO_PASSWORD"
-BASH
-)"
-    unset SUDO_PASSWORD
     SUDO_ASKPASS_DIR="$(mktemp -d)"
     SUDO_ASKPASS="$(mktemp "$SUDO_ASKPASS_DIR"/bootstrap-askpass-XXXXXXXX)"
     chmod 700 "$SUDO_ASKPASS_DIR" "$SUDO_ASKPASS"
-    bash -c "cat > '$SUDO_ASKPASS'" <<<"$SUDO_PASSWORD_SCRIPT"
-    unset SUDO_PASSWORD_SCRIPT
+    write_askpass "$SUDO_ASKPASS" "$SUDO_PASSWORD"
+    unset SUDO_PASSWORD
     reset_debug
 
     export SUDO_ASKPASS
@@ -158,6 +165,10 @@ if [ -n "$DOTFILES_URL" ]; then
     run_dotfile_scripts script/setup
     run_dotfile_scripts script/macos
     logk
+  else
+    # Fatal rather than skipped: carrying on installs Homebrew around dotfiles
+    # that never arrived, and then reports success.
+    abort "Cannot reach $DOTFILES_URL, so there are no dotfiles to install."
   fi
 fi
 
