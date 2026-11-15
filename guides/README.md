@@ -51,6 +51,7 @@ and with JavaScript off every diagram is drawn in its finished state.
 
 ## Publishing
 
+The guides are served at <https://ogrady.ie/dotfiles/>.
 `.github/workflows/pages.yml` deploys this directory, and only this directory,
 to GitHub Pages on every push to `main` that touches it. Pages has to be
 switched on once in the repository settings, with "GitHub Actions" as the
