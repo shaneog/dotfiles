@@ -76,7 +76,7 @@ jobs:
 
       - name: Repo scaffolding stays out of home
         run: |
-          for f in .test .Makefile .script .github; do
+          for f in .test .Makefile .script .guides .github; do
             [ ! -e "$HOME_UNDER_TEST/$f" ] || { echo "setup linked $f"; exit 1; }
           done
 

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Where files live · Dotfiles guides</title>
+  <meta name="description" content="How the dotfiles are linked from the home folder into the repository, and which files stay private to each Mac.">
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      const theme = localStorage.getItem("guides-theme");
+      if (theme) document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="assets/guide.css">
+  <script defer src="assets/guide.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">~</span> dotfiles</a>
+    <nav class="site-nav" aria-label="Guides"><a href="index.html">All guides</a></nav>
+    <button class="btn" type="button" data-theme-toggle hidden>Theme</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Guide 3 of 7 · Where files live</p>
+      <h1>Where the files live</h1>
+      <p class="lede">The real files stay in one folder, <code>~/.dotfiles</code>. Your home folder holds signposts that point at them, one for each tool.</p>
+    </section>
+
+    <h2 id="symlinks">Signposts, not copies</h2>
+    <p>Tools expect their settings in fixed places: git looks in <code>~/.config/git</code>, SSH looks in <code>~/.ssh/config</code>. Copying files there would mean two versions that drift apart. So <code>script/setup</code> creates <strong>symlinks</strong> instead.</p>
+
+    <div class="callout">
+      <p class="callout-title">In plain words</p>
+      <p>A symlink is a signpost. When git walks up to <code>~/.config/git</code> it finds a sign that says “the real folder is in <code>~/.dotfiles/config/git</code>”, follows it, and never notices the detour. Edit the file from either side and you are editing the same file.</p>
+    </div>
+
+    <!--
+      The link map. Each .linkmap-group names a real folder, and the list after
+      it holds one <li> per entry inside: the path in the home folder, a wire,
+      and what it points at. A row with class "stays" is a real file that is not
+      linked, so it has a note in place of a wire. To change the layout, edit,
+      add or remove rows.
+    -->
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <div class="linkmap-head" aria-hidden="true"><span>In your home folder</span><span>In the repository</span></div>
+
+        <p class="linkmap-group">~/ <small>your home folder</small></p>
+        <ul class="linkmap">
+          <li class="seq">
+            <span class="chip home">~/.Brewfile <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/Brewfile <small>the shopping list <code>brew bundle --global</code> reads</small></span>
+          </li>
+          <li class="seq">
+            <span class="chip home">~/.zshenv <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/config/zsh/.zshenv <small>the shell's front door</small></span>
+          </li>
+        </ul>
+
+        <p class="linkmap-group">~/.config/ <small>a real folder, shared with every other app</small></p>
+        <ul class="linkmap">
+          <li class="seq">
+            <span class="chip home">~/.config/zsh <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/config/zsh <small>the shell</small></span>
+          </li>
+          <li class="seq">
+            <span class="chip home">~/.config/git <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/config/git <small>git</small></span>
+          </li>
+          <li class="seq">
+            <span class="chip home">~/.config/nvim <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/config/nvim <small>the editor</small></span>
+          </li>
+          <li class="seq">
+            <span class="chip home">~/.config/… <small>seven more signposts</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/config/… <small>tmux, ghostty, gh, homebrew, karabiner, mise, starship.toml</small></span>
+          </li>
+          <li class="seq stays">
+            <span class="chip">~/.config/another-app <small>a real folder</small></span>
+            <span class="note">Any other app's settings. They stay here, outside the repository.</span>
+          </li>
+        </ul>
+
+        <p class="linkmap-group">~/.ssh/ <small>a real folder, private to this Mac</small></p>
+        <ul class="linkmap">
+          <li class="seq">
+            <span class="chip home">~/.ssh/config <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/ssh/config <small>SSH settings</small></span>
+          </li>
+          <li class="seq stays">
+            <span class="chip">~/.ssh/known_hosts, config-local <small>real files</small></span>
+            <span class="note">The servers this Mac has met, and its private hosts. They stay here.</span>
+          </li>
+        </ul>
+      </div>
+      <figcaption>
+        <span>Two real folders with signposts inside them, plus two signposts in the home folder itself.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h3>The rule behind the map</h3>
+    <p><code>script/setup</code> walks the top level of the repository and does one of two things with what it finds.</p>
+    <ul>
+      <li><strong>A file</strong> becomes a signpost named <code>~/.&lt;name&gt;</code>. That is how <code>Brewfile</code> becomes <code>~/.Brewfile</code>.</li>
+      <li><strong>A folder</strong>, which means <code>config</code> and <code>ssh</code>, becomes a <em>real</em> folder, <code>~/.config</code> or <code>~/.ssh</code>. Inside it goes one signpost for each thing git tracks directly inside the repository's folder.</li>
+    </ul>
+    <p>Then it adds <code>~/.zshenv</code>, because that one file has to sit in the home folder for zsh to find it. The repository's own scaffolding is skipped, so it never shows up in your home folder: <code>script/</code>, <code>test/</code>, <code>guides/</code>, the <code>Makefile</code> and anything ending in <code>.md</code> or <code>.txt</code>.</p>
+
+    <h3>Why one signpost per tool</h3>
+    <p>Dozens of apps keep their settings in <code>~/.config</code>, and most of them have nothing to do with this repository. With one signpost per tool, their files stay in your home folder. They cannot be published by accident, and removing the dotfiles cannot delete them.</p>
+
+    <div class="callout note">
+      <p class="callout-title">Adding a tool</p>
+      <p>Git's list of tracked files is the list of what gets linked. To bring a new tool's settings into the repository, put them under <code>config/</code>, <code>git add</code> them, and run <code>script/setup</code> again.</p>
+    </div>
+
+    <h2 id="existing">What if something is already there?</h2>
+    <p>A Mac that has been used for a day already has files in these places. Setup never deletes what it finds. It picks one of three polite options.</p>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <div class="aside-demo">
+          <div class="aside-case">
+            <h3>A real file or folder is in the way</h3>
+            <div class="slot">
+              <span class="chip drop-in">~/.config/nvim <small>new signpost</small></span>
+              <span class="chip tone-muted slide-out">~/.config/nvim.bak.20261115… <small>your old folder</small></span>
+            </div>
+            <p>The old one is renamed with a date stamp, then the signpost takes its place. Nothing is lost.</p>
+          </div>
+          <div class="aside-case">
+            <h3>The signpost is already correct</h3>
+            <div class="slot">
+              <span class="chip seq">~/.config/nvim <small>unchanged</small></span>
+            </div>
+            <p>Setup reports “unchanged” and moves on. Running it twice changes nothing.</p>
+          </div>
+          <div class="aside-case">
+            <h3><code>~/.ssh</code> holds a private key</h3>
+            <div class="slot">
+              <span class="chip tone-orange seq">~/.ssh <small>left exactly as it is</small></span>
+            </div>
+            <p>If <code>~/.ssh</code> contains an <code>id_…</code> key file, something else manages SSH on this Mac. Setup leaves the whole folder alone.</p>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span>Move aside, leave unchanged, or keep out. Never delete.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h3>Coming from the older layout</h3>
+    <p>Earlier versions made <code>~/.config</code> and <code>~/.ssh</code> signposts to the repository's whole folders, so every app was writing inside the repository. On a Mac set up that way, pull the latest changes and run <code>script/setup</code> once. It moves everything git does not track back out into real folders at the same paths, then links one entry at a time as above.</p>
+
+    <h3>Four files it never touches</h3>
+    <p>On a managed Mac, another tool owns <code>~/.profile</code>, <code>~/.bashrc</code>, <code>~/.zprofile</code> and <code>~/.zshrc</code>, and rewrites them from time to time. Setup neither creates nor changes any of the four. They are read as a base layer instead, which <a href="shell.html#layers">Opening a terminal</a> explains.</p>
+
+    <h2 id="gitignore">Why the ignore list is upside down</h2>
+    <p>Here is a side effect of the signposts. Because <code>~/.config/gh</code> <em>is</em> the repository's <code>config/gh</code> folder, anything the GitHub CLI saves there lands inside the repository, including its record of who is logged in. Left alone, git would offer to publish it.</p>
+    <p>So <code>.gitignore</code> works like a guest list. It starts by ignoring everything under <code>config/</code> and <code>ssh/</code>, then names the few things that are allowed in.</p>
+
+    <pre><code><span class="dim"># everything is turned away at the door...</span>
+config/*
+ssh/*
+
+<span class="dim"># ...except the names on the list</span>
+!config/git
+!config/zsh/
+!config/nvim/
+!ssh/config</code></pre>
+
+    <div class="callout note">
+      <p class="callout-title">Good to know</p>
+      <p>A test checks that every folder under <code>config/</code> has been decided on purpose: either tracked, or ignored by a rule of its own. A folder that simply appeared fails the test, so nothing gets published or forgotten by accident. Names that should not appear in a public repository go in <code>.git/info/exclude</code>, which is never shared.</p>
+    </div>
+
+    <h2 id="local">Three files that belong to one Mac</h2>
+    <p>Some settings are different on every machine and must not be shared. Each tracked file has an untracked partner for exactly that.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Private file</th><th>Adds to</th><th>What goes in it</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>~/.gitconfig-user</code></td><td><code>config/git/config</code></td><td>Your name, email and signing key. Required, and the only file you create by hand.</td></tr>
+          <tr><td><code>~/.ssh/config-local</code></td><td><code>ssh/config</code></td><td>Hosts only this Mac knows about. Setup creates it empty. It is read first, so it wins.</td></tr>
+          <tr><td><code>~/.zshrc.local</code></td><td><code>config/zsh/.zshrc</code></td><td>Shell tweaks for this Mac only. Optional, and read last, so it has the final word.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="xdg">Three drawers for everything else</h2>
+    <p>One of the first things the shell does is name three folders. Every tool in this setup is told to use them, which keeps the home folder itself nearly empty.</p>
+
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">~/.config</span>
+        <h3>Settings</h3>
+        <p>Written by a person. The entries this repository owns are signposts into its <code>config/</code> folder, tracked in git.</p>
+      </li>
+      <li class="card tone-yellow">
+        <span class="card-num">~/.cache</span>
+        <h3>Throwaway</h3>
+        <p>Things the shell worked out once and saved to go faster, such as the completion index. Safe to delete at any time.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">~/.local/share</span>
+        <h3>Yours</h3>
+        <p>Data worth keeping that is not a setting: shell history, installed plugins, saved tmux sessions.</p>
+      </li>
+    </ul>
+
+    <nav class="pager" aria-label="Previous and next guide"></nav>
+  </main>
+
+  <footer class="site-footer">Describes the repository as it is on <code>main</code>. When the code changes, change the page that explains it.</footer>
+</body>
+</html>

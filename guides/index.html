@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Start here · Dotfiles guides</title>
+  <meta name="description" content="A picture-book tour of what these dotfiles do and how they work.">
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      const theme = localStorage.getItem("guides-theme");
+      if (theme) document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="assets/guide.css">
+  <script defer src="assets/guide.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">~</span> dotfiles</a>
+    <nav class="site-nav" aria-label="Guides"><a href="index.html">All guides</a></nav>
+    <button class="btn" type="button" data-theme-toggle hidden>Theme</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Guide 1 of 7 · Start here</p>
+      <h1>How these dotfiles work</h1>
+      <p class="lede">A picture-book tour of the small text files that turn a blank Mac into a familiar one, and of the scripts and tests that keep them honest.</p>
+    </section>
+
+    <h2 id="what">What is a dotfile?</h2>
+    <p>Almost every tool on a Mac keeps its settings in a plain text file. Many of those files have names that start with a dot, like <code>.zshrc</code>, which also makes them invisible in Finder. People call them <strong>dotfiles</strong>.</p>
+
+    <div class="callout">
+      <p class="callout-title">In plain words</p>
+      <p>A new Mac is an empty house. Dotfiles are the box you bring with you: where the furniture goes, which light switch does what, the labels on every drawer. This repository is that box. It lives in one place, so every Mac gets unpacked the same way.</p>
+    </div>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <div class="hub">
+          <div class="hub-repo seq">
+            <strong>~/.dotfiles</strong>
+            <span>One git repository. Settings, a shopping list of apps, and the scripts that install them.</span>
+          </div>
+          <div class="wire down only-narrow seq"></div>
+          <div class="wire only-wide seq"></div>
+          <div class="mac seq">
+            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="7" width="20" height="13" rx="2"/><path d="M3 24h26"/></svg>
+            <span>A laptop <small>same shell, same keys</small></span>
+          </div>
+          <div class="wire only-wide seq"></div>
+          <div class="mac seq">
+            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="6" width="22" height="14" rx="2"/><path d="M12 26h8M16 20v6"/></svg>
+            <span>A desktop <small>same editor, same prompt</small></span>
+          </div>
+          <div class="wire only-wide seq"></div>
+          <div class="mac seq">
+            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="7" width="20" height="13" rx="2"/><path d="M3 24h26"/></svg>
+            <span>A managed work Mac <small>layered on top, politely</small></span>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span>One repository feeds every Mac. Change a setting once, pull it everywhere.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h2 id="ideas">Five ideas hold it together</h2>
+    <p>Everything in the repository follows from five decisions. Each has a guide of its own.</p>
+
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">01</span>
+        <h3><a href="install.html">One command sets up a Mac</a></h3>
+        <p>Paste one line into Terminal. It installs Homebrew, fetches this repository, links it into place, applies macOS settings and installs every app on the list.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">02</span>
+        <h3><a href="layout.html">Files stay in one folder, linked into place</a></h3>
+        <p>Nothing is copied around. The home folder holds signposts that point into the repository, so an edit in either place is the same edit.</p>
+      </li>
+      <li class="card tone-yellow">
+        <span class="card-num">03</span>
+        <h3><a href="shell.html">It sits on top of whatever is already there</a></h3>
+        <p>Some Macs come with a shell setup somebody else manages. These dotfiles never fight it. They load it first, then add their own layer above.</p>
+      </li>
+      <li class="card tone-violet">
+        <span class="card-num">04</span>
+        <h3><a href="keys.html">No secret ever touches the disk</a></h3>
+        <p>SSH keys live inside 1Password. Logging in to servers and signing commits both ask 1Password, which asks for a fingerprint.</p>
+      </li>
+      <li class="card tone-orange">
+        <span class="card-num">05</span>
+        <h3><a href="tests.html">Fast, and proven to stay that way</a></h3>
+        <p>A new terminal opens in about 145 milliseconds, and a test fails if that slips. More than two hundred other tests watch everything else.</p>
+      </li>
+      <li class="card tone-muted">
+        <span class="card-num">+</span>
+        <h3><a href="tools.html">The toolbox</a></h3>
+        <p>A cheat sheet for what you actually get: the prompt, git shortcuts, tmux keys, the editor, fuzzy finding and the rest.</p>
+      </li>
+    </ul>
+
+    <h2 id="map">A map of the repository</h2>
+    <p>The top level is small on purpose. Two folders are linked into your home folder piece by piece, one file is a shopping list, and the rest is machinery.</p>
+
+    <ul class="tree">
+      <li><span class="path tone-yellow">Brewfile</span><span class="what">The shopping list. Every command-line tool, app and font Homebrew should install.</span></li>
+      <li><span class="path">config/</span><span class="what">Settings for every tool. Each entry inside is linked into <code>~/.config</code>.</span></li>
+      <li class="sub"><span class="path">zsh/</span><span class="what">The shell: four startup files, a <code>lib/</code> folder with one file per topic, and a few handy functions.</span></li>
+      <li class="sub"><span class="path">git/</span><span class="what">Git settings, a global ignore list, a commit message template and the list of trusted signing keys.</span></li>
+      <li class="sub"><span class="path">nvim/</span><span class="what">A deliberately small Neovim setup for commit messages and quick edits.</span></li>
+      <li class="sub"><span class="path">tmux/</span><span class="what">Windows and panes inside the terminal, in the Gotham colors.</span></li>
+      <li class="sub"><span class="path">ghostty/</span><span class="what">The Ghostty terminal app: its font and the same Gotham colors.</span></li>
+      <li class="sub"><span class="path">mise/ gh/ homebrew/ karabiner/ starship.toml</span><span class="what">Language runtimes, the GitHub CLI, Homebrew's own switches, the Caps Lock remap and the prompt.</span></li>
+      <li><span class="path tone-cyan">ssh/</span><span class="what">SSH settings. Its one file, <code>config</code>, is linked into <code>~/.ssh</code>.</span></li>
+      <li><span class="path tone-orange">script/</span><span class="what">The robots: <code>bootstrap</code>, <code>setup</code>, <code>macos</code>, <code>after-setup</code>, <code>remove</code>, and the maintenance checks.</span></li>
+      <li><span class="path tone-violet">test/</span><span class="what">Checks that all of the above still works, including on a brand-new Mac in a virtual machine.</span></li>
+      <li><span class="path tone-muted">guides/</span><span class="what">These pages. Plain HTML, no build step.</span></li>
+    </ul>
+
+    <h2 id="glossary">Words you will meet</h2>
+    <p>The guides avoid jargon where they can. These are the terms they could not avoid.</p>
+
+    <dl class="glossary">
+      <div><dt>Terminal</dt><dd>The window you type commands into. On these Macs that is Apple's Terminal.app or Ghostty.</dd></div>
+      <div><dt>Shell (zsh)</dt><dd>The program inside that window that reads what you type and runs it. macOS ships one called zsh.</dd></div>
+      <div><dt>Repository</dt><dd>A folder whose whole history is tracked by git, so it can be copied to another Mac and kept in sync.</dd></div>
+      <div><dt>Symlink</dt><dd>A signpost on disk. It looks like a file or folder, but it only says “the real thing is over there”.</dd></div>
+      <div><dt>Homebrew</dt><dd>An app store for the command line. <code>brew install</code> fetches tools and apps.</dd></div>
+      <div><dt>PATH</dt><dd>The list of folders the shell searches when you type a command name. Earlier folders win.</dd></div>
+      <div><dt>Login shell</dt><dd>The first shell of a session, such as a new Terminal window. It reads a couple of extra startup files.</dd></div>
+      <div><dt>Plugin</dt><dd>An add-on for the shell or the editor, fetched from GitHub the first time it is needed.</dd></div>
+      <div><dt>tmux</dt><dd>A tool that splits one terminal window into several panes and keeps them alive if the window closes.</dd></div>
+      <div><dt>Agent</dt><dd>A helper that holds your keys and uses them for you, so the keys themselves never have to be handed out.</dd></div>
+      <div><dt>Base layer</dt><dd>A shell setup that somebody else installed and maintains, for example on a work Mac. These dotfiles load on top of it.</dd></div>
+      <div><dt>XDG folders</dt><dd>A tidy convention: settings in <code>~/.config</code>, throwaway caches in <code>~/.cache</code>, your data in <code>~/.local/share</code>.</dd></div>
+    </dl>
+
+    <nav class="pager" aria-label="Previous and next guide"></nav>
+  </main>
+
+  <footer class="site-footer">Describes the repository as it is on <code>main</code>. When the code changes, change the page that explains it.</footer>
+</body>
+</html>
