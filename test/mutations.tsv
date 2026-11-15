@@ -75,3 +75,5 @@ script/audit	s@warn "the VM tier has no recorded run: make test-vm"@:@	test/unit
 config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
 config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integration/startup.bats	twice is a no-op	the double-source guard goes
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
+config/zsh/lib/git.zsh	s|^alias gco=.*|# gone|	test/integration/startup.bats	git aliases in daily use	a git alias in daily use disappears
+config/zsh/lib/git.zsh	s|--force-with-lease|--force|	test/integration/startup.bats	git aliases in daily use	gpf force-pushes without checking the remote first
