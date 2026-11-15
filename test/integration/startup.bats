@@ -52,6 +52,8 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "BREWUP=${aliases[brewup]:-unset}"
        for a in g gia gco gbc gfc gfr gp gpf gr; do print "GITALIAS $a=${aliases[$a]:-unset}"; done
        print "LANG=$LANG LC_ALL=$LC_ALL LC_TIME=$LC_TIME LC_COLLATE=$LC_COLLATE"
+       print "CHILD_ENV=$(env | grep -E "^(LANG|LESSCHARSET)=" | sort | tr "\n" " ")"
+       print "HISTOPTS=share:$options[sharehistory] incappend:$options[incappendhistory]"
        print "USRLOCAL=$path[(r)/usr/local/bin]:$path[(r)/usr/local/sbin]"
        print "LEAKS=${custom_lib-unset}/${file-unset}"
        print "STRAY_DUMPS=$(ls $ZDOTDIR/.zcompdump* $ZDOTDIR/.zcmpdump* 2>/dev/null | wc -l | tr -d " ")"'
@@ -115,6 +117,53 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
   echo "$output" | grep -q "PATH_DUPES=$"
   run cat "$PROBE_WITHOUT"
   echo "$output" | grep -q "PATH_DUPES=$"
+}
+
+@test "PATH stays free of duplicates in a nested non-login shell" {
+  # What every tmux pane is. Regression: .zshenv adds to PATH in every shell,
+  # while the attribute that drops duplicates was set in .zprofile, which a
+  # shell that is neither a login shell nor the first level never reads -- so
+  # each level of nesting added the system directories again. The login-shell
+  # probe above could not see it.
+  #
+  # The trailing `true` matters: as the last command the inner shell would be
+  # exec'd in place of the outer one, and would not be nested at all.
+  mkdir -p "$HOME_WITHOUT/.orbstack/bin"
+  cat > "$HOME_WITHOUT/nested-probe.zsh" <<'PROBE'
+print "NESTED level=$SHLVL login=$options[login] dupes=$(print -l $path | sort | uniq -d | tr "\n" ",")"
+PROBE
+  run run_login_shell "$HOME_WITHOUT" "'$ZSH_BIN' -ic 'source ~/nested-probe.zsh'; true"
+  printf '%s\n' "$output" | grep -qx "NESTED level=2 login=off dupes=" || {
+    echo "duplicated PATH entries in a nested shell:"; echo "$output"; return 1; }
+}
+
+@test "the locale and less's charset reach child processes, not only the shell" {
+  # Regression: both were assigned without export, so zsh had them and nothing
+  # it started did. The probe runs with no LANG in its environment, which is
+  # the case the export is there for.
+  local p
+  for p in "$PROBE_WITH" "$PROBE_WITHOUT"; do
+    run cat "$p"
+    assert_contains "$output" "CHILD_ENV=LANG=en_US.UTF-8 LESSCHARSET=utf-8 " "$(basename "$p")"
+  done
+}
+
+@test "ignored commands never reach the history file" {
+  # Regression: the list was in HISTIGNORE, which is bash's variable and means
+  # nothing to zsh, so `ls` and `cd ..` were recorded like anything else.
+  run run_login_shell "$HOME_WITHOUT" \
+    'for c in ls "ls -la" "cd .." fg "echo kept"; do print -s -- "$c"; done; fc -W; cat $HISTFILE'
+  assert_contains "$output" ";ls -la"
+  assert_contains "$output" ";echo kept"
+  local leaked
+  leaked="$(printf '%s\n' "$output" | grep -E ';(ls|cd \.\.|fg)$' || true)"
+  [ -z "$leaked" ] || { echo "written to the history file anyway:"; echo "$leaked"; return 1; }
+}
+
+@test "history is shared between shells without a second option also appending it" {
+  # zsh's documentation asks for SHARE_HISTORY or INC_APPEND_HISTORY, not both.
+  run cat "$PROBE_WITHOUT"
+  assert_contains "$output" "HISTOPTS=share:on incappend:off"
 }
 
 @test "ZDOTDIR points into the repo" {

@@ -27,12 +27,15 @@ HISTFILE=$XDG_DATA_HOME/zsh/zhistory
 HISTSIZE=50000
 SAVEHIST=100000
 
-# Ignore certain commands
-HISTIGNORE="&:ls:[bf]g:exit:reset:clear:cd:cd ..:cd..:..:zh"
+# Commands not worth keeping. A pattern matched against the whole line, so
+# `ls` is dropped and `ls -la` is kept. It applies when history is written to
+# the file: the current session can still recall them.
+HISTORY_IGNORE='(ls|[bf]g|exit|reset|clear|cd|cd ..|cd..|..|zh)'
 
 setopt BANG_HIST                # Treat the '!' character specially during expansion.
 setopt EXTENDED_HISTORY         # Write the history file in the ':start:elapsed;command' format.
-setopt INC_APPEND_HISTORY       # write after each command
+# SHARE_HISTORY also writes each command as it is run, which is why
+# INC_APPEND_HISTORY is absent: zsh's documentation asks for one or the other.
 setopt SHARE_HISTORY            # Share history between all sessions.
 setopt HIST_EXPIRE_DUPS_FIRST   # Expire a duplicate event first when trimming history.
 setopt HIST_IGNORE_DUPS         # Do not record an event that was just recorded again.

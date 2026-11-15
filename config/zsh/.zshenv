@@ -18,6 +18,13 @@ export ZDOTDIR=${ZDOTDIR:-$XDG_CONFIG_HOME/zsh}
 ZSH_CACHE_DIR=$XDG_CACHE_HOME/zsh
 ZSH_COMPDUMP=$ZSH_CACHE_DIR/zcompdump
 
+# Keep the path arrays free of duplicates. Here rather than in .zprofile,
+# because this file is the only one every shell reads: a tmux pane is neither a
+# login shell nor the first level, so it never sources .zprofile, and it still
+# runs the additions at the end of this file on top of a PATH that already has
+# them. The attribute is not inherited, so each shell has to set it for itself.
+typeset -gU cdpath fpath path
+
 # https://github.com/sorin-ionescu/prezto/blob/master/runcoms/zshenv
 # Ensure that a non-login, non-interactive shell has a defined environment.
 if [[ ( "$SHLVL" -eq 1 && ! -o LOGIN ) && -s "${ZDOTDIR}/.zprofile" ]]; then
@@ -31,8 +38,7 @@ fi
 [ -d "$HOME/.orbstack/bin" ] && path=("$HOME/.orbstack/bin" $path)
 
 # Ensure we have the system directories in our PATH. `noglobalrcs` skips
-# /etc/zprofile, so nothing else runs path_helper for us. Duplicates are removed
-# by `typeset -gU path` in .zprofile.
+# /etc/zprofile, so nothing else runs path_helper for us.
 path=($path /usr/bin /bin /usr/sbin /sbin)
 
 # Disable zsh_sessions
