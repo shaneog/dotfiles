@@ -217,12 +217,13 @@
           <tr><td><code>kp</code></td><td>Pick running programs from a fuzzy list and stop them.</td></tr>
           <tr><td><code>curlt</code></td><td>Fetches a URL and shows where the time went.</td></tr>
           <tr><td><code>checkip</code></td><td>Prints this Mac's public IP address.</td></tr>
-          <tr><td><code>rm_known_hosts</code></td><td>Forgets a server's old fingerprint after it has been rebuilt.</td></tr>
           <tr><td><code>randommac</code></td><td>Gives the Wi-Fi card a random hardware address.</td></tr>
           <tr><td><code>rm_node_modules</code></td><td>Deletes every <code>node_modules</code> folder below the current one.</td></tr>
         </tbody>
       </table>
     </div>
+
+    <p>One job needs no helper: <code>ssh-keygen -R &lt;host&gt;</code> makes SSH forget a server's old fingerprint after the server has been rebuilt.</p>
 
     <h3>Outside the terminal</h3>
     <ul>
