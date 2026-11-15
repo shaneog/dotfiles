@@ -77,3 +77,9 @@ config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integrat
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
 config/zsh/lib/git.zsh	s|^alias gco=.*|# gone|	test/integration/startup.bats	git aliases in daily use	a git alias in daily use disappears
 config/zsh/lib/git.zsh	s|--force-with-lease|--force|	test/integration/startup.bats	git aliases in daily use	gpf force-pushes without checking the remote first
+script/bootstrap	s|printf '%s\\n' "$2" > "$1.secret"|eval "echo \\"$2\\"" > "$1.secret"|	test/unit/install-scripts.bats	exactly as it was typed	bootstrap's askpass helper expands the password as shell
+script/remove	s|printf '%s\\n' "$2" > "$1.secret"|eval "echo \\"$2\\"" > "$1.secret"|	test/unit/install-scripts.bats	exactly as it was typed	remove's askpass helper expands the password as shell
+script/bootstrap	s|( umask 077; printf|( printf|	test/unit/install-scripts.bats	readable only by its owner	the sudo password is left readable by other users
+script/bootstrap	s|abort "Cannot reach|: "Cannot reach|	test/unit/install-scripts.bats	cannot be fetched	bootstrap reports success without any dotfiles
+script/remove	s|if \[ -L "$link" \] && \[ -e "$link" \]; then|if [ -L "$link" ]; then|	test/unit/install-scripts.bats	leaves other dangling links alone	remove deletes dangling links it never made
+script/remove	s|^  \[ "$dir" = "/Library/Developer/CommandLineTools" \] \|\| return 1|  :|	test/unit/install-scripts.bats	Command Line Tools for deletion	remove --everything deletes Xcode's own directory
