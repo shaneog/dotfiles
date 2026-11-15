@@ -34,11 +34,14 @@ done
 # Prezto's modules are single files, which zinit names after the module and not
 # after where they came from. The commit they were downloaded at is recorded
 # beside them, and when the pin moves on they are deleted to be fetched again.
+# zinit links any completions a snippet came with into completions/, and
+# compinit complains about each link whose file has gone, so those go too.
 local stamp=$home/snippets/.prezto-commit have=
 want=$DOTFILES_PINS[sorin-ionescu/prezto]
 [[ -r $stamp ]] && have="$(<$stamp)"
 if [[ -n $want && $have != $want ]]; then
   mkdir -p $home/snippets
   rm -rf $home/snippets/PZT*(N)
+  rm -f $home/completions/*(-@N)
   print -r -- $want > $stamp
 fi

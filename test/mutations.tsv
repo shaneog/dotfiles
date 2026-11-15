@@ -99,6 +99,7 @@ config/zsh/autoload/sync_pins	s#|| git -C $dir fetch -q origin $want }#}#	test/u
 config/zsh/autoload/sync_pins	s#|| print -ru2 -- "Could not move.*#|| true#	test/unit/sync_pins.bats	when the pin cannot be fetched	a pin that cannot be reached is skipped without a word
 config/zsh/autoload/sync_pins	s|rm -rf $home/snippets/PZT\*(N)|true|	test/unit/sync_pins.bats	when the pinned commit changes	a new Prezto pin leaves the old modules in place
 config/zsh/autoload/sync_pins	s|PZT\*(N)|*(N)|	test/unit/sync_pins.bats	and only those	every snippet is deleted with Prezto's
+config/zsh/autoload/sync_pins	s|rm -f $home/completions/\*(-@N)|true|	test/unit/sync_pins.bats	leaves dangling	completions of a deleted Prezto module stay linked and compinit complains about each
 config/zsh/autoload/sync_pins	s|print -r -- $want > $stamp|:|	test/unit/sync_pins.bats	with nothing installed	Prezto's modules are deleted and fetched again by every shell
 config/zsh/pins.zsh	s|^\(  zsh-users/zsh-completions .*\)  # master$|\1|	test/static/lint.bats	Renovate reads the same pins	a pin loses the branch Renovate needs and is never updated
 .github/renovate.json	s|\[0-9a-f\]{40}|[0-9a-f]{41}|	test/static/lint.bats	Renovate reads the same pins	Renovate's pattern matches no pin at all
