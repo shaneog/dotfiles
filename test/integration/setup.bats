@@ -113,7 +113,7 @@ snapshot() {
   [ -d "$FAKE_HOME/.config" ]
   [ ! -L "$FAKE_HOME/.config" ] || { echo "~/.config is a link"; return 1; }
   local entry
-  for entry in gh git homebrew karabiner mise nvim starship.toml tmux zsh; do
+  for entry in gh ghostty git homebrew karabiner mise nvim starship.toml tmux zsh; do
     [ -L "$FAKE_HOME/.config/$entry" ] || { echo "$entry is not linked"; return 1; }
     [ "$FAKE_HOME/.config/$entry" -ef "$REPO/config/$entry" ] \
       || { echo "$entry points somewhere else"; return 1; }
