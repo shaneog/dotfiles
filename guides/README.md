@@ -48,3 +48,11 @@ stay in step. Animations are skipped when the system asks for reduced motion,
 and with JavaScript off every diagram is drawn in its finished state.
 
 `script/setup` skips this directory, so it is never linked into `$HOME`.
+
+## Publishing
+
+`.github/workflows/pages.yml` deploys this directory, and only this directory,
+to GitHub Pages on every push to `main` that touches it. Pages has to be
+switched on once in the repository settings, with "GitHub Actions" as the
+source. Links between the pages are relative, so the same files work from disk
+and from the site.
