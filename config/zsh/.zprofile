@@ -13,9 +13,11 @@ if [[ "$__dotfiles_zdotdir" != "${HOME:A}" && -r "$HOME/.zprofile" ]]; then
 fi
 unset __dotfiles_zdotdir
 
-# Set locale correctly
+# Set locale correctly. LANG is exported so that programs started from this
+# shell get it too: a terminal usually puts it in the environment already, but
+# an ssh session or a shell started by another tool may not.
 if [[ -z "$LANG" ]]; then
-  LANG='en_US.UTF-8'
+  export LANG='en_US.UTF-8'
   LANGUAGE=$LANG
 fi
 
@@ -27,11 +29,8 @@ LC_NUMERIC=$LANG
 LC_TIME=$LANG
 LC_ALL=$LANG
 
-LESSCHARSET=utf-8
-
-# Ensure path arrays do not contain duplicates. Also dedupes anything the base
-# layer above added.
-typeset -gU cdpath fpath path
+# Exported: less is a child process, and reads this from its environment.
+export LESSCHARSET=utf-8
 
 # Zsh search path for executables. Prepend only what is missing, so we don't
 # reorder a PATH that was already arranged elsewhere: a base profile may

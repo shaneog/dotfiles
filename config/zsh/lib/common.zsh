@@ -68,13 +68,3 @@ export PAGER="less"
 # Default less options
 # Mouse-wheel scrolling has been disabled by -X (disable screen clearing).
 export LESS="-F -g -i -M -R -S -w -X -z-4"
-
-# Fix for https://openradar.appspot.com/27348363
-#
-# Backgrounded: it is a subprocess costing 8ms of every shell start, and nothing
-# in the rest of startup waits on the keys being loaded.
-#
-# Fully detached, all three streams. A background child that keeps the shell's
-# stdout open holds the write end of whatever pipe the shell was started with,
-# and whatever is reading that pipe then waits on this rather than on the shell.
-(ssh-add --apple-load-keychain >/dev/null 2>&1 </dev/null &)
