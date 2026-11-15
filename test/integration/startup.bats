@@ -50,6 +50,7 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "AUTOSUGGEST=$+functions[_zsh_autosuggest_start]"
        print "BASE_PATH=$path[(r)/base/rc-bin]"
        print "BREWUP=${aliases[brewup]:-unset}"
+       for a in g gia gco gbc gfc gfr gp gpf gr; do print "GITALIAS $a=${aliases[$a]:-unset}"; done
        print "LANG=$LANG LC_ALL=$LC_ALL LC_TIME=$LC_TIME LC_COLLATE=$LC_COLLATE"
        print "USRLOCAL=$path[(r)/usr/local/bin]:$path[(r)/usr/local/sbin]"
        print "LEAKS=${custom_lib-unset}/${file-unset}"
@@ -300,6 +301,36 @@ STUB
   # shell ends up with -- not merely that the line exists in a file.
   run cat "$PROBE_WITH"
   assert_contains "$output" "BREWUP=brew update; brew upgrade; brew cleanup; brew doctor"
+}
+
+@test "the git aliases in daily use are defined, with and without a base layer" {
+  # These are this repo's own lines rather than a plugin's, so nothing else
+  # would notice one going missing -- or `gpf` quietly losing the lease check
+  # that makes a force push safe to type from muscle memory.
+  #
+  # Whole lines, not substrings: "gp=git push" is a prefix of what a wrong
+  # definition would print, and a substring match could not tell them apart.
+  local p name expansion
+  for p in "$PROBE_WITH" "$PROBE_WITHOUT"; do
+    run cat "$p"
+    while IFS='=' read -r name expansion; do
+      printf '%s\n' "$output" | grep -qxF "GITALIAS $name=$expansion" || {
+        echo "$(basename "$p"): expected $name to be '$expansion', got:"
+        printf '%s\n' "$output" | grep "^GITALIAS $name=" || echo "  nothing"
+        return 1
+      }
+    done <<'ALIASES'
+g=git
+gia=git add
+gco=git checkout
+gbc=git checkout -b
+gfc=git clone
+gfr=git pull --rebase
+gp=git push
+gpf=git push --force-with-lease
+gr=git rebase
+ALIASES
+  done
 }
 
 @test "the locale is en_US in every category" {
