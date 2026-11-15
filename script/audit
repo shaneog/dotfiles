@@ -12,8 +12,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # Lists handed from a pipeline to the loop that counts them. A directory of our
-# own, not fixed names in /tmp, which anyone can create first.
-SCRATCH="$(mktemp -d)" || exit 1
+# own, not fixed names in /tmp, which anyone can create first. The template is
+# spelled out because a bare `mktemp -d` on macOS does not go where TMPDIR says.
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/audit.XXXXXX")" || exit 1
 trap 'rm -rf "$SCRATCH"' EXIT
 
 FAILURES=0
