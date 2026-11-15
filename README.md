@@ -5,7 +5,9 @@ These are my dotfiles. There are many others like them, but these ones are mine.
 ## Guides
 
 Illustrated, plain-language explanations of what all of this does and how it
-works live in [`guides/`](guides/). They are plain HTML with no build step:
+works are published at <https://ogrady.ie/dotfiles/>. The source is in
+[`guides/`](guides/): plain HTML with no build step, so the same pages open
+from a clone:
 
 ```sh
 open guides/index.html
