@@ -70,6 +70,8 @@ config/zsh/.zprofile	s|^export LESSCHARSET=utf-8|LESSCHARSET=utf-8|	test/integra
 config/zsh/.zprofile	s|^  export LANG=|  LANG=|	test/integration/startup.bats	reach child processes	a shell started without LANG keeps the locale to itself
 config/zsh/lib/history.zsh	s|^HISTORY_IGNORE=|HISTIGNORE=|	test/integration/startup.bats	never reach the history file	the ignore list goes back to a variable zsh does not read
 config/zsh/lib/history.zsh	s|^setopt SHARE_HISTORY|setopt INC_APPEND_HISTORY SHARE_HISTORY|	test/integration/startup.bats	without a second option	two options both append each command to the history file
+config/zsh/lib/history.zsh	s|^unsetopt HIST_EXPIRE_DUPS_FIRST|setopt HIST_EXPIRE_DUPS_FIRST|	test/integration/startup.bats	history file longer	a long history file adds seconds to every shell's startup
+config/zsh/lib/history.zsh	s|^HISTSIZE=.*|HISTSIZE=50000|	test/integration/startup.bats	history file longer	half of the history file is kept and can never be recalled
 config/zsh/lib/history.zsh	s| ver"$DOTFILES_PINS\[zsh-users/zsh-history-substring-search\]"||	test/static/lint.bats	every plugin zinit loads is pinned	a plugin installs at whatever is newest that day
 script/macos	s|.*sed -n .*pam_tid.*|grep "^#auth" "$PAM_SUDO_TEMPLATE"|	test/unit/macos.bats	Apple's hook	the pam_tid line is copied still commented out
 script/macos	s:| sudo tee "$PAM_SUDO_LOCAL" >/dev/null:> "$PAM_SUDO_LOCAL":	test/unit/macos.bats	Apple's hook	the PAM file is written without sudo

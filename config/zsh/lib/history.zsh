@@ -24,7 +24,9 @@ zinit light zsh-users/zsh-history-substring-search
 # Configuration
 ##
 HISTFILE=$XDG_DATA_HOME/zsh/zhistory
-HISTSIZE=50000
+# The same number for both: a line the file keeps and the shell does not load
+# can never be recalled.
+HISTSIZE=100000
 SAVEHIST=100000
 
 # Commands not worth keeping. A pattern matched against the whole line, so
@@ -37,7 +39,12 @@ setopt EXTENDED_HISTORY         # Write the history file in the ':start:elapsed;
 # SHARE_HISTORY also writes each command as it is run, which is why
 # INC_APPEND_HISTORY is absent: zsh's documentation asks for one or the other.
 setopt SHARE_HISTORY            # Share history between all sessions.
-setopt HIST_EXPIRE_DUPS_FIRST   # Expire a duplicate event first when trimming history.
+# Off, and said out loud because a base layer may have turned it on. Each time
+# the list is full it looks for a duplicate to drop first, and with
+# HIST_IGNORE_ALL_DUPS there is never one to find, so every line past the limit
+# costs a walk of the whole list. That is seconds added to a shell's startup
+# once the history file outgrows the list.
+unsetopt HIST_EXPIRE_DUPS_FIRST
 setopt HIST_IGNORE_DUPS         # Do not record an event that was just recorded again.
 setopt HIST_IGNORE_ALL_DUPS     # Delete an old recorded event if a new event is a duplicate.
 setopt HIST_FIND_NO_DUPS        # Do not display a previously found event.

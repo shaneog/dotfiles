@@ -160,6 +160,30 @@ PROBE
   [ -z "$leaked" ] || { echo "written to the history file anyway:"; echo "$leaked"; return 1; }
 }
 
+@test "a history file longer than the shell's list loads at once, and all of it can be recalled" {
+  # Regression: HIST_EXPIRE_DUPS_FIRST was on beside HIST_IGNORE_ALL_DUPS, so
+  # each line past HISTSIZE searched the whole list for a duplicate that could
+  # not be there, and a file this size took most of a minute to read. HISTSIZE
+  # was also half of SAVEHIST, so half of the file was kept and never loaded.
+  local histfile="$HOME_WITHOUT/.local/share/zsh/zhistory"
+  mkdir -p "${histfile%/*}"
+  awk 'BEGIN { for (i = 0; i < 120000; i++) printf ": %d:0;echo unique-%d\n", 1700000000 + i, i }' \
+    > "$histfile"
+  # -c shells do not read the history file by themselves, hence fc -R.
+  SECONDS=0
+  run run_login_shell "$HOME_WITHOUT" \
+    'fc -R; print "RECALLABLE=$(fc -l 1 | wc -l | tr -d " ") KEPT=$SAVEHIST EXPIRE=$options[histexpiredupsfirst]"'
+  local took="$SECONDS"
+  echo "$output"; echo "took ${took}s"
+  local recallable kept
+  recallable="$(printf '%s\n' "$output" | sed -n 's/.*RECALLABLE=\([0-9]*\).*/\1/p')"
+  kept="$(printf '%s\n' "$output" | sed -n 's/.*KEPT=\([0-9]*\).*/\1/p')"
+  [ -n "$recallable" ] && [ -n "$kept" ] || { echo "the probe printed nothing"; return 1; }
+  [ "$took" -lt 8 ] || { echo "reading the history file took ${took}s"; return 1; }
+  [ "$recallable" -ge $(( kept - 1 )) ] \
+    || { echo "the file keeps $kept lines and only $recallable can be recalled"; return 1; }
+}
+
 @test "history is shared between shells without a second option also appending it" {
   # zsh's documentation asks for SHARE_HISTORY or INC_APPEND_HISTORY, not both.
   run cat "$PROBE_WITHOUT"
