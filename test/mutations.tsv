@@ -11,6 +11,7 @@ config/tmux/tmux.conf	s|^set -g status-style|# set -g status-style|	test/integra
 config/tmux/tmux.conf	s|@prefix_highlight_prefix_prompt '#{prefix}'|@prefix_highlight_prefix_prompt 'PREFIX'|	test/integration/tmux.bats	carries the placeholder	the prefix indicator stops naming the real key
 config/tmux/tmux.conf	s|#{prefix_highlight}||	test/integration/tmux.bats	carries the placeholder	status-left loses the plugin's placeholder
 ssh/config	s|    IdentityAgent SSH_AUTH_SOCK||	test/static/ssh.bats	inbound ssh session	an inbound session loses its forwarded agent
+ssh/config	s|ControlPath ~/.ssh/cm-%C|ControlPath /tmp/ssh-%r@%h:%p.socket|	test/static/ssh.bats	shared-connection socket	the control socket goes back to a directory anyone can write to
 config/zsh/lib/node.zsh	s|^if (( \$+functions\[nvm\]|if false \&\& (( $+functions[nvm]|	test/unit/guards.bats	defers entirely	our layer stops handing node over
 config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select|# removed|	test/integration/startup.bats	completion styling is ours	the completion styling disappears
 script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comments() { cat; }|	test/unit/audit.bats	prose mentioning	the audit reads comments as invocations
@@ -42,6 +43,7 @@ script/setup	s|^    chmod 700 "$target"|    true|	test/integration/setup.bats	pr
 script/remove	s|^  if \[ -L "$HOME/.$dir" \] && \[ "$HOME/.$dir" -ef "$HOME/.dotfiles/$dir" \]; then|  if false; then|	test/unit/install-scripts.bats	remove refuses while	remove deletes every other tool's files along with the clone
 script/remove	s|^            "$HOME"/.config/.\* "$HOME"/.config/\* \\$|            \\|	test/unit/install-scripts.bats	leaves other dangling links alone	the links under the config directory survive as dangling
 config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.bats	every git config key	a git config key becomes one git silently ignores
+config/git/config	s|^  gpgSign = true|  gpgSign = false|	test/static/lint.bats	a tag made with this git config is signed	tags go back to being unsigned
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format " #I #W "|	test/integration/tmux.bats	a window with activity	an alerting window looks like every other window
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format "#[fg=colour11,bg=colour8] #I #W#F "|	test/integration/tmux.bats	a window with activity	an inline colour shadows the alert style again
 config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.bats	a zoomed pane	a zoomed pane leaves no trace in the status line

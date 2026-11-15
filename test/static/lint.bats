@@ -54,6 +54,31 @@ load '../helpers/common'
   assert_equal "$output" "true"
 }
 
+@test "a tag made with this git config is signed, as a commit is" {
+  command -v ssh-keygen >/dev/null 2>&1 || skip "ssh-keygen is not installed"
+  local home="$BATS_TEST_TMPDIR/home" repo="$BATS_TEST_TMPDIR/repo"
+  mkdir -p "$home" "$repo"
+  ssh-keygen -q -t ed25519 -N '' -f "$home/key"
+  # Our config as the global one. The signing program is swapped for
+  # ssh-keygen and a throwaway key, since 1Password is not there to ask.
+  git_ours() {
+    env -i HOME="$home" PATH="$PATH" GIT_CONFIG_NOSYSTEM=1 \
+      GIT_CONFIG_GLOBAL="$REPO/config/git/config" \
+      git -C "$repo" -c gpg.ssh.program=ssh-keygen -c user.signingkey="$home/key.pub" \
+          -c user.name=tester -c user.email=tester@example.com "$@"
+  }
+  git_ours init -q
+  git_ours commit -q --allow-empty -m "one"
+  run git_ours tag -m "a release" v1
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$(git_ours cat-file -p v1)" "BEGIN SSH SIGNATURE" "the tag object"
+
+  # The way out the config comment promises.
+  run git_ours tag --no-sign light
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_equal "$(git_ours cat-file -t light)" "commit" "what a --no-sign tag points at"
+}
+
 @test "allowed signers file is well formed" {
   # principal, then options/keytype, then the key material
   run grep -cE '^[^#].* (ssh-ed25519|ssh-rsa|ecdsa-) ' "$REPO/config/git/allowed_signers"
@@ -276,12 +301,10 @@ load '../helpers/common'
       next
     }
 
-    # Read elsewhere than git, verified against each reader own documentation:
-    # filter.<driver>.process and .required are in gitattributes(5) rather than
-    # config.txt, and color.diff-highlight.* is read by diff-so-fancy.
+    # Read elsewhere than git, verified against the reader own documentation:
+    # color.diff-highlight.* is read by diff-so-fancy.
     function allowed(k) {
-      return k == "filter.lfs.process" || k == "filter.lfs.required" \
-          || k ~ /^color\.diff-highlight\./
+      return k ~ /^color\.diff-highlight\./
     }
 
     # Pass 2: our config.

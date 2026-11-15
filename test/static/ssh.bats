@@ -83,6 +83,18 @@ effective_in_ssh() {
   echo "$output" | grep -qx "identitiesonly no"
 }
 
+@test "the shared-connection socket is kept where only its owner can put one" {
+  # ssh talks to whatever is listening at ControlPath, so the path has to be in
+  # a directory nobody else can create a socket in. /tmp is not one.
+  run effective example.com
+  local path; path="$(echo "$output" | sed -n 's/^controlpath //p')"
+  [ -n "$path" ] || { echo "no ControlPath in effect"; return 1; }
+  case "$path" in
+    */.ssh/cm-*) ;;
+    *) echo "the socket would be created at $path"; return 1 ;;
+  esac
+}
+
 @test "an inbound ssh session defers to the forwarded agent" {
   # IdentityAgent overrides SSH_AUTH_SOCK, so a Host * path would send onward
   # hops to 1Password's socket and block on an approval nobody can give. The

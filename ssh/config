@@ -36,8 +36,13 @@ Host *
     # authentication to keys named by IdentityFile, and there are none.
     IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
 
+    # The socket goes in a directory only its owner can write to. Whoever
+    # creates a socket at this path first is who later connections talk to, and
+    # in /tmp that can be anybody on the machine. %C is a hash of the local
+    # host, remote host, port and user, so the path stays short enough for a
+    # socket whatever the hostname.
     ControlMaster auto
-    ControlPath /tmp/ssh-%r@%h:%p.socket
+    ControlPath ~/.ssh/cm-%C
     NoHostAuthenticationForLocalhost yes
     StrictHostKeyChecking ask
     VerifyHostKeyDNS ask

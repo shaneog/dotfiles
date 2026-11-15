@@ -46,12 +46,6 @@
 [help]
   autocorrect = 10
 
-[filter "lfs"]
-  smudge = git-lfs smudge -- %f
-  process = git-lfs filter-process
-  required = true
-  clean = git-lfs clean -- %f
-
 [stash]
   showPatch = true
 
@@ -90,3 +84,8 @@
 
 [commit]
   gpgsign = true
+
+# Every tag is a signed, annotated one, so a plain `git tag v1` asks for a
+# message. A lightweight tag takes `git tag --no-sign v1`.
+[tag]
+  gpgSign = true
