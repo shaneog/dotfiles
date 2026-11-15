@@ -136,7 +136,7 @@ snapshot() {
 @test "does not link the repo's own scaffolding into home" {
   run_setup
   local f
-  for f in .test .Makefile .script .README.md .LICENSE.md; do
+  for f in .test .Makefile .script .guides .README.md .LICENSE.md; do
     [ ! -e "$FAKE_HOME/$f" ] || { echo "setup linked $f"; return 1; }
   done
 }

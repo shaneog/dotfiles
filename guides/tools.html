@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The toolbox · Dotfiles guides</title>
+  <meta name="description" content="A cheat sheet for what the dotfiles give you: the prompt, git shortcuts, tmux keys, the editor, fuzzy finding and macOS settings.">
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      const theme = localStorage.getItem("guides-theme");
+      if (theme) document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="assets/guide.css">
+  <script defer src="assets/guide.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">~</span> dotfiles</a>
+    <nav class="site-nav" aria-label="Guides"><a href="index.html">All guides</a></nav>
+    <button class="btn" type="button" data-theme-toggle hidden>Theme</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Guide 6 of 7 · Toolbox</p>
+      <h1>The toolbox</h1>
+      <p class="lede">The other guides explain how it works. This one is the cheat sheet: what you get, and which keys to press.</p>
+    </section>
+
+    <h2 id="brew">The shopping list</h2>
+    <p>The <code>Brewfile</code> is a plain list of everything Homebrew should install. Add a line, run <code>brew bundle --global</code>, and the tool is on this Mac. Commit the line, and it is on the next Mac too.</p>
+
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">brew</span>
+        <h3>Command-line tools</h3>
+        <p>zsh, git, Neovim, tmux, fzf, ripgrep, fd, Starship, mise, direnv, the GitHub CLI, <code>jq</code> and <code>yq</code>, and the tools the tests need.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">cask</span>
+        <h3>Apps</h3>
+        <p>1Password, Ghostty, Alfred, Rectangle, Karabiner-Elements, OrbStack, Visual Studio Code and the rest of the everyday apps.</p>
+      </li>
+      <li class="card tone-violet">
+        <span class="card-num">cask</span>
+        <h3>Fonts</h3>
+        <p>Three Nerd Fonts, which add the small icons the prompt and the editor's status line use.</p>
+      </li>
+    </ul>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>brewup</code></td><td>The whole maintenance run in one word: update, upgrade, clean up, health check.</td></tr>
+          <tr><td><code>make brew-drift</code></td><td>Compares this Mac with the Brewfile and lists what each has that the other lacks.</td></tr>
+          <tr><td><code>make audit</code></td><td>Asks Homebrew and GitHub whether anything on the list has been renamed, deprecated or abandoned.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="terminals">Two terminal apps, one look</h2>
+    <p>Either Apple's Terminal.app or Ghostty can be the window. They are set up to match, and both step into tmux when a window opens.</p>
+
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">Terminal.app</span>
+        <h3>A Gotham profile</h3>
+        <p><code>script/macos</code> installs the Gotham color profile and makes it the default for new windows.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">Ghostty</span>
+        <h3>The same sixteen colors</h3>
+        <p><code>config/ghostty/config</code> spells out the Gotham palette and the same Nerd Font. The colors sit in the same numbered slots, because the tmux status bar picks its colors by slot number.</p>
+      </li>
+      <li class="card tone-yellow">
+        <span class="card-num">Ghostty</span>
+        <h3>Two switches turned off</h3>
+        <p>Its shell integration is off, because it works by borrowing <code>ZDOTDIR</code>, which <a href="shell.html#order">this setup depends on</a>. And closing a window does not ask first, because tmux keeps the session alive.</p>
+      </li>
+    </ul>
+
+    <h2 id="prompt">The prompt</h2>
+    <p>The prompt is drawn by Starship. It stays quiet until there is something to say.</p>
+    <pre><code><span class="dim">dotfiles on</span> main <span class="dim">*</span>
+➜</code></pre>
+    <p>The arrow is green after a command that worked and red after one that failed. Inside a git repository the prompt adds the branch, a <code>*</code> when files have changed, and arrows when you are ahead of or behind the remote. A helper also speaks up when you type a long command that already has a shortcut.</p>
+
+    <h2 id="git">Git</h2>
+    <p>Nine shell shortcuts cover the commands typed most often. They are defined in <code>config/zsh/lib/git.zsh</code>, and adding one is a single line there.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Type</th><th>Runs</th><th>Type</th><th>Runs</th></tr></thead>
+        <tbody>
+          <tr><td><code>g</code></td><td><code>git</code></td><td><code>gfr</code></td><td><code>git pull --rebase</code></td></tr>
+          <tr><td><code>gia</code></td><td><code>git add</code></td><td><code>gp</code></td><td><code>git push</code></td></tr>
+          <tr><td><code>gco</code></td><td><code>git checkout</code></td><td><code>gpf</code></td><td><code>git push --force-with-lease</code></td></tr>
+          <tr><td><code>gbc</code></td><td><code>git checkout -b</code></td><td><code>gr</code></td><td><code>git rebase</code></td></tr>
+          <tr><td><code>gfc</code></td><td><code>git clone</code></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Git itself has a few more, from <code>config/git/config</code>:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>git st</code></td><td>Status.</td></tr>
+          <tr><td><code>git undo</code></td><td>Takes back the last commit but keeps its changes.</td></tr>
+          <tr><td><code>git lg</code></td><td>The history as a colored graph of every branch.</td></tr>
+          <tr><td><code>git l</code></td><td>The history as one line per commit, date first.</td></tr>
+          <tr><td><code>git cleanup</code></td><td>Deletes merged local branches whose remote branch is gone.</td></tr>
+          <tr><td><code>gh co</code></td><td>Checks out a pull request by number.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>How git behaves here</h3>
+    <ul>
+      <li>Every commit is signed. See <a href="keys.html#signing">Keys and 1Password</a>.</li>
+      <li>Pulls and merges only fast-forward, so history never gains a surprise merge commit.</li>
+      <li>Rebasing with unsaved changes stashes them and puts them back afterwards.</li>
+      <li>Fetching removes branches that were deleted on the remote.</li>
+      <li>New repositories start on <code>main</code>, and diffs are shown through <code>diff-so-fancy</code>.</li>
+      <li>A new commit message opens with a template that reminds you to say why.</li>
+    </ul>
+
+    <h2 id="tmux">tmux</h2>
+    <p>tmux splits one terminal window into panes and tabs, and keeps them running when the window closes. Every tmux key starts with the <strong>prefix</strong>, which is <kbd>Ctrl</kbd> <kbd>A</kbd> here. Press it, let go, then press the next key.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>After the prefix</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>|</kbd> &nbsp; <kbd>-</kbd></td><td>Split the pane side by side, or one above the other. The new pane opens in the same folder.</td></tr>
+          <tr><td><kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd></td><td>Move to the pane on the left, below, above or right.</td></tr>
+          <tr><td><kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd></td><td>Resize the pane in that direction. Hold to repeat.</td></tr>
+          <tr><td><kbd>c</kbd></td><td>A new tab, in the same folder.</td></tr>
+          <tr><td><kbd>R</kbd></td><td>Reload the tmux settings.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ul>
+      <li><strong>The mouse works.</strong> Click a pane to select it, drag a border to resize, drag over text to copy it to the Mac clipboard.</li>
+      <li><strong>Tabs name themselves</strong> after the folder they are in, so three tabs read “dotfiles”, “api”, “notes” and not “zsh”, “zsh”, “zsh”.</li>
+      <li><strong>Sessions survive a restart.</strong> Two plugins save the layout regularly and restore it when tmux starts again.</li>
+      <li><strong>The status bar shows the mode.</strong> It lights up when the prefix is pressed, in copy mode, and in red when typing goes to every pane at once.</li>
+    </ul>
+
+    <h2 id="find">Finding things</h2>
+    <p>fzf is a fuzzy finder: type a few letters from anywhere in a name and it narrows the list as you go.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Keys</th><th>What it finds</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl</kbd> <kbd>T</kbd></td><td>A file under the current folder, including hidden files and ones git ignores.</td></tr>
+          <tr><td><kbd>Ctrl</kbd> <kbd>R</kbd></td><td>A command from your history.</td></tr>
+          <tr><td><kbd>Alt</kbd> <kbd>C</kbd></td><td>A folder to jump into.</td></tr>
+          <tr><td><kbd>↑</kbd> &nbsp; <kbd>↓</kbd></td><td>Type part of a command first, and the arrows step through the history entries that contain it.</td></tr>
+          <tr><td><kbd>Tab</kbd></td><td>Completion with a menu. It ignores capitals and forgives a typo.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="editor">The editor</h2>
+    <p>Neovim is set up as a quick editor for commit messages and config files, not as a second IDE. It has five plugins, pinned to exact versions by a lockfile. <code>vim</code> and <code>vi</code> both open it. The leader key is <kbd>Space</kbd>.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Keys</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Space</kbd> <kbd>Space</kbd></td><td>Find a file.</td></tr>
+          <tr><td><kbd>Space</kbd> <kbd>h</kbd></td><td>Recently opened files.</td></tr>
+          <tr><td><kbd>Space</kbd> <kbd>b</kbd></td><td>Open buffers.</td></tr>
+          <tr><td><kbd>Space</kbd> <kbd>/</kbd></td><td>Search the whole project.</td></tr>
+          <tr><td><kbd>Space</kbd> <kbd>d</kbd></td><td>Problems in this file.</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Clear the search highlight.</td></tr>
+          <tr><td><code>ys</code> <code>ds</code> <code>cs</code></td><td>Add, delete or change the quotes or brackets around something.</td></tr>
+          <tr><td><code>ga</code></td><td>Line things up in columns.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Commit messages get special treatment: a ruler at 72 characters, spell checking, and the cursor on the subject line.</p>
+
+    <h2 id="runtimes">Languages and projects</h2>
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">mise</span>
+        <h3>The right version per project</h3>
+        <p>Reads a project's <code>mise.toml</code>, <code>.nvmrc</code>, <code>.node-version</code> or <code>.python-version</code> and switches Node or Python to match. It never downloads anything without being asked.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">direnv</span>
+        <h3>Variables per folder</h3>
+        <p>Loads the environment variables in a folder's <code>.envrc</code> when you enter it, and removes them when you leave.</p>
+      </li>
+      <li class="card tone-yellow">
+        <span class="card-num">OrbStack</span>
+        <h3>Containers</h3>
+        <p>Provides <code>docker</code>. Its Tab completions are generated from whichever version is installed.</p>
+      </li>
+    </ul>
+
+    <h2 id="extras">Small conveniences</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>path</code></td><td>Prints PATH one folder per line, in color.</td></tr>
+          <tr><td><code>kp</code></td><td>Pick running programs from a fuzzy list and stop them.</td></tr>
+          <tr><td><code>curlt</code></td><td>Fetches a URL and shows where the time went.</td></tr>
+          <tr><td><code>checkip</code></td><td>Prints this Mac's public IP address.</td></tr>
+          <tr><td><code>randommac</code></td><td>Gives the Wi-Fi card a random hardware address.</td></tr>
+          <tr><td><code>rm_node_modules</code></td><td>Deletes every <code>node_modules</code> folder below the current one.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>One job needs no helper: <code>ssh-keygen -R &lt;host&gt;</code> makes SSH forget a server's old fingerprint after the server has been rebuilt.</p>
+
+    <h3>Outside the terminal</h3>
+    <ul>
+      <li><strong>Caps Lock is useful.</strong> Karabiner makes it Escape when tapped and Control when held with another key.</li>
+      <li><strong>macOS is set up the same everywhere.</strong> <code>script/macos</code> applies one table of settings: dark mode, the Dock on the right and hidden, Finder in list view with the path bar, no <code>.DS_Store</code> files on network or USB drives, silent alerts and no startup chime.</li>
+      <li><strong>You can check without changing.</strong> <code>script/macos --check</code> lists any setting that has drifted and writes nothing.</li>
+    </ul>
+
+    <h2 id="knobs">Switches</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Variable</th><th>Effect when set</th></tr></thead>
+        <tbody>
+          <tr><td><code>ZSH_NO_TMUX_AUTOSTART</code></td><td>This shell does not step into tmux.</td></tr>
+          <tr><td><code>ZSH_NO_ZCOMPILE</code></td><td>Skips the background compile of the completion index.</td></tr>
+          <tr><td><code>DOTFILES_URL</code>, <code>DOTFILES_REF</code></td><td>Where <code>script/bootstrap</code> installs from.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <nav class="pager" aria-label="Previous and next guide"></nav>
+  </main>
+
+  <footer class="site-footer">Describes the repository as it is on <code>main</code>. When the code changes, change the page that explains it.</footer>
+</body>
+</html>

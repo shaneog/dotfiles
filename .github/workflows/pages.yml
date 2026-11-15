@@ -1,0 +1,59 @@
+name: pages
+
+# Publishes guides/ as a GitHub Pages site, and nothing else from the repo.
+#
+# Pages can serve a branch directly, but only from its root or from /docs, and
+# the root here is the dotfiles themselves. Deploying an artifact built from
+# guides/ keeps the published tree to exactly that directory.
+#
+# Needs Pages switched on once, with "GitHub Actions" as the source
+# (Settings, Pages). Until it is, the deploy job fails saying so.
+on:
+  push:
+    branches: [main]
+    # Only when what is published could have changed.
+    paths:
+      - 'guides/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+# Read-only by default, like the other workflows. The deploy job below asks for
+# what a Pages deployment needs, and only that job gets it.
+permissions:
+  contents: read
+
+# A newer deploy waits for a running one rather than cancelling it: a
+# deployment interrupted part way can leave the site on neither version.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: package guides/
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      # The pages are plain files, so there is nothing to build: the directory
+      # is the site. Hidden files are left out by default.
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: guides
+
+  deploy:
+    name: deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # pages: write creates the deployment. id-token: write lets Pages verify
+    # that the artifact came from this workflow. Neither can write to the repo.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
