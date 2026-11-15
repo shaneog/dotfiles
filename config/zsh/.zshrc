@@ -46,8 +46,9 @@ if [[ ! -d $ZINIT[ZINIT_HOME] ]]; then
 fi
 # Before zinit is sourced, so that the zinit that runs is the pinned one: on a
 # machine where a pin has changed, and on a new one, where the clone above is of
-# whatever is newest.
-autoload -Uz sync_pins && sync_pins
+# whatever is newest. By path, because a base layer's rc file may have replaced
+# fpath since it was set above.
+autoload -Uz "$ZDOTDIR/autoload/sync_pins" && sync_pins
 # Bootstrap zinit
 source "${ZINIT[ZINIT_HOME]}/zinit.zsh"
 # PZTM:: and PZT:: are zinit's shorthand for Prezto's master branch. Pointed at

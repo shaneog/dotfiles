@@ -324,6 +324,10 @@ STUB
     git -C "$plugin" -c user.name=tester -c user.email=tester@example.com \
     commit -q --allow-empty -m "not the pin"
 
+  # Under a base layer whose rc file sets fpath for itself, as a managed one
+  # may: the function that does the moving has to be found all the same.
+  echo 'fpath=(${fpath:#*/zsh/autoload})' > "$home/.zshrc"
+
   run --separate-stderr run_login_shell "$home" 'true'
   local now; now="$(git -C "$plugin" rev-parse HEAD)"
   guard_home "$home" && rm -rf "$home"
