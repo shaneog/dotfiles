@@ -11,8 +11,7 @@ setup() {
   [ -n "${DOTFILES_COLD_CACHE:-}" ] || skip "set DOTFILES_COLD_CACHE=1 to run"
   COLD_HOME="$(mktemp -d)"
   guard_home "$COLD_HOME"
-  ln -s "$REPO/config" "$COLD_HOME/.config"
-  ln -s "$REPO/config/zsh/.zshenv" "$COLD_HOME/.zshenv"
+  link_config "$COLD_HOME"
   mkdir -p "$COLD_HOME/.cache" "$COLD_HOME/.local/share"   # deliberately no zinit
 }
 

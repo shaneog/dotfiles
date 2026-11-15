@@ -105,23 +105,54 @@ PASSWORDS
 }
 
 @test "remove takes the links into the clone and leaves other dangling links alone" {
-  mkdir -p "$IHOME/.dotfiles/config/zsh" "$IHOME/elsewhere"
+  mkdir -p "$IHOME/.dotfiles/config/zsh" "$IHOME/.dotfiles/ssh" "$IHOME/elsewhere"
+  mkdir -p "$IHOME/.config/some-other-tool" "$IHOME/.ssh"
   : > "$IHOME/.dotfiles/config/zsh/.zshenv"
-  ln -s "$IHOME/.dotfiles/config" "$IHOME/.config"
-  # Through .config rather than straight into the clone, as script/setup makes it.
+  : > "$IHOME/.dotfiles/ssh/config"
+  : > "$IHOME/.dotfiles/Brewfile"
+  ln -s "$IHOME/.dotfiles/config/zsh" "$IHOME/.config/zsh"
+  ln -s "$IHOME/.dotfiles/ssh/config" "$IHOME/.ssh/config"
+  ln -s "$IHOME/.dotfiles/Brewfile" "$IHOME/.Brewfile"
+  # Through .config rather than straight into the clone, as older installs have it.
   ln -s "$IHOME/.config/zsh/.zshenv" "$IHOME/.zshenv"
   ln -s "$IHOME/elsewhere" "$IHOME/.kept"
   # Already dangling before anything is removed: a share that is not mounted.
   ln -s "$BATS_TEST_TMPDIR/not-mounted/share" "$IHOME/nas"
+  ln -s "$BATS_TEST_TMPDIR/not-mounted/tool" "$IHOME/.config/not-ours"
+  echo "keep me" > "$IHOME/.config/some-other-tool/state"
+  echo "example.com ssh-ed25519 AAAA" > "$IHOME/.ssh/known_hosts"
 
   run run_script remove <<< "y"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
 
   [ ! -e "$IHOME/.dotfiles" ]
-  [ ! -L "$IHOME/.config" ] || { echo ".config survived as a dangling link"; return 1; }
-  [ ! -L "$IHOME/.zshenv" ] || { echo ".zshenv survived as a dangling link"; return 1; }
-  [ -L "$IHOME/.kept" ]     || { echo "a link to somewhere else was removed"; return 1; }
-  [ -L "$IHOME/nas" ]       || { echo "someone else's dangling link was removed"; return 1; }
+  local link
+  for link in .zshenv .Brewfile .config/zsh .ssh/config; do
+    [ ! -L "$IHOME/$link" ] || { echo "$link survived as a dangling link"; return 1; }
+  done
+  [ -L "$IHOME/.kept" ]             || { echo "a link to somewhere else was removed"; return 1; }
+  [ -L "$IHOME/nas" ]               || { echo "someone else's dangling link was removed"; return 1; }
+  [ -L "$IHOME/.config/not-ours" ]  || { echo "someone else's dangling link was removed"; return 1; }
+  assert_equal "$(cat "$IHOME/.config/some-other-tool/state")" "keep me"
+  assert_equal "$(cat "$IHOME/.ssh/known_hosts")" "example.com ssh-ed25519 AAAA"
+}
+
+@test "remove refuses while ~/.config or ~/.ssh is a link to the clone's whole directory" {
+  # Regression: on a home laid out that way, removing the clone deleted every
+  # other tool's configuration and ssh's known_hosts along with it.
+  local dir
+  for dir in config ssh; do
+    rm -rf "$IHOME"; mkdir -p "$IHOME/.dotfiles/$dir"
+    echo "keep me" > "$IHOME/.dotfiles/$dir/somebody-elses"
+    ln -s "$IHOME/.dotfiles/$dir" "$IHOME/.$dir"
+
+    run run_script remove <<< "y"
+    [ "$status" -ne 0 ] || { echo "removed with ~/.$dir still a link into the clone"; return 1; }
+    assert_contains "$output" "script/setup first"
+    assert_equal "$(cat "$IHOME/.$dir/somebody-elses")" "keep me" "the file under ~/.$dir"
+    # Nothing at all had been done by the time it stopped.
+    refute_contains "$(cat "$LOG")" "dscl" "what was run with sudo"
+  done
 }
 
 @test "remove only ever names the Command Line Tools for deletion" {

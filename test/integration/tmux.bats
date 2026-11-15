@@ -12,7 +12,7 @@ setup() {
   command -v tmux >/dev/null 2>&1 || skip "tmux is not installed"
   SOCKET="dotfiles-test-$$-${BATS_TEST_NUMBER:-0}"
   # A throwaway $HOME with a stub tpm already in place. The config clones tpm
-  # when it is missing, and ~/.config is a symlink to this repo, so without the
+  # when it is missing, and ~/.config/tmux is a link into this repo, so without the
   # stub these tests fetch plugins over the network and into the working tree.
   TMUX_HOME="$BATS_TEST_TMPDIR/home"
   mkdir -p "$TMUX_HOME/.config/tmux/plugins/tpm"

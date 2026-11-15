@@ -19,6 +19,24 @@ DOTFILES_URL=/Volumes/stick/dotfiles ./script/bootstrap
 DOTFILES_REF=some-branch ./script/bootstrap
 ```
 
+### What gets linked
+
+`script/setup` links `~/.Brewfile` and `~/.zshenv` into the clone, and then one
+entry at a time inside two directories that stay real: `~/.config/<name>` for
+each entry git tracks under `config/`, and `~/.ssh/config`. Everything else
+under `~/.config` and `~/.ssh` -- other tools' settings, `known_hosts` -- is
+outside the clone, so it is never published and `script/remove` leaves it alone.
+
+To add a tool's config: put it under `config/`, `git add` it, and run
+`script/setup` again. Running it again is always safe: a correct link is left
+alone, and anything else found at a target path is renamed to `<name>.bak.<time>`
+rather than deleted.
+
+A machine set up before this layout has `~/.config` and `~/.ssh` as links to the
+clone's whole directories. Pull and run `script/setup` once: it moves everything
+git does not track out of the clone into real directories, at the same paths
+under `~`, and then links as above.
+
 ### Commit signing (required)
 
 `.config/git/config` turns on SSH commit signing unconditionally, but the key
@@ -50,9 +68,6 @@ The following files allow for local overrides:
 | .config/git/config  | .gitconfig-user |
 | .ssh/config  | .ssh/config-local  |
 | .zshrc  | .zshrc.local  |
-
-
-To ignore local changes to already committed files such as `.ssh/config-local`, use `git update-index --skip-worktree <file>`.
 
 ### Environment Knobs
 

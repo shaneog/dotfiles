@@ -28,6 +28,11 @@ loads afterwards and wins where it should.
   is worse than either extreme — a base layer's `node` wrapper is what points
   `npm` at a private registry, so `lib/node.zsh` returns early rather than
   fronting `PATH`.
+- **Link entries, not directories.** `~/.config` and `~/.ssh` are real
+  directories, and `script/setup` links only what git tracks directly under
+  `config/` and `ssh/`. Other tools' state stays out of the clone, so the index
+  is the list of what is ours: a new tool's config has to be `git add`ed before
+  `script/setup` will link it.
 - **Runtimes are mise's**, and no tools are declared globally: a base layer's
   wrappers are shell functions, found before anything mise adds to `PATH`.
 - **Startup cost is a feature**: ~145ms for this repo alone, which is the number
