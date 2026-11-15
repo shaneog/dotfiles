@@ -11,6 +11,7 @@ config/tmux/tmux.conf	s|^set -g status-style|# set -g status-style|	test/integra
 config/tmux/tmux.conf	s|@prefix_highlight_prefix_prompt '#{prefix}'|@prefix_highlight_prefix_prompt 'PREFIX'|	test/integration/tmux.bats	carries the placeholder	the prefix indicator stops naming the real key
 config/tmux/tmux.conf	s|#{prefix_highlight}||	test/integration/tmux.bats	carries the placeholder	status-left loses the plugin's placeholder
 ssh/config	s|    IdentityAgent SSH_AUTH_SOCK||	test/static/ssh.bats	inbound ssh session	an inbound session loses its forwarded agent
+ssh/config	s|${SSH_CONNECTION:+set}|${SSH_CONNECTION:-set}|	test/static/ssh.bats	local session still uses	every session counts as inbound, so 1Password's agent is never asked
 ssh/config	s|ControlPath ~/.ssh/cm-%C|ControlPath /tmp/ssh-%r@%h:%p.socket|	test/static/ssh.bats	shared-connection socket	the control socket goes back to a directory anyone can write to
 config/zsh/lib/node.zsh	s|^if (( \$+functions\[nvm\]|if false \&\& (( $+functions[nvm]|	test/unit/guards.bats	defers entirely	our layer stops handing node over
 config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select|# removed|	test/integration/startup.bats	completion styling is ours	the completion styling disappears
