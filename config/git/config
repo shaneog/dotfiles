@@ -29,7 +29,9 @@
 
 [merge]
   ff = only
-  conflictStyle = diff3
+  # diff3 with the lines both sides agree on moved out of the conflict, so what
+  # is left between the markers is only what actually differs.
+  conflictStyle = zdiff3
 
 [commit]
   template = ~/.config/git/message

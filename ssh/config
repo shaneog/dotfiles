@@ -19,7 +19,10 @@ Compression yes
 # hops at 1Password's socket and wait for an approval nobody is there to give.
 # lib/1password.zsh declines to export the variable in the same situation.
 # The literal string SSH_AUTH_SOCK tells ssh to read it from the environment.
-Match exec "test -n \"$SSH_CONNECTION\""
+#
+# The test has no quotes of its own: OpenSSH 9.6 rejects an escaped quote here
+# as a bad Match condition, and then refuses to read the file at all.
+Match exec "test ${SSH_CONNECTION:+set}"
     IdentityAgent SSH_AUTH_SOCK
 
 Host *

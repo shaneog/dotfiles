@@ -11,10 +11,12 @@ config/tmux/tmux.conf	s|^set -g status-style|# set -g status-style|	test/integra
 config/tmux/tmux.conf	s|@prefix_highlight_prefix_prompt '#{prefix}'|@prefix_highlight_prefix_prompt 'PREFIX'|	test/integration/tmux.bats	carries the placeholder	the prefix indicator stops naming the real key
 config/tmux/tmux.conf	s|#{prefix_highlight}||	test/integration/tmux.bats	carries the placeholder	status-left loses the plugin's placeholder
 ssh/config	s|    IdentityAgent SSH_AUTH_SOCK||	test/static/ssh.bats	inbound ssh session	an inbound session loses its forwarded agent
+ssh/config	s|${SSH_CONNECTION:+set}|${SSH_CONNECTION:-set}|	test/static/ssh.bats	local session still uses	every session counts as inbound, so 1Password's agent is never asked
 ssh/config	s|ControlPath ~/.ssh/cm-%C|ControlPath /tmp/ssh-%r@%h:%p.socket|	test/static/ssh.bats	shared-connection socket	the control socket goes back to a directory anyone can write to
 config/zsh/lib/node.zsh	s|^if (( \$+functions\[nvm\]|if false \&\& (( $+functions[nvm]|	test/unit/guards.bats	defers entirely	our layer stops handing node over
 config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select|# removed|	test/integration/startup.bats	completion styling is ours	the completion styling disappears
 script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comments() { cat; }|	test/unit/audit.bats	prose mentioning	the audit reads comments as invocations
+script/audit	s|^trap 'rm -rf "$SCRATCH"' EXIT|:|	test/unit/audit.bats	TMPDIR says	each audit leaves its working directory behind
 script/brew-drift	s|comm -13 "\$WORK/installed-formulae"|comm -13 "$WORK/requested-formulae"|	test/unit/brew-drift.bats	not called absent	dependencies get reported as missing
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
@@ -44,6 +46,7 @@ script/remove	s|^  if \[ -L "$HOME/.$dir" \] && \[ "$HOME/.$dir" -ef "$HOME/.dot
 script/remove	s|^            "$HOME"/.config/.\* "$HOME"/.config/\* \\$|            \\|	test/unit/install-scripts.bats	leaves other dangling links alone	the links under the config directory survive as dangling
 config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.bats	every git config key	a git config key becomes one git silently ignores
 config/git/config	s|^  gpgSign = true|  gpgSign = false|	test/static/lint.bats	a tag made with this git config is signed	tags go back to being unsigned
+config/git/config	s|conflictStyle = zdiff3|conflictStyle = diff3|	test/static/lint.bats	merge conflict shows only	a conflict repeats the lines both sides agree on
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format " #I #W "|	test/integration/tmux.bats	a window with activity	an alerting window looks like every other window
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format "#[fg=colour11,bg=colour8] #I #W#F "|	test/integration/tmux.bats	a window with activity	an inline colour shadows the alert style again
 config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.bats	a zoomed pane	a zoomed pane leaves no trace in the status line
@@ -70,6 +73,8 @@ config/zsh/.zprofile	s|^export LESSCHARSET=utf-8|LESSCHARSET=utf-8|	test/integra
 config/zsh/.zprofile	s|^  export LANG=|  LANG=|	test/integration/startup.bats	reach child processes	a shell started without LANG keeps the locale to itself
 config/zsh/lib/history.zsh	s|^HISTORY_IGNORE=|HISTIGNORE=|	test/integration/startup.bats	never reach the history file	the ignore list goes back to a variable zsh does not read
 config/zsh/lib/history.zsh	s|^setopt SHARE_HISTORY|setopt INC_APPEND_HISTORY SHARE_HISTORY|	test/integration/startup.bats	without a second option	two options both append each command to the history file
+config/zsh/lib/history.zsh	s|^unsetopt HIST_EXPIRE_DUPS_FIRST|setopt HIST_EXPIRE_DUPS_FIRST|	test/integration/startup.bats	history file longer	a long history file adds seconds to every shell's startup
+config/zsh/lib/history.zsh	s|^HISTSIZE=.*|HISTSIZE=50000|	test/integration/startup.bats	history file longer	half of the history file is kept and can never be recalled
 config/zsh/lib/history.zsh	s| ver"$DOTFILES_PINS\[zsh-users/zsh-history-substring-search\]"||	test/static/lint.bats	every plugin zinit loads is pinned	a plugin installs at whatever is newest that day
 script/macos	s|.*sed -n .*pam_tid.*|grep "^#auth" "$PAM_SUDO_TEMPLATE"|	test/unit/macos.bats	Apple's hook	the pam_tid line is copied still commented out
 script/macos	s:| sudo tee "$PAM_SUDO_LOCAL" >/dev/null:> "$PAM_SUDO_LOCAL":	test/unit/macos.bats	Apple's hook	the PAM file is written without sudo

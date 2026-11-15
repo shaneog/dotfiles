@@ -96,14 +96,14 @@ jobs:
           [ "$before" = "$after" ] || { diff <(echo "$before") <(echo "$after"); exit 1; }
 
       # The real prize: a first interactive shell on a machine that has never had
-      # one. This installs every plugin and runs every clone hook, which is where
-      # the fzf and direnv hook bugs were hiding.
+      # one. This installs every plugin and generates each tool's cached init,
+      # the path an established machine never takes again.
       - name: A first login shell installs cleanly
         run: |
           HOME="$HOME_UNDER_TEST" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 \
             zsh -lic 'true' 2>first.err || { echo "first shell failed"; cat first.err; exit 1; }
           if grep -iE "permission denied|returned with 1[0-9][0-9]" first.err; then
-            echo "an install hook failed"; exit 1
+            echo "an install step failed"; exit 1
           fi
 
       - name: A second login shell is silent and has its integrations

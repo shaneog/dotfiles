@@ -139,6 +139,39 @@ for found in pin.finditer(open(sys.argv[1]).read()):
   assert_equal "$(git_ours cat-file -t light)" "commit" "what a --no-sign tag points at"
 }
 
+@test "a merge conflict shows only the lines that differ" {
+  local repo="$BATS_TEST_TMPDIR/conflict"
+  mkdir -p "$repo"
+  # Our config as the global one. Signing is off because 1Password is not there
+  # to ask, and merge.ff because a conflict needs a real merge to happen in.
+  git_ours() {
+    env -i HOME="$BATS_TEST_TMPDIR" PATH="$PATH" GIT_CONFIG_NOSYSTEM=1 \
+      GIT_CONFIG_GLOBAL="$REPO/config/git/config" \
+      git -C "$repo" -c commit.gpgsign=false -c merge.ff=false \
+          -c user.name=tester -c user.email=tester@example.com "$@"
+  }
+  git_ours init -q -b main
+  printf 'first\nlast\n' > "$repo/file"
+  git_ours add file
+  git_ours commit -q -m "base"
+  # Both sides add the same line and then a different one.
+  git_ours checkout -q -b theirs
+  printf 'first\nshared\ntheirs\nlast\n' > "$repo/file"
+  git_ours commit -q -am "theirs"
+  git_ours checkout -q main
+  printf 'first\nshared\nours\nlast\n' > "$repo/file"
+  git_ours commit -q -am "ours"
+
+  run git_ours merge theirs
+  [ "$status" -ne 0 ] || { echo "expected a conflict: $output"; return 1; }
+  cat "$repo/file"
+  assert_equal "$(sed -n 1,3p "$repo/file" | tr '\n' ' ')" "first shared <<<<<<< HEAD " \
+    "the line both sides added, above the conflict"
+  assert_equal "$(grep -c '^shared$' "$repo/file")" "1" "copies of the line both sides added"
+  # Still a three-way conflict: the common ancestor keeps its marker.
+  assert_contains "$(cat "$repo/file")" "|||||||"
+}
+
 @test "allowed signers file is well formed" {
   # principal, then options/keytype, then the key material
   run grep -cE '^[^#].* (ssh-ed25519|ssh-rsa|ecdsa-) ' "$REPO/config/git/allowed_signers"

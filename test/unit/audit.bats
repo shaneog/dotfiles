@@ -104,6 +104,27 @@ audit() {
   echo "$output" | grep -q "0 failures" || { echo "$output"; return 1; }
 }
 
+@test "audit: its working files go where TMPDIR says, and are gone afterwards" {
+  local scratch="$BATS_TEST_TMPDIR/tmp" seen="$BATS_TEST_TMPDIR/seen"
+  mkdir -p "$scratch"
+  echo "zinit light some/plugin" >> "$FIX/config/zsh/lib/fzf.zsh"
+  # gh is asked about that plugin partway through, which is the only moment the
+  # working files can be seen from outside.
+  cat > "$STUBS/gh" <<'EOF'
+#!/bin/sh
+case "$1" in
+  auth) exit 0 ;;
+  api)  ls -A "$TMPDIR" > "$SEEN"; printf 'false\t2026-08-01\n' ;;
+  run)  echo 0 ;;
+esac
+EOF
+  chmod +x "$STUBS/gh"
+  TMPDIR="$scratch" SEEN="$seen" run audit
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  [ -s "$seen" ] || { echo "nothing was under TMPDIR while the audit ran"; return 1; }
+  assert_equal "$(ls -A "$scratch")" "" "left behind in TMPDIR"
+}
+
 @test "audit: a deprecated formula fails" {
   cat > "$STUBS/brew" <<'EOF'
 #!/bin/sh
