@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Setting up a new Mac · Dotfiles guides</title>
+  <meta name="description" content="What script/bootstrap does, step by step, when it sets up a new Mac.">
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      const theme = localStorage.getItem("guides-theme");
+      if (theme) document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="assets/guide.css">
+  <script defer src="assets/guide.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">~</span> dotfiles</a>
+    <nav class="site-nav" aria-label="Guides"><a href="index.html">All guides</a></nav>
+    <button class="btn" type="button" data-theme-toggle hidden>Theme</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Guide 2 of 7 · New Mac</p>
+      <h1>Setting up a new Mac</h1>
+      <p class="lede">One pasted line does the lot. A bare Mac reaches a working shell in under two minutes, plus however long the apps take to download.</p>
+    </section>
+
+    <h2 id="command">The one command</h2>
+    <p>Open Terminal on the new Mac and paste this. It downloads a script called <code>script/bootstrap</code> and runs it.</p>
+
+    <pre data-copy><code>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/shaneog/dotfiles/HEAD/script/bootstrap)"</code></pre>
+
+    <div class="callout">
+      <p class="callout-title">In plain words</p>
+      <p>Bootstrap is a moving crew with a checklist. It asks for your password once at the door, then works through the list in order: fetch the tools, bring the boxes in, put things where they belong, set the thermostat, stock the shelves. If any step fails it stops and tells you which.</p>
+    </div>
+
+    <h2 id="steps">What happens, in order</h2>
+    <p>Every step below is real code in <code>script/bootstrap</code> or a script it calls. The label on each one says which.</p>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <ol class="timeline">
+          <li class="seq">
+            <div>
+              <h3>Check it is safe to start <span class="who">bootstrap</span></h3>
+              <p>Refuses to run as root, checks you are an administrator, and asks for your password once. The password is kept in a temporary file only you can read, which is deleted when the script exits, however it exits. The Mac is kept awake until the work is done.</p>
+            </div>
+          </li>
+          <li class="seq">
+            <div>
+              <h3>Install Homebrew <span class="who">bootstrap</span></h3>
+              <p>Homebrew is how everything else arrives. If it is already installed this step is skipped, which keeps a second run quick.</p>
+            </div>
+          </li>
+          <li class="seq">
+            <div>
+              <h3>Fetch the dotfiles <span class="who">bootstrap</span></h3>
+              <p>Clones this repository to <code>~/.dotfiles</code>. If that folder already exists it pulls the latest changes instead, keeping any local edits safe. If the repository cannot be reached, bootstrap stops here and says so, so it never reports success without any dotfiles.</p>
+            </div>
+          </li>
+          <li class="seq tone-cyan">
+            <div>
+              <h3>Link everything into place <span class="who">script/setup</span></h3>
+              <p>Creates the signposts from your home folder into the repository. Anything already in the way is moved aside with a date stamp, never deleted. <a href="layout.html">Where files live</a> has the full picture.</p>
+            </div>
+          </li>
+          <li class="seq tone-violet">
+            <div>
+              <h3>Apply macOS settings <span class="who">script/macos</span></h3>
+              <p>First it records the current values and writes a script that can put them back. Then it applies one table of settings: Dock, Finder, sounds, Touch ID for <code>sudo</code>, and the Gotham theme for Terminal.</p>
+            </div>
+          </li>
+          <li class="seq tone-yellow">
+            <div>
+              <h3>Install everything on the shopping list <span class="who">Brewfile</span></h3>
+              <p>Runs <code>brew bundle --global</code>, which reads <code>~/.Brewfile</code>. That is one of the signposts from two steps ago, pointing at the <code>Brewfile</code> in the repository.</p>
+            </div>
+          </li>
+          <li class="seq">
+            <div>
+              <h3>Switch the login shell <span class="who">bootstrap</span></h3>
+              <p>Makes Homebrew's newer zsh the default shell. It happens after the shopping list on purpose: the shell has to be installed before the Mac can be pointed at it.</p>
+            </div>
+          </li>
+          <li class="seq tone-orange">
+            <div>
+              <h3>Finish the editor <span class="who">script/after-setup</span></h3>
+              <p>Starts Neovim with no window, installs its plugins at the exact versions recorded in the lockfile, and builds the syntax parsers.</p>
+            </div>
+          </li>
+          <li class="seq you">
+            <div>
+              <h3>Open a new terminal window <span class="who">you</span></h3>
+              <p>The first shell fetches its own plugins, which takes around twenty seconds, once. Every shell after that starts in a fraction of a second.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+      <figcaption>
+        <span>The bootstrap checklist, top to bottom. The last step is the only one that needs you.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h2 id="by-hand">Two things only you can do</h2>
+    <p>Everything above is automatic. These two are not, because they involve your identity.</p>
+
+    <ul class="cards">
+      <li class="card tone-yellow">
+        <span class="card-num">By hand · required</span>
+        <h3>Create <code>~/.gitconfig-user</code></h3>
+        <p>Your name, your email and the public half of your signing key. Commit signing is always on, and this file is where git learns which key to use.</p>
+      </li>
+      <li class="card tone-yellow">
+        <span class="card-num">By hand · once</span>
+        <h3>Turn on the 1Password SSH agent</h3>
+        <p>In 1Password, open Settings, then Developer, and tick “Use the SSH agent”. <a href="keys.html">Keys and 1Password</a> explains why.</p>
+      </li>
+    </ul>
+
+    <pre><code><span class="dim"># ~/.gitconfig-user</span>
+[user]
+	name = Your Name
+	email = you@example.com
+	signingkey = ssh-ed25519 AAAA...   <span class="dim"># the public key, not a path</span></code></pre>
+
+    <h2 id="timing">How long it takes</h2>
+    <p>These numbers come from the virtual machine test, which installs onto a completely fresh copy of macOS. Apps are left out because their download time depends on your connection.</p>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <ul class="bars" style="--max: 30">
+          <li><span class="label">Homebrew from scratch</span><span class="track"><span class="fill" style="--v: 10"></span></span><span class="value">10 s</span></li>
+          <li><span class="label"><code>script/macos</code></span><span class="track"><span class="fill tone-violet" style="--v: 1"></span></span><span class="value">1 s</span></li>
+          <li><span class="label">Brewfile, command-line tools</span><span class="track"><span class="fill tone-yellow" style="--v: 29"></span></span><span class="value">29 s</span></li>
+          <li><span class="label"><code>script/after-setup</code></span><span class="track"><span class="fill tone-orange" style="--v: 30"></span></span><span class="value">30 s</span></li>
+          <li><span class="label">First shell, installing plugins</span><span class="track"><span class="fill tone-cyan" style="--v: 24"></span></span><span class="value">24 s</span></li>
+        </ul>
+      </div>
+      <figcaption>
+        <span>Measured on macOS 26 in a Tart virtual machine. The whole run, image already downloaded: 95 seconds.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h2 id="again">Running it again is safe</h2>
+    <p>Bootstrap is written so a second run only does what is still missing. That makes it the way to update a Mac as well as the way to set one up.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Step</th><th>On a Mac that is already set up</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Homebrew</td><td>Found, so the installer is skipped.</td></tr>
+          <tr><td>Dotfiles</td><td>Pulled instead of cloned. Local edits are stashed and put back.</td></tr>
+          <tr><td>Links</td><td>Each one already points into the repository, so it is reported as unchanged.</td></tr>
+          <tr><td>macOS settings</td><td>Each setting is read first and only written if it differs. The record of the original values is never overwritten.</td></tr>
+          <tr><td>Brewfile</td><td>Checked first. Nothing is installed if nothing is missing.</td></tr>
+          <tr><td>Login shell</td><td>Already Homebrew's zsh, so it is left alone.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Installing from somewhere else</h3>
+    <p>Two variables change where the dotfiles come from. That is handy for trying a branch, or for a Mac that has no GitHub login yet and gets the repository from a USB stick.</p>
+
+    <pre><code>DOTFILES_REF=some-branch ./script/bootstrap
+DOTFILES_URL=/Volumes/stick/dotfiles ./script/bootstrap</code></pre>
+
+    <h2 id="remove">Taking it all out again</h2>
+    <p><code>script/remove</code> is the undo. It asks “Are you sure?” first, and by default it only removes what this repository put there.</p>
+
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">script/remove</span>
+        <h3>The dotfiles</h3>
+        <ul>
+          <li>The login shell goes back to <code>/bin/zsh</code>.</li>
+          <li>The plugin and shell caches are deleted.</li>
+          <li><code>~/.dotfiles</code> is deleted, and so is every signpost in your home folder, <code>~/.config</code> and <code>~/.ssh</code> that pointed into it. A signpost that was already broken belongs to something else and is left alone.</li>
+        </ul>
+      </li>
+      <li class="card tone-red">
+        <span class="card-num">script/remove --everything</span>
+        <h3>The dotfiles and Homebrew</h3>
+        <ul>
+          <li>All of the above.</li>
+          <li>Every package and app Homebrew installed.</li>
+          <li>Homebrew itself, and the Command Line Tools. A full Xcode is never touched.</li>
+        </ul>
+      </li>
+      <li class="card tone-muted">
+        <span class="card-num">Either way</span>
+        <h3>Left alone</h3>
+        <ul>
+          <li>Your shell history.</li>
+          <li>Every other app's files in <code>~/.config</code> and <code>~/.ssh</code>.</li>
+          <li>The macOS settings. To put those back, run the <code>restore</code> script that <code>script/macos</code> saved in <code>~/.local/share/dotfiles/macos-defaults</code> on its first run.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <nav class="pager" aria-label="Previous and next guide"></nav>
+  </main>
+
+  <footer class="site-footer">Describes the repository as it is on <code>main</code>. When the code changes, change the page that explains it.</footer>
+</body>
+</html>

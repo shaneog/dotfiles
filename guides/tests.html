@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Staying healthy · Dotfiles guides</title>
+  <meta name="description" content="How the dotfiles are tested: four tiers, tests that are proven able to fail, and weekly checks on the outside world.">
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      const theme = localStorage.getItem("guides-theme");
+      if (theme) document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="assets/guide.css">
+  <script defer src="assets/guide.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">~</span> dotfiles</a>
+    <nav class="site-nav" aria-label="Guides"><a href="index.html">All guides</a></nav>
+    <button class="btn" type="button" data-theme-toggle hidden>Theme</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Guide 7 of 7 · Staying healthy</p>
+      <h1>How it stays working</h1>
+      <p class="lede">Settings files do not crash when they break. A feature just quietly stops, and you find out weeks later. So this repository tests its settings the way an app tests its code.</p>
+    </section>
+
+    <h2 id="why">Smoke detectors, and someone to test them</h2>
+    <div class="callout">
+      <p class="callout-title">In plain words</p>
+      <p>A test is a smoke detector: it sits there quietly and shouts when something goes wrong. But a smoke detector with a flat battery is also quiet. So this repository does two things. It fits detectors everywhere, and it regularly lights a match under each one to make sure it still shouts.</p>
+    </div>
+
+    <h2 id="tiers">Four tiers, each asking a bigger question</h2>
+    <p>The quick tests run first and catch the silly mistakes. The slow ones run last and catch the subtle ones. <code>make test</code> runs the first three in about 35 seconds.</p>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <ol class="ladder">
+          <li class="seq tone-cyan" style="--w: 70%"><strong>static</strong><span>Does every file even read correctly? Syntax, linting, valid configs and a scan for secrets.</span><em>make test-static</em></li>
+          <li class="seq tone-green" style="--w: 80%"><strong>unit</strong><span>Does each small decision go the right way? One guard or one function at a time.</span><em>make test-unit</em></li>
+          <li class="seq tone-yellow" style="--w: 90%"><strong>integration</strong><span>Does a real shell start up properly? The whole startup chain, in a throwaway home folder.</span><em>make test-integration</em></li>
+          <li class="seq tone-orange" style="--w: 100%"><strong>vm</strong><span>Does it work on a Mac that has never seen it? A full install onto fresh macOS in a virtual machine.</span><em>make test-vm</em></li>
+        </ol>
+      </div>
+      <figcaption>
+        <span>Wider means slower and more realistic. The VM tier runs on your own Mac only, because it needs a genuinely fresh copy of macOS.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h3>Nothing is tested on your real home folder</h3>
+    <p>Tests that start a shell build a temporary home folder first and link the repository into it, the way <code>script/setup</code> would. A safety check refuses to run against anything that is not a temporary folder, so a test can never damage the files it is testing.</p>
+    <p>The tests also bring their own <strong>pretend base layer</strong>: stand-in <code>~/.zprofile</code> and <code>~/.zshrc</code> files that behave like a managed setup. That way the layering is tested on every Mac, with and without one, whatever that Mac really has installed.</p>
+
+    <h2 id="fail">A test has to be able to fail</h2>
+    <p>Most of the real bugs in this repository hid behind a test that could not fail. It passed when the feature worked and it passed when the feature was broken, which makes it worse than no test at all. Two scripts hunt for exactly that.</p>
+
+    <figure class="fig">
+      <div class="fig-body">
+        <svg class="loop" viewBox="0 0 360 290" role="img" aria-label="A loop: break something on purpose, run the test and expect it to fail, then put it back.">
+          <circle class="ring" cx="180" cy="150" r="90"/>
+          <circle class="runner" cx="180" cy="150" r="90"/>
+          <rect class="stop stop-a" x="115" y="36" width="130" height="48" rx="12"/>
+          <text x="180" y="57">1 · Break it</text>
+          <text class="sub" x="180" y="73">on purpose</text>
+          <rect class="stop stop-b" x="205" y="176" width="130" height="48" rx="12"/>
+          <text x="270" y="197">2 · Run the test</text>
+          <text class="sub" x="270" y="213">it must fail</text>
+          <rect class="stop stop-c" x="25" y="176" width="130" height="48" rx="12"/>
+          <text x="90" y="197">3 · Put it back</text>
+          <text class="sub" x="90" y="213">then the next one</text>
+        </svg>
+      </div>
+      <figcaption>
+        <span>If step 2 passes, the test is blind, and that is the thing to fix.</span>
+      </figcaption>
+    </figure>
+
+    <ul class="cards">
+      <li class="card tone-red">
+        <span class="card-num">make mutate</span>
+        <h3>Does this test still work?</h3>
+        <p>Reads a list of deliberate breakages from <code>test/mutations.tsv</code>. Each row names a file, how to break it, and the test that must notice. Every row is a bug that really shipped, or the failure a test was written to catch.</p>
+      </li>
+      <li class="card tone-yellow">
+        <span class="card-num">make sweep</span>
+        <h3>Is this line tested at all?</h3>
+        <p>The opposite question. It switches off each line of config in turn and reports the ones no test noticed were gone. It is slow, so it works to a time budget and picks up where it stopped.</p>
+      </li>
+    </ul>
+
+    <h2 id="outside">Watching the outside world</h2>
+    <p>Dotfiles depend on things other people maintain: Homebrew packages, shell plugins, macOS itself. Those change without warning, so two scripts keep an eye on them.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it looks for</th></tr></thead>
+        <tbody>
+          <tr><td><code>make audit</code></td><td>Packages that were renamed or deprecated, plugin projects that were archived, tools the config uses but the Brewfile does not install, and config left behind for tools that are gone.</td></tr>
+          <tr><td><code>make brew-drift</code></td><td>What this Mac has installed that the Brewfile does not list, and the reverse. Advice only: you decide each one.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout note">
+      <p class="callout-title">Skipping is not passing</p>
+      <p>When the audit cannot run one of its checks, it prints <code>NOT CHECKED</code> and says which. It never reports a check it skipped as a check that passed.</p>
+    </div>
+
+    <h2 id="ci">Robots on GitHub</h2>
+    <p>Three workflows run on GitHub's disposable Macs, so problems show up as a notification and not as a broken shell.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Workflow</th><th>When</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>test</code></td><td>Every pull request, every push to <code>main</code>, and Mondays</td><td>Runs the static, unit and integration tiers against both the built-in zsh and Homebrew's, then the mutation list.</td></tr>
+          <tr><td><code>provision</code></td><td>Mondays, or on demand</td><td>Runs the install scripts for real: <code>setup</code>, the Brewfile, <code>macos</code>, <code>remove</code>, and <code>bootstrap</code> from start to finish.</td></tr>
+          <tr><td><code>audit</code></td><td>Mondays, or on demand</td><td>Runs <code>make audit</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The Monday runs matter because nothing upstream is pinned. A plugin can change on a Tuesday, and the following Monday's run is what notices.</p>
+
+    <h2 id="habit">The habit</h2>
+    <p>Before committing a change, both of these should come back clean.</p>
+
+    <pre data-copy><code>make test
+make audit</code></pre>
+
+    <p>And when a change claims to make something faster, the claim comes with a measurement. The startup time has <a href="shell.html#speed">a test of its own</a> for that reason.</p>
+
+    <nav class="pager" aria-label="Previous and next guide"></nav>
+  </main>
+
+  <footer class="site-footer">Describes the repository as it is on <code>main</code>. When the code changes, change the page that explains it.</footer>
+</body>
+</html>

@@ -123,7 +123,7 @@ link_directory() {  # top-level directory name
 }
 
 for DOTFILE in *; do
-  echo "$DOTFILE" | grep -qE '(^script$|^test$|^Makefile$|\.txt$|\.md$)' && continue
+  echo "$DOTFILE" | grep -qE '(^script$|^test$|^guides$|^Makefile$|\.txt$|\.md$)' && continue
 
   if [ -d "$DOTFILE" ]
   then

@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opening a terminal · Dotfiles guides</title>
+  <meta name="description" content="The zsh startup files in the order they run, how the dotfiles layer on top of a managed shell, and why it is fast.">
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      const theme = localStorage.getItem("guides-theme");
+      if (theme) document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="assets/guide.css">
+  <script defer src="assets/guide.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">~</span> dotfiles</a>
+    <nav class="site-nav" aria-label="Guides"><a href="index.html">All guides</a></nav>
+    <button class="btn" type="button" data-theme-toggle hidden>Theme</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Guide 4 of 7 · Opening a terminal</p>
+      <h1>What happens when you open a terminal</h1>
+      <p class="lede">Between the window appearing and the prompt blinking, zsh reads four files in a fixed order. It takes about 145 milliseconds. Here is every step.</p>
+    </section>
+
+    <h2 id="order">Four files, always in this order</h2>
+    <p>zsh decides which files to read by asking two questions. Is this a <strong>login</strong> shell, the first one of a session? Is it <strong>interactive</strong>, with a person typing? A new Terminal window is both, so it reads all four.</p>
+
+    <div class="callout">
+      <p class="callout-title">In plain words</p>
+      <p>Think of opening a shop in the morning. Someone unlocks the door and switches on the lights (<code>.zshenv</code>). Someone sets out the stock (<code>.zprofile</code>). Someone arranges the counter the way the shopkeeper likes it (<code>.zshrc</code>). Then the cleaner tidies up out the back while the first customer is already being served (<code>.zlogin</code>).</p>
+    </div>
+
+    <!--
+      The walkthrough. Each <li data-step> is one step: its name in <strong>,
+      its explanation in .explain. guide.js plays them in document order, so
+      adding, removing or reordering steps needs no other change. data-label on
+      a stage is the heading shown above the explanation.
+    -->
+    <figure class="fig" data-walk>
+      <div class="fig-body">
+        <div class="walk-bar">
+          <button class="btn" type="button" data-walk-prev>← Back</button>
+          <button class="btn" type="button" data-walk-play aria-pressed="false">Play</button>
+          <button class="btn" type="button" data-walk-next>Next →</button>
+          <span class="walk-count" data-walk-count></span>
+        </div>
+        <div class="walk-panel" data-walk-panel aria-live="polite"></div>
+
+        <div class="stages">
+          <section class="stage tone-cyan" data-label="~/.zshenv · every zsh, even scripts">
+            <h3>~/.zshenv <small>every zsh, even scripts</small></h3>
+            <ol>
+              <li data-step><strong>Skip the system-wide files</strong><span class="explain">macOS has its own startup files in <code>/etc</code>. One switch, <code>noglobalrcs</code>, tells zsh to skip them, so startup is the same on every Mac and nothing runs twice.</span></li>
+              <li data-step><strong>Name the three drawers</strong><span class="explain">Sets where settings, caches and data live: <code>~/.config</code>, <code>~/.cache</code> and <code>~/.local/share</code>. Every later step uses these names.</span></li>
+              <li data-step><strong>Point zsh at the repository</strong><span class="explain">Sets <code>ZDOTDIR</code> to <code>~/.config/zsh</code>. This is the pivot the whole design turns on: from now on zsh looks for its other startup files in the repository, and the ones in the home folder are left for somebody else to own.</span></li>
+              <li data-step><strong>Give PATH its basics</strong><span class="explain">Adds the system folders, because skipping the <code>/etc</code> files means nothing else will, and tells zsh to drop duplicate entries. That lives here because this is the only file every shell reads, tmux panes included. A shell started by an app rather than by you also loads the profile here, so it gets the same environment.</span></li>
+            </ol>
+          </section>
+
+          <section class="stage tone-yellow" data-label=".zprofile · login shells">
+            <h3>.zprofile <small>login shells</small></h3>
+            <ol>
+              <li data-step><strong>Load the base layer's profile</strong><span class="explain">If a <code>~/.zprofile</code> exists in the home folder, read it first. On a managed Mac that file belongs to another tool. Loading it first means anything set afterwards wins.</span></li>
+              <li data-step><strong>Set the language</strong><span class="explain">Makes sure text is treated as UTF-8, so accents and symbols display properly, and passes that on to every program the shell starts.</span></li>
+              <li data-step><strong>Add only what is missing</strong><span class="explain">Adds <code>/usr/local/bin</code> to PATH if it is not there already. It never reorders a PATH that a base layer arranged on purpose.</span></li>
+              <li data-step><strong>Find Homebrew</strong><span class="explain">Puts <code>/opt/homebrew/bin</code> on PATH, unless a base layer already has. It happens this early because the very next file looks for tmux, and tmux comes from Homebrew.</span></li>
+            </ol>
+          </section>
+
+          <section class="stage tone-green" data-label=".zshrc · interactive shells">
+            <h3>.zshrc <small>interactive shells</small></h3>
+            <ol>
+              <li data-step><strong>Jump into tmux</strong><span class="explain">If this is a fresh Terminal.app or Ghostty window, hand over to tmux straight away, before any expensive work. The shell inside tmux then runs this same list. More on this <a href="#tmux">below</a>.</span></li>
+              <li data-step><strong>Load the base layer's rc file</strong><span class="explain">If a <code>~/.zshrc</code> exists in the home folder, read it now. Same idea as the profile: theirs first, ours on top.</span></li>
+              <li data-step><strong>Start the plugin manager</strong><span class="explain">Loads zinit, which fetches and loads shell plugins. On a brand-new Mac it downloads itself first.</span></li>
+              <li data-step><strong>Register the handy functions</strong><span class="explain">Every file in <code>autoload/</code> becomes a command, such as <code>kp</code> or <code>path</code>. zsh only reads the file the first time you run it.</span></li>
+              <li data-step><strong>Read lib/, one topic per file</strong><span class="explain">Fourteen small files in alphabetical order: aliases, completion, history, the prompt and so on. The <a href="#lib">cast list</a> is below.</span></li>
+              <li data-step><strong>Switch on tab completion</strong><span class="explain">Builds the index of what Tab can complete. The index is saved and only rebuilt when it is more than twenty hours old, which is the difference between a few milliseconds and a few hundred.</span></li>
+              <li data-step><strong>Turn on syntax highlighting</strong><span class="explain">Colors commands as you type them. It goes last because the highlighter asks to be the final thing loaded.</span></li>
+              <li data-step><strong>Read ~/.zshrc.local</strong><span class="explain">An optional file for this Mac only. Read at the end, so it has the final word.</span></li>
+              <li data-step><strong>Tell the rest of macOS about PATH</strong><span class="explain">Hands the finished PATH to macOS itself, so apps opened from the Dock can find the same tools the terminal can.</span></li>
+            </ol>
+          </section>
+
+          <section class="stage tone-violet" data-label=".zlogin · after everything else">
+            <h3>.zlogin <small>after everything else</small></h3>
+            <ol>
+              <li data-step><strong>Tidy up in the background</strong><span class="explain">Compiles the completion index into a faster form. It runs detached from the shell, so it costs the shell nothing.</span></li>
+              <li data-step><strong>Draw the prompt, then load the rest</strong><span class="explain">The prompt appears. A moment later the plugins that were told to wait arrive quietly: suggestions as you type, history search and alias reminders.</span></li>
+            </ol>
+          </section>
+        </div>
+      </div>
+      <figcaption>
+        <span>Press Play, or select any step. Inside tmux the shell is not a login shell, so it reads <code>.zshenv</code> and <code>.zshrc</code> only.</span>
+      </figcaption>
+    </figure>
+
+    <h2 id="layers">Sitting on top of another setup</h2>
+    <p>On some Macs a separate tool installs its own <code>~/.zprofile</code> and <code>~/.zshrc</code>, and rewrites them now and then. Editing those files would be pointless, because the edits would be wiped. Replacing them would break whatever that tool set up.</p>
+    <p>So this repository does neither. Its own startup files live in <code>config/zsh</code>, and each one begins by loading the file of the same name from the home folder, if there is one.</p>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <ol class="layers">
+          <li class="seq tone-muted"><strong>zsh itself</strong><span>The shell macOS or Homebrew provides.</span></li>
+          <li class="seq tone-yellow"><strong>The base layer · ~/.zprofile, ~/.zshrc</strong><span>Somebody else's setup. Loaded first, never edited. On a personal Mac it simply is not there.</span></li>
+          <li class="seq tone-green"><strong>This repository · config/zsh</strong><span>Loaded second, so where the two disagree, this one wins.</span></li>
+          <li class="seq tone-cyan"><strong>This Mac only · ~/.zshrc.local</strong><span>Loaded last. The final word.</span></li>
+        </ol>
+        <p class="layers-note">↑ later layers win</p>
+      </div>
+      <figcaption>
+        <span>Each layer is loaded after the one beneath it, and later settings replace earlier ones.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h3>It asks what is there, never where it is</h3>
+    <p>Nothing in the shell config asks “is this a work Mac?”. It asks questions it can check: does this command exist, is this function already defined. The same files then do the right thing everywhere.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>If the shell finds…</th><th>…then this repository</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Node already wrapped by a base layer (<code>nvm</code>, <code>node</code> or <code>npm</code> are functions)</td><td>Hands Node over completely and changes nothing about it.</td></tr>
+          <tr><td>Suggestions-as-you-type already running</td><td>Does not load a second copy.</td></tr>
+          <tr><td>Another prompt installed (pure)</td><td>Switches it off cleanly before starting its own.</td></tr>
+          <tr><td>Another syntax highlighter loaded</td><td>Stands it down, so two highlighters never fight over the line.</td></tr>
+          <tr><td>Homebrew already set up</td><td>Keeps the order the base layer chose.</td></tr>
+          <tr><td>A tool that is not installed (<code>mise</code>, <code>fzf</code>, <code>starship</code>, <code>direnv</code>, <code>docker</code>)</td><td>Skips it silently. A missing tool is never an error.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="lib">The cast list in lib/</h2>
+    <p>The <code>.zshrc</code> file itself is short. The real settings are in <code>config/zsh/lib</code>, one file per topic, so it is obvious where a new setting belongs.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>What it is in charge of</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>1password.zsh</code></td><td>Points SSH at the 1Password agent. See <a href="keys.html">Keys and 1Password</a>.</td></tr>
+          <tr><td><code>alias.zsh</code></td><td>Short names such as <code>vim</code> for Neovim, and a reminder when you type out something that has an alias.</td></tr>
+          <tr><td><code>common.zsh</code></td><td>The core plugins, a handful of Prezto modules, and the default editor and pager.</td></tr>
+          <tr><td><code>completion.zsh</code></td><td>How the Tab menu looks and matches: ignores capitals, forgives typos, groups results.</td></tr>
+          <tr><td><code>direnv.zsh</code></td><td>Per-folder environment variables.</td></tr>
+          <tr><td><code>fzf.zsh</code></td><td>The fuzzy finder and its keys.</td></tr>
+          <tr><td><code>git.zsh</code></td><td>Nine git shortcuts. They are listed in the <a href="tools.html#git">Toolbox</a>.</td></tr>
+          <tr><td><code>history.zsh</code></td><td>A large history shared between all open shells, without duplicates or throwaway commands like a bare <code>ls</code>.</td></tr>
+          <tr><td><code>homebrew.zsh</code></td><td>Homebrew shortcuts, including <code>brewup</code> for the whole maintenance run.</td></tr>
+          <tr><td><code>mise.zsh</code></td><td>Language runtimes, chosen per project.</td></tr>
+          <tr><td><code>node.zsh</code></td><td>Where npm keeps its cache, unless a base layer owns Node.</td></tr>
+          <tr><td><code>orbstack.zsh</code></td><td>Tab completion for <code>docker</code> and <code>orb</code>.</td></tr>
+          <tr><td><code>prompt.zsh</code></td><td>The Starship prompt.</td></tr>
+          <tr><td><code>tmux.zsh</code></td><td>tmux shortcuts, and where its config file is.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="tmux">The tmux front door</h2>
+    <p>The very first thing <code>.zshrc</code> does is decide whether to step inside tmux. It only says yes when every one of these is true. An editor's built-in terminal, an SSH session or a script fails one of them and gets a plain shell.</p>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <ul class="gates">
+          <li class="seq"><span class="chip">A person is typing</span></li>
+          <li class="seq"><span class="chip">Not already inside tmux</span></li>
+          <li class="seq"><span class="chip">The window is Terminal.app or Ghostty</span></li>
+          <li class="seq"><span class="chip">No opt-out is set</span></li>
+          <li class="seq"><span class="chip">tmux is installed</span></li>
+        </ul>
+        <div class="outcomes">
+          <div class="outcome seq"><strong>No session yet</strong>Start one, named after your username.</div>
+          <div class="outcome seq tone-cyan"><strong>A session nobody is looking at</strong>Attach to it, and carry on where you left off.</div>
+          <div class="outcome seq tone-muted"><strong>A session open in another window</strong>Leave it alone. This window gets a plain shell, so a session is never stolen.</div>
+        </div>
+      </div>
+      <figcaption>
+        <span>Set <code>ZSH_NO_TMUX_AUTOSTART</code> to skip tmux for one shell.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h2 id="speed">Why it is fast</h2>
+    <p>A shell that takes two seconds to start is two seconds you wait hundreds of times a day. Startup time is treated as a feature here, with a number attached.</p>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <ul class="bars" style="--max: 2230">
+          <li><span class="label">2022, the old plugin manager</span><span class="track"><span class="fill tone-red" style="--v: 2230"></span></span><span class="value">2,230 ms</span></li>
+          <li><span class="label">2022, everything loaded up front</span><span class="track"><span class="fill tone-orange" style="--v: 730"></span></span><span class="value">730 ms</span></li>
+          <li><span class="label">The test's limit</span><span class="track"><span class="fill tone-yellow" style="--v: 200"></span></span><span class="value">200 ms</span></li>
+          <li><span class="label">Today</span><span class="track"><span class="fill" style="--v: 146"></span></span><span class="value">146 ms</span></li>
+        </ul>
+      </div>
+      <figcaption>
+        <span>Time to start an interactive login shell. The 2022 figures are from the README's historical log on an older Mac, so compare the shape, not the decimals.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <p>Three habits get it there, and a fourth keeps it there.</p>
+
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">Habit 1</span>
+        <h3>Wait until after the prompt</h3>
+        <p>Suggestions, history search and alias reminders are not needed to draw a prompt. They are loaded a moment after it appears. The alias reminder alone cost 47 ms when it loaded up front.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">Habit 2</span>
+        <h3>Remember the answer</h3>
+        <p>Tools like Starship, fzf, mise and direnv set themselves up by printing shell code. Asking each one on every start is slow, so <code>cached_init</code> saves the answer and only asks again after the tool is upgraded.</p>
+      </li>
+      <li class="card tone-yellow">
+        <span class="card-num">Habit 3</span>
+        <h3>Let Tab fetch it later</h3>
+        <p>Completions for <code>docker</code> and <code>orb</code> are saved as files that zsh only opens the first time you press Tab on that command.</p>
+      </li>
+      <li class="card tone-orange">
+        <span class="card-num">Habit 4</span>
+        <h3>Measure it, every time</h3>
+        <p>A test times real shell startups with <code>hyperfine</code> and fails if the fastest one is over 200 ms. A slow change cannot slip in unnoticed.</p>
+      </li>
+    </ul>
+
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <div class="lanes">
+          <div class="lane">
+            <span>Needed now</span>
+            <div class="lane-track"><span class="lane-block" style="--from: 0%; --to: 52%">the four startup files</span><span class="lane-mark" style="--from: 54%"></span></div>
+          </div>
+          <div class="lane">
+            <span>Can wait</span>
+            <div class="lane-track"><span class="lane-block tone-cyan" style="--from: 58%; --to: 86%; --at: 0.9s">deferred plugins</span><span class="lane-mark" style="--from: 54%"></span></div>
+          </div>
+          <div class="lane">
+            <span>Background</span>
+            <div class="lane-track"><span class="lane-block tone-violet" style="--from: 30%; --to: 96%; --at: 0.4s">background chores</span><span class="lane-mark" style="--from: 54%"></span></div>
+          </div>
+        </div>
+        <p class="lanes-legend"><b>┆</b> The dashed line is the moment the prompt appears. Only the top row has to finish before it.</p>
+      </div>
+      <figcaption>
+        <span>A sketch of where the work goes, not a measurement.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <nav class="pager" aria-label="Previous and next guide"></nav>
+  </main>
+
+  <footer class="site-footer">Describes the repository as it is on <code>main</code>. When the code changes, change the page that explains it.</footer>
+</body>
+</html>

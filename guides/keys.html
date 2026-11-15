@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keys and 1Password · Dotfiles guides</title>
+  <meta name="description" content="How SSH logins, commit signing and sudo all go through 1Password and Touch ID, with no private key on disk.">
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      const theme = localStorage.getItem("guides-theme");
+      if (theme) document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="stylesheet" href="assets/guide.css">
+  <script defer src="assets/guide.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">~</span> dotfiles</a>
+    <nav class="site-nav" aria-label="Guides"><a href="index.html">All guides</a></nav>
+    <button class="btn" type="button" data-theme-toggle hidden>Theme</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Guide 5 of 7 · Keys and 1Password</p>
+      <h1>Keys, 1Password and a fingerprint</h1>
+      <p class="lede">There is no private key file anywhere on these Macs. Logging in to servers, signing commits and running <code>sudo</code> all end at the same place: a Touch ID prompt.</p>
+    </section>
+
+    <h2 id="idea">The key never leaves the vault</h2>
+    <p>An SSH key proves who you are to a server, and to GitHub. The usual setup keeps that key as a file in <code>~/.ssh</code>, where any program running as you can read it. This repository's rule is stricter: <strong>no private keys on disk, ever</strong>.</p>
+
+    <div class="callout">
+      <p class="callout-title">In plain words</p>
+      <p>Most people keep the house key under the doormat. Here the key is locked in a safe (1Password) with a guard beside it (the 1Password agent). When something needs the key, the guard does not hand it over. The guard walks to the door, unlocks it, and comes back, after checking your fingerprint.</p>
+    </div>
+
+    <h2 id="three">Three jobs, one fingerprint</h2>
+
+    <!--
+      Each .relay is one chain, left to right: a node, a wire, a node. To change
+      a chain, edit, add or remove nodes and keep a wire between each pair.
+    -->
+    <figure class="fig" data-animate>
+      <div class="fig-body">
+        <p class="relay-title">Logging in to a server · ssh, git push</p>
+        <div class="relay">
+          <div class="relay-node seq tone-muted"><strong>ssh</strong><span>You connect to a server, or push to GitHub.</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq tone-cyan"><strong>ssh/config</strong><span>“For every host, ask the 1Password agent.”</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq"><strong>1Password</strong><span>Asks you to approve, with Touch ID where it is set up, then answers the server's challenge with the key.</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq tone-violet"><strong>The server</strong><span>Sees proof that you hold the key. Never sees the key.</span></div>
+        </div>
+
+        <p class="relay-title">Signing a commit · git commit</p>
+        <div class="relay">
+          <div class="relay-node seq tone-muted"><strong>git commit</strong><span>Signing is switched on for every commit.</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq tone-cyan"><strong>git config</strong><span>“Sign with SSH, using 1Password's signing program.”</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq"><strong>1Password</strong><span>Signs with the key named in <code>~/.gitconfig-user</code>.</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq tone-violet"><strong>The commit</strong><span>Carries a signature anyone can check.</span></div>
+        </div>
+
+        <p class="relay-title">Becoming administrator · sudo</p>
+        <div class="relay">
+          <div class="relay-node seq tone-muted"><strong>sudo</strong><span>A command needs administrator rights.</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq tone-cyan"><strong>sudo_local</strong><span>Apple's own hook for local sudo rules, written by <code>script/macos</code>.</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq tone-yellow"><strong>pam_reattach</strong><span>Reaches out of tmux to the screen, so the prompt can appear.</span></div>
+          <span class="wire seq" role="img" aria-label="then"></span>
+          <div class="relay-node seq"><strong>Touch ID</strong><span>A fingerprint instead of typing the password.</span></div>
+        </div>
+      </div>
+      <figcaption>
+        <span>Three different commands. Each one is routed to something that asks for your fingerprint.</span>
+        <button class="btn" type="button" data-replay>Replay</button>
+      </figcaption>
+    </figure>
+
+    <h2 id="ssh">Logging in: two doors to the same guard</h2>
+    <p>Programs find the agent in two different ways, so the repository sets both. Each covers programs the other misses.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Where</th><th>What it sets</th><th>Who it is for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ssh/config</code></td><td><code>IdentityAgent</code>, for every host</td><td>Anything that runs <code>ssh</code>, including apps that were never started from a shell.</td></tr>
+          <tr><td><code>config/zsh/lib/1password.zsh</code></td><td>The <code>SSH_AUTH_SOCK</code> variable</td><td>Tools that talk to an agent directly and never read the SSH config file.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout note">
+      <p class="callout-title">One exception</p>
+      <p>When you connect <em>to</em> one of these Macs over SSH, nobody is sitting at it to touch the sensor. Both settings notice the incoming session and step back, so the keys you brought with you from the other computer are used instead.</p>
+    </div>
+
+    <h3>The rest of the SSH settings</h3>
+    <ul>
+      <li><strong>This Mac's own hosts come first.</strong> <code>~/.ssh/config-local</code> is included at the top, because SSH keeps the first value it sees for each setting.</li>
+      <li><strong>Connections are shared.</strong> While one connection to a server is open, a second one reuses it and opens instantly.</li>
+      <li><strong>Short network drops are forgiven.</strong> A connection survives about five minutes of silence before it gives up.</li>
+      <li><strong>Unknown servers are questioned.</strong> SSH asks before trusting a server it has not seen before.</li>
+    </ul>
+
+    <h2 id="signing">Signing: proof a commit is yours</h2>
+    <p>Anyone can type any name into a commit. A signature is what proves a commit really came from you, and it is what puts the “Verified” badge on GitHub.</p>
+    <p>Signing is switched on for every commit in <code>config/git/config</code>. The one piece that differs per Mac is <em>which</em> key to sign with, and that lives in <code>~/.gitconfig-user</code>, the file you create by hand.</p>
+
+    <pre><code><span class="dim"># config/git/config, shared by every Mac</span>
+[gpg]
+  format = ssh
+[gpg "ssh"]
+  program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
+  allowedSignersFile = ~/.config/git/allowed_signers
+[commit]
+  gpgsign = true
+
+<span class="dim"># ~/.gitconfig-user, private to one Mac</span>
+[user]
+  signingkey = ssh-ed25519 AAAA...   <span class="dim"># the public half</span></code></pre>
+
+    <div class="callout warn">
+      <p class="callout-title">The one thing to remember</p>
+      <p>If <code>~/.gitconfig-user</code> is missing, git has no key to sign with and commits cannot be signed. It is the only file a new Mac has to be given by hand.</p>
+    </div>
+
+    <p>Checking works the other way round. <code>config/git/allowed_signers</code> lists the public keys this repository trusts, so <code>git log --show-signature</code> can say whether each commit was signed by one of them. Public keys are safe to publish, which is why that file is tracked.</p>
+
+    <h2 id="sudo">Touch ID for sudo</h2>
+    <p><code>script/macos</code> sets <code>sudo</code> up to accept a fingerprint. This replaces the password prompt. It does not remove the check: you still have to approve every time.</p>
+
+    <ul class="cards">
+      <li class="card">
+        <span class="card-num">Why a bridge</span>
+        <h3>tmux hides the screen</h3>
+        <p>A shell inside tmux cannot reach the desktop, so the fingerprint prompt would never appear. A small module called <code>pam_reattach</code> bridges back to it.</p>
+      </li>
+      <li class="card tone-orange">
+        <span class="card-num">Why a copy</span>
+        <h3>Only root may change it</h3>
+        <p>Anything <code>sudo</code> loads runs as root. So the module is copied to a folder only root can write to, and the script refuses if any folder on the way there could be changed by someone else.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">Upkeep</span>
+        <h3>Re-run after an upgrade</h3>
+        <p>After <code>brew upgrade pam-reattach</code>, run <code>script/macos</code> again to refresh the copy. <code>script/macos --check</code> reports when it has fallen behind.</p>
+      </li>
+    </ul>
+
+    <h2 id="public">A public repository with nothing to hide</h2>
+    <p>The repository is public, so three rules keep private things out of it.</p>
+    <ul>
+      <li><strong>Secrets are scanned for.</strong> The test suite runs a secret scanner over the whole git history.</li>
+      <li><strong>Only public keys are tracked.</strong> The private halves never leave 1Password.</li>
+      <li><strong>Private names stay local.</strong> Per-Mac files and machine-specific paths are kept out of git, as <a href="layout.html#local">Where files live</a> describes.</li>
+    </ul>
+
+    <nav class="pager" aria-label="Previous and next guide"></nav>
+  </main>
+
+  <footer class="site-footer">Describes the repository as it is on <code>main</code>. When the code changes, change the page that explains it.</footer>
+</body>
+</html>

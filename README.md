@@ -2,6 +2,15 @@
 
 These are my dotfiles. There are many others like them, but these ones are mine. My dotfiles are my best friends. They are my life. I must master them as I must master my life. Without me, my dotfiles are useless. Without my dotfiles, I am useless.
 
+## Guides
+
+Illustrated, plain-language explanations of what all of this does and how it
+works live in [`guides/`](guides/). They are plain HTML with no build step:
+
+```sh
+open guides/index.html
+```
+
 ## Installation
 
 To install, run the following command:
