@@ -3,8 +3,8 @@
 # Remove these dotfiles.
 #
 # By default this undoes what this repo installed and nothing else: the symlinks
-# in $HOME, the clone at ~/.dotfiles, the caches its shell config generates, and
-# the login shell that script/macos changed. Homebrew, everything the Brewfile
+# in $HOME, ~/.config and ~/.ssh, the clone at ~/.dotfiles, the caches its shell
+# config generates, and the login shell that script/macos changed. Homebrew, everything the Brewfile
 # installed, and the Command Line Tools are left alone: taking those out is a
 # good deal more than "remove these dotfiles" promises.
 #
@@ -13,7 +13,11 @@
 #
 # Not undone either way: the settings script/macos wrote, because their previous
 # values are recorded nowhere. Shell history under $XDG_DATA_HOME/zsh is also
-# left alone, being yours rather than ours.
+# left alone, being yours rather than ours, and so is everything in ~/.config
+# and ~/.ssh that is not a link into the clone.
+#
+# What a tool wrote inside a directory that is linked into the clone does go
+# with it: gh's record of the logged-in account, Homebrew's tap trust.
 set -e -o pipefail
 
 DEBUG=""
@@ -132,20 +136,32 @@ command_line_tools_dir() {
 [ "$USER" = "root" ] && abort "Run bootstrap as yourself, not root."
 groups | grep -qE "\b(admin)\b" || abort "Add $USER to the admin group."
 
+# A home set up by an older script/setup has ~/.config and ~/.ssh as links to
+# the clone's whole directories, so everything any tool keeps under them is
+# inside the clone and would be deleted with it. script/setup moves those files
+# out; until it has, there is no safe way to remove the clone.
+for dir in config ssh; do
+  if [ -L "$HOME/.$dir" ] && [ "$HOME/.$dir" -ef "$HOME/.dotfiles/$dir" ]; then
+    abort "$HOME/.$dir is a link to the whole of $HOME/.dotfiles/$dir, so removing" \
+      "the clone would delete every other tool's files under it. Run" \
+      "$HOME/.dotfiles/script/setup first, which moves them out, then this again."
+  fi
+done
+
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &
 
-echo "This removes these dotfiles: the symlinks in \$HOME, the clone at"
-echo "\$HOME/.dotfiles, the caches the shell config generates, and the login"
-echo "shell that script/macos set."
+echo "This removes these dotfiles: the symlinks in \$HOME, \$HOME/.config and"
+echo "\$HOME/.ssh, the clone at \$HOME/.dotfiles, the caches the shell config"
+echo "generates, and the login shell that script/macos set."
 if [ -n "$EVERYTHING" ]; then
   echo
   echo "--everything was given, so this will ALSO uninstall Homebrew, every"
   echo "package the Brewfile installed, and the Command Line Tools."
 fi
 echo
-echo "Left alone either way: the macOS settings script/macos wrote, and your"
-echo "shell history."
+echo "Left alone either way: the macOS settings script/macos wrote, your shell"
+echo "history, and other tools' files under \$HOME/.config and \$HOME/.ssh."
 echo
 
 read -r -p "Are you sure? [y/N] " response
@@ -171,9 +187,12 @@ log "Removing the clone and the links into it"
 # The links that resolve now and stop resolving once the clone is gone, which is
 # what makes them ours without a list of what was installed. One that is
 # already dangling -- pointing at a volume that is not mounted, say -- is
-# somebody else's, and is left alone.
+# somebody else's, and is left alone. Three places to look, because those are
+# the three script/setup links into.
 live_links=()
-for link in "$HOME"/.* "$HOME"/*; do
+for link in "$HOME"/.* "$HOME"/* \
+            "$HOME"/.config/.* "$HOME"/.config/* \
+            "$HOME"/.ssh/.* "$HOME"/.ssh/*; do
   if [ -L "$link" ] && [ -e "$link" ]; then
     live_links+=("$link")
   fi

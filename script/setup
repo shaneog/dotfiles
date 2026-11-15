@@ -2,8 +2,14 @@
 #
 # Install all dotfiles into the home directory.
 #
-# Every top-level entry becomes ~/.<name>, except the repo's own scaffolding.
-# Anything already at the target path is moved aside rather than deleted, and the
+# A top-level file becomes ~/.<name>. The two top-level directories, config and
+# ssh, become real directories -- ~/.config and ~/.ssh -- holding one link for
+# each entry git tracks directly beneath them: ~/.config/nvim, ~/.config/zsh,
+# ~/.ssh/config. Everything else in those directories belongs to whichever tool
+# wrote it, and stays outside the clone, where deleting or publishing the repo
+# cannot reach it.
+#
+# Anything already at a target path is moved aside rather than deleted, and the
 # externally managed shell files -- ~/.profile, ~/.bashrc, ~/.zprofile, ~/.zshrc
 # -- are never touched: they are sourced as a base layer from ours instead.
 set -euo pipefail
@@ -12,73 +18,128 @@ DOTFILESDIRREL="$(dirname "$0")"
 cd "$DOTFILESDIRREL"/.. || exit
 DOTFILESDIR=$(pwd -P)
 
-[ "$(uname -s)" = "Darwin" ] && export OSX=1 && export UNIX=1
-[ "$(uname -s)" = "Linux" ] && export LINUX=1 && export UNIX=1
+# One stamp for the whole run, so everything moved aside by it sorts together.
+STAMP="$(date +%Y%m%d%H%M%S)"
 
-for DOTFILE in *; do
-  HOMEFILE="$HOME/.$DOTFILE"
-  [ -d "$DOTFILE" ] && DOTFILE="$DOTFILE/"
-  DIRFILE="$DOTFILESDIR/$DOTFILE"
+abort() { echo "!!! $*" >&2; exit 1; }
 
-  echo "$DOTFILE" | grep -qE '(^script/$|^test/$|^Makefile$|\.txt$|\.md$)' && continue
+# Back up rather than delete: on any machine that has been used, the target
+# paths already hold something, and it may be the only copy.
+move_aside() {  # path
+  mv -v "$1" "$1.bak.$STAMP"
+}
 
-  # shellcheck disable=SC2001
-  echo "$DOTFILE" | grep -q '\.sh' \
-    && HOMEFILE="$HOME/.$(echo "$DOTFILE" | sed -e 's/\.sh//')"
-
-  # Never take over an ~/.ssh that holds a private key. On a machine where
-  # something else manages ssh -- a corporate setup, say -- replacing that
-  # directory with a symlink moves the key out of the path ssh looks in, and
-  # breaks authentication until it is put back.
-  if [ "$HOMEFILE" = "$HOME/.ssh" ] && [ ! -L "$HOMEFILE" ]
+link_into() {  # target in the clone, link path
+  if [ -L "$2" ] && [ "$2" -ef "$1" ]
   then
-    if ls "$HOMEFILE"/id_* >/dev/null 2>&1
+    echo "$2 == $1 (unchanged)"
+    return 0
+  fi
+  if [ -e "$2" ] || [ -L "$2" ]
+  then
+    move_aside "$2"
+  fi
+  ln -sv "$1" "$2"
+}
+
+# The entries git tracks directly under one of the clone's directories. The
+# index is the list of what is ours: a tool's state that turned up beside our
+# files is not in it, and neither is a directory nobody has `git add`ed yet.
+tracked_entries() {  # directory, relative to the clone
+  git -C "$DOTFILESDIR" ls-files -- "$1" | cut -d/ -f2 | sort -u
+}
+
+# Earlier versions of this script linked ~/.config and ~/.ssh to the clone's
+# whole directories, so every tool that wrote under them wrote into the clone.
+# Hand those files back: move what git does not track out to a real directory,
+# then put that directory where the link was. The staging name is fixed, so a
+# run that was interrupted is picked up where it stopped.
+unlink_whole_directory() {  # directory in the clone, its link in $HOME, tracked entries
+  local staging="$2.migrating" entry name
+  echo "$2 is a link to the whole of $1, moving other tools' files out of the clone"
+  mkdir -p "$staging"
+  for entry in "$1"/* "$1"/.[!.]* "$1"/..?*
+  do
+    # an unmatched pattern is left as it was written
+    [ -e "$entry" ] || [ -L "$entry" ] || continue
+    name="${entry##*/}"
+    if printf '%s\n' "$3" | grep -qxF -- "$name"
     then
-      echo "$HOMEFILE holds a private key and is managed elsewhere, leaving it alone"
       continue
     fi
-  fi
-
-  # Already pointing into the repo: leave it be, rather than `rm -r` a live
-  # directory (~/.config in particular, which other tools write into too)
-  if [ -L "$HOMEFILE" ] && [ "$HOMEFILE" -ef "$DIRFILE" ]
-  then
-    echo "$HOMEFILE == $DIRFILE (unchanged)"
-    continue
-  fi
-
-  if [ -n "${UNIX:-}" ]
-  then
-    if [ -L "$HOMEFILE" ] && ! [ -d "$DOTFILE" ]
+    if [ -e "$staging/$name" ] || [ -L "$staging/$name" ]
     then
-      ln -sfv "$DIRFILE" "$HOMEFILE"
-    else
-      # Back up rather than delete: on any machine that has been used,
-      # ~/.config and ~/.ssh already hold other tools' files, and an `rm -r`
-      # here would take them with it.
-      if [ -e "$HOMEFILE" ] || [ -L "$HOMEFILE" ]
-      then
-        mv -v "$HOMEFILE" "$HOMEFILE.bak.$(date +%Y%m%d%H%M%S)"
-      fi
-      ln -sv "$DIRFILE" "$HOMEFILE"
+      move_aside "$staging/$name"
     fi
+    mv -v "$entry" "$staging/$name"
+  done
+  rm "$2"
+  mv "$staging" "$2"
+}
+
+link_directory() {  # top-level directory name
+  local source="$DOTFILESDIR/$1" target="$HOME/.$1" entries entry created=""
+
+  entries="$(tracked_entries "$1")"
+  [ -n "$entries" ] || abort "git tracks nothing under $source, so there is nothing to link"
+
+  if [ -L "$target" ] && [ "$target" -ef "$source" ]
+  then
+    unlink_whole_directory "$source" "$target" "$entries"
+    created=1
   else
-    cp -rv "$DIRFILE" "$HOMEFILE"
+    # Never take over the files in an ~/.ssh that holds a private key. Where
+    # something else manages ssh -- a corporate setup, say -- its config is
+    # what names that key, and moving it aside breaks authentication until it
+    # is put back.
+    if [ "$1" = "ssh" ] && ls "$target"/id_* >/dev/null 2>&1
+    then
+      echo "$target holds a private key and is managed elsewhere, leaving it alone"
+      return 0
+    fi
+
+    if [ ! -d "$target" ]
+    then
+      if [ -e "$target" ] || [ -L "$target" ]
+      then
+        move_aside "$target"
+      fi
+      mkdir -p "$target"
+      created=1
+    fi
+  fi
+
+  # Only on a directory made here: the mode of one that was already there is
+  # somebody's decision.
+  if [ -n "$created" ] && [ "$1" = "ssh" ]
+  then
+    chmod 700 "$target"
+  fi
+
+  while IFS= read -r entry
+  do
+    link_into "$source/$entry" "$target/$entry"
+  done <<< "$entries"
+}
+
+for DOTFILE in *; do
+  echo "$DOTFILE" | grep -qE '(^script$|^test$|^Makefile$|\.txt$|\.md$)' && continue
+
+  if [ -d "$DOTFILE" ]
+  then
+    link_directory "$DOTFILE"
+  else
+    link_into "$DOTFILESDIR/$DOTFILE" "$HOME/.$DOTFILE"
   fi
 done
 
-# Symlink .zshenv. This is the entry point that sets ZDOTDIR, and the only
-# home-level shell file we own. Where something else already manages
-# ~/.profile, ~/.bashrc, ~/.zprofile and ~/.zshrc, those are sourced as a base
-# layer from our own .zprofile/.zshrc rather than replaced.
-if [ -e "$HOME/.zshenv" ] && [ ! -L "$HOME/.zshenv" ]
-then
-  mv -v "$HOME/.zshenv" "$HOME/.zshenv.bak.$(date +%Y%m%d%H%M%S)"
-fi
-ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
+# .zshenv is the entry point that sets ZDOTDIR, and the only home-level shell
+# file we own. Where something else already manages ~/.profile, ~/.bashrc,
+# ~/.zprofile and ~/.zshrc, those are sourced as a base layer from our own
+# .zprofile/.zshrc rather than replaced.
+link_into "$DOTFILESDIR/config/zsh/.zshenv" "$HOME/.zshenv"
 
 # Set up ssh/config-local, if it doesn't exist
 if [ ! -f "$HOME/.ssh/config-local" ]; then
   echo "# Machine specific SSH config file" > "$HOME/.ssh/config-local"
 fi
-

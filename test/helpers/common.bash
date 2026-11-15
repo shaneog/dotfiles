@@ -74,14 +74,24 @@ plugin_cache() {
   printf '%s' "$snapshot"
 }
 
-# A disposable $HOME with .config and .zshenv linked into the repo, i.e. what
+# Link the repo's config into the home at $1 the way script/setup does: a real
+# ~/.config holding one link for each entry git tracks, and ~/.zshenv.
+link_config() {
+  local entry
+  mkdir -p "$1/.config"
+  git -C "$REPO" ls-files -- config | cut -d/ -f2 | sort -u | while IFS= read -r entry; do
+    ln -s "$REPO/config/$entry" "$1/.config/$entry"
+  done
+  ln -s "$REPO/config/zsh/.zshenv" "$1/.zshenv"
+}
+
+# A disposable $HOME with the config linked into the repo, i.e. what
 # script/setup would have produced. Echoes the path.
 make_home() {
   local home
   home="$(mktemp -d)"
   guard_home "$home" || return 1
-  ln -s "$REPO/config" "$home/.config"
-  ln -s "$REPO/config/zsh/.zshenv" "$home/.zshenv"
+  link_config "$home"
   mkdir -p "$home/.cache" "$home/.local/share"
   local snapshot
   if snapshot="$(plugin_cache)"; then

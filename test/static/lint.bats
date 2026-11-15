@@ -64,7 +64,7 @@ load '../helpers/common'
 @test "tmux config loads without error" {
   # The config bootstraps TPM by cloning it, so hand it a throwaway HOME with a
   # stub already in place. Otherwise this "static" test clones plugins over
-  # the network -- into this repo, since ~/.config is a symlink to it.
+  # the network -- into this repo, since ~/.config/tmux is a link into it.
   local home="$BATS_TEST_TMPDIR/home"
   mkdir -p "$home/.config/tmux/plugins/tpm"
   printf '#!/bin/sh\nexit 0\n' > "$home/.config/tmux/plugins/tpm/tpm"
@@ -155,8 +155,9 @@ load '../helpers/common'
 }
 
 @test "no stray runtime state is lurking under config/" {
-  # ~/.config is a symlink into this repo, so tools write their state here.
-  # Anything new must be a deliberate decision: track it, or ignore it.
+  # The directories here are linked into ~/.config, so the tools they configure
+  # write their state here. Anything new must be a deliberate decision: track
+  # it, or ignore it.
   # Left alone, an allowlisted directory can silently accumulate state that a
   # broad `git add` would then publish.
   local stray
@@ -165,7 +166,6 @@ load '../helpers/common'
 }
 
 @test "every config entry is deliberately tracked or deliberately ignored" {
-  # ~/.config is a symlink into this repo, so tools create directories here.
   # config/* ignores everything by default, which is the safe direction for a
   # public repo -- but it also means a directory you meant to version is
   # silently absent. Require each entry to be classified by a rule of its own:
