@@ -43,6 +43,27 @@ call() {
   [ "$(wc -l < "$LOG" | tr -d ' ')" -eq 2 ]
 }
 
+@test "regenerates when the command now leads to another binary, even an older one" {
+  # Regression: only the binary's date was compared. Homebrew stamps a binary
+  # with the date of the upstream source, so a version installed today can be
+  # days older than the cache the last version wrote, and the cache stayed.
+  local cellar="$BATS_TEST_TMPDIR/cellar" v
+  for v in 1.0 2.0; do
+    mkdir -p "$cellar/$v"
+    printf '#!/bin/sh\necho called >> "$LOG"\necho "FAKETOOL_VERSION=%s"\n' "$v" > "$cellar/$v/faketool"
+    chmod +x "$cellar/$v/faketool"
+    touch -t 202001010000 "$cellar/$v/faketool"
+  done
+  ln -sf "$cellar/1.0/faketool" "$STUBS/faketool"
+  call >/dev/null
+  grep -q "FAKETOOL_VERSION=1.0" "$CACHE"
+  # The upgrade: the same command, a new directory, a binary older than the cache.
+  ln -sf "$cellar/2.0/faketool" "$STUBS/faketool"
+  call >/dev/null; call >/dev/null
+  grep -q "FAKETOOL_VERSION=2.0" "$CACHE" || { cat "$CACHE"; return 1; }
+  assert_equal "$(wc -l < "$LOG" | tr -d ' ')" "2" "times the tool was run"
+}
+
 @test "reports failure and caches nothing when the tool is absent" {
   run env -i HOME="$FAKE_HOME" PATH="/usr/bin:/bin" \
       XDG_CACHE_HOME="$FAKE_HOME/.cache" \

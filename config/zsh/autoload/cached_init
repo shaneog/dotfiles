@@ -23,14 +23,25 @@ REPLY=
 local dir=${XDG_CACHE_HOME:-$HOME/.cache}/zsh/init
 local file=$dir/$name.zsh
 
-# Regenerate when missing, empty, or older than the binary that produced it, so
-# an upgraded tool refreshes its own integration.
-if [[ ! -s $file || $bin -nt $file ]]; then
+# The cache opens with the binary it came from, symlinks resolved. Homebrew
+# keeps each version in a directory of its own and stamps the binary with the
+# date of the upstream source, not of the install, so a newer version can be
+# older than the cache: the path changing is what says it was upgraded. -nt
+# covers a tool replaced in place, which keeps its path.
+local stamp="# from ${bin:A}" first=
+[[ -s $file ]] && IFS= read -r first < $file
+
+# Regenerate when missing, empty, from another binary, or older than the binary,
+# so an upgraded tool refreshes its own integration.
+if [[ $first != $stamp || $bin -nt $file ]]; then
   mkdir -p $dir || return 1
+  # An empty init script is worse than none, so exit status alone is not enough.
+  local out
+  out="$("$@" 2>/dev/null)" && [[ -n $out ]] || return 1
   # Write via a temporary file: a reader must never see a half-written script,
-  # and a failed generation must not leave a broken cache behind.
+  # and a failed write must not leave a broken cache behind.
   local tmp=$file.$$
-  if ! "$@" > $tmp 2>/dev/null || [[ ! -s $tmp ]]; then
+  if ! print -r -- "$stamp"$'\n'"$out" > $tmp; then
     rm -f $tmp
     return 1
   fi

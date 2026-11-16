@@ -22,8 +22,9 @@ script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& fal
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
 config/zsh/lib/orbstack.zsh	s|^cached_completion docker|# cached_completion docker|	test/integration/startup.bats	CLI completions	a CLI completion stops being generated (docker: present everywhere the tests run)
 config/zsh/lib/homebrew.zsh	s|^alias brewup|# alias brewup|	test/integration/startup.bats	brew maintenance alias	the brew maintenance alias disappears
-config/zsh/autoload/cached_init	s|\[\[ ! -s $file \|\| $bin -nt $file \]\]|[[ ! -s $file ]]|	test/unit/cached_init.bats	regenerates when the tool is newer	an upgraded tool keeps the stale cache
-config/zsh/autoload/cached_init	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
+config/zsh/autoload/cached_init	s| \|\| $bin -nt $file \]\]| ]]|	test/unit/cached_init.bats	regenerates when the tool is newer	a tool replaced in place keeps the stale cache
+config/zsh/autoload/cached_init	s|\[\[ $first != $stamp \|\| |[[ ! -s $file \|\| |	test/unit/cached_init.bats	leads to another binary	a Homebrew upgrade keeps the last version's cache
+config/zsh/autoload/cached_init	s| && \[\[ -n $out \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
 config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/cached_completion.bats	writes the completion where compinit will find it	the completion is generated but never on fpath
 config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
 config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects
