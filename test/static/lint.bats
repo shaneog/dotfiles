@@ -228,6 +228,12 @@ for found in pin.finditer(open(sys.argv[1]).read()):
   echo "$output" | grep -qx shellcheck
 }
 
+@test "the opt-in Brewfile is parseable" {
+  run brew bundle list --cask --file "$REPO/Brewfile.desk"
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -qx elgato-stream-deck || { echo "$output"; return 1; }
+}
+
 @test "script/macos only touches known domains" {
   # nvram and pam are pseudo-domains: settings that are not a `defaults write`
   # but belong in the same table, so apply, --check and the tests stay one list.

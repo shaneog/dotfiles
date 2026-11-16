@@ -38,6 +38,7 @@ if ! command -v brew >/dev/null 2>&1; then
   SKIPPED="$SKIPPED brew"
   printf '  ----  not checked: brew is not installed\n'
 else
+  # Brewfile.desk is opt-in, and its entries rot the same way.
   while read -r kind name; do
     [ -n "$name" ] || continue
     case "$kind" in
@@ -63,7 +64,7 @@ EOF
       ok "$kind '$name'"
     fi
   done <<EOF
-$(grep -E "^(brew|cask) '" Brewfile | tr -d "'" )
+$(grep -hsE "^(brew|cask) '" Brewfile Brewfile.desk | tr -d "'" )
 EOF
 
   while read -r _ tap; do

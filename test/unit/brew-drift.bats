@@ -114,3 +114,21 @@ drift() {
   echo "$output" | grep -qi "not installed" \
     || { echo "a check that cannot run must say so: $output"; return 1; }
 }
+
+@test "brew-drift: what the opt-in Brewfile lists is not an undeclared extra" {
+  printf "cask 'stream-deck'\n" > "$FIX/Brewfile.desk"
+  stub_brew "$(printf 'fzf\ttrue')" "fzf" "$(printf '1password\nstream-deck')"
+  run drift
+  echo "$output" | grep -q "stream-deck" && { echo "an opt-in cask was reported: $output"; return 1; }
+  echo "$output" | grep -q "0 undeclared, 0 declared but absent" || { echo "$output"; return 1; }
+}
+
+@test "brew-drift: what the opt-in Brewfile lists is not absent where it was never installed" {
+  # Opting out is the point of the file, so a machine without these is not
+  # missing anything.
+  printf "brew 'desk-tool'\ncask 'stream-deck'\n" > "$FIX/Brewfile.desk"
+  stub_brew "$(printf 'fzf\ttrue')" "fzf" "1password"
+  run drift
+  echo "$output" | grep -q "0 undeclared, 0 declared but absent" \
+    || { echo "an opt-in entry was called absent: $output"; return 1; }
+}

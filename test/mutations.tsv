@@ -20,6 +20,9 @@ config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select
 script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comments() { cat; }|	test/unit/audit.bats	prose mentioning	the audit reads comments as invocations
 script/audit	s|^trap 'rm -rf "$SCRATCH"' EXIT|:|	test/unit/audit.bats	TMPDIR says	each audit leaves its working directory behind
 script/brew-drift	s|comm -13 "\$WORK/installed-formulae"|comm -13 "$WORK/requested-formulae"|	test/unit/brew-drift.bats	not called absent	dependencies get reported as missing
+script/brew-drift	s|comm -23 "\$WORK/installed-casks" "\$WORK/known-casks"|comm -23 "$WORK/installed-casks" "$WORK/declared-casks"|	test/unit/brew-drift.bats	not an undeclared extra	opt-in casks get reported as undeclared
+script/brew-drift	s|comm -13 "\$WORK/installed-casks" "\$WORK/declared-casks"|comm -13 "$WORK/installed-casks" "$WORK/known-casks"|	test/unit/brew-drift.bats	not absent where it was never installed	opt-in casks get reported as missing
+script/audit	s|Brewfile Brewfile.desk|Brewfile|	test/unit/audit.bats	opt-in Brewfile fails too	the opt-in Brewfile stops being checked upstream
 script/sweep	s|still_current < "$OUT" > "$OUT.new"|cp "$OUT" "$OUT.new"|	test/unit/sweep.bats	has moved	sweep resumes on line numbers alone and skips lines nothing has swept
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
 script/macos	s|^if \[ -z "\$CHECK_ONLY" \]; then$|if true; then|	test/unit/macos.bats	leaves System Settings open	--check closes System Settings on whoever has it open

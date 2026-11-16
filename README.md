@@ -135,6 +135,7 @@ it is pulled on whatever branch it has checked out.
 ```text
 .
 ├── Brewfile        formulae, casks and fonts, linked as ~/.Brewfile
+├── Brewfile.desk   apps for desk hardware, opt-in and not linked
 ├── config/         one entry per tool, each linked as ~/.config/<name>
 │   ├── gh/  ghostty/  git/  homebrew/  karabiner/  mise/  nvim/  tmux/
 │   ├── starship.toml
@@ -231,7 +232,7 @@ flowchart LR
 | **Environment** | direnv, with its hook cached so startup does not pay for it. |
 | **Keyboard** | Karabiner-Elements: Caps Lock is Control when held with another key, and Escape when tapped. |
 | **macOS** | A table of `defaults` in [`script/macos`](script/macos). `script/macos --check` reports the ones that are not applied, and changes nothing. |
-| **Packages** | The [`Brewfile`](Brewfile): command line tools, apps and Nerd Fonts. |
+| **Packages** | The [`Brewfile`](Brewfile): command line tools, apps and Nerd Fonts. [`Brewfile.desk`](Brewfile.desk) holds the apps for hardware only one desk has, and is installed by naming it: `brew bundle --file ~/.dotfiles/Brewfile.desk`. |
 
 The cheat sheet in the guides lists the
 [aliases and key bindings](https://ogrady.ie/dotfiles/tools.html).

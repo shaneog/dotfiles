@@ -146,6 +146,26 @@ EOF
   echo "$output" | grep -q "deprecated upstream" || { echo "$output"; return 1; }
 }
 
+@test "audit: a deprecated cask in the opt-in Brewfile fails too" {
+  printf "cask 'stream-deck'\n" > "$FIX/Brewfile.desk"
+  cat > "$STUBS/brew" <<'EOF'
+#!/bin/sh
+case "$1 $2" in
+  "info --json=v2")
+    case "$4" in stream-deck) deprecated=true ;; *) deprecated=false ;; esac
+    printf '{"formulae":[{"name":"%s","deprecated":false,"disabled":false}],' "$4"
+    printf '"casks":[{"token":"%s","deprecated":%s,"disabled":false,' "$4" "$deprecated"
+    printf '"deprecation_reason":"discontinued"}]}\n'
+    ;;
+  *) exit 0 ;;
+esac
+EOF
+  chmod +x "$STUBS/brew"
+  run audit
+  [ "$status" -eq 1 ] || { echo "expected a failure exit: $output"; return 1; }
+  echo "$output" | grep -q "cask 'stream-deck' is deprecated upstream" || { echo "$output"; return 1; }
+}
+
 @test "audit: a renamed token fails" {
   # brew answers with a different token than it was asked for, which is what a
   # rename looks like: windsurf -> devin-desktop.
