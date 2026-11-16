@@ -51,6 +51,8 @@ script/setup	s|^    mv -v "$entry" "$staging/$name"|    true|	test/integration/s
 script/setup	s|^    if printf '%s\\n' "$3" \| grep -qxF -- "$name"|    if false|	test/integration/setup.bats	gets its files back	our own tracked entries are moved out of the clone
 script/setup	s|local staging="$2.migrating"|local staging="$2.migrating.$$"|	test/integration/setup.bats	picked up where it stopped	an interrupted run strands the files it had already moved
 script/setup	s|^    chmod 700 "$target"|    true|	test/integration/setup.bats	private to its owner	a new ssh directory is left readable by everyone
+script/setup	s|^link_directory ssh$|&; for f in *; do if [ -f "$f" ]; then link_into "$DOTFILESDIR/$f" "$HOME/.$f"; fi; done|	test/integration/setup.bats	nothing else at the top of the clone	every file at the top of the clone is linked into home again
+script/setup	s|^link_into "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"|true|	test/integration/setup.bats	links each entry git tracks under config	the Brewfile is not linked, so brew bundle --global has nothing to read
 script/remove	s|^  if \[ -L "$HOME/.$dir" \] && \[ "$HOME/.$dir" -ef "$HOME/.dotfiles/$dir" \]; then|  if false; then|	test/unit/install-scripts.bats	remove refuses while	remove deletes every other tool's files along with the clone
 script/remove	s|^            "$HOME"/.config/.\* "$HOME"/.config/\* \\$|            \\|	test/unit/install-scripts.bats	leaves other dangling links alone	the links under the config directory survive as dangling
 config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.bats	every git config key	a git config key becomes one git silently ignores

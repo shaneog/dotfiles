@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# Install all dotfiles into the home directory.
+# Install the dotfiles into the home directory.
 #
-# A top-level file becomes ~/.<name>. The two top-level directories, config and
-# ssh, become real directories -- ~/.config and ~/.ssh -- holding one link for
-# each entry git tracks directly beneath them: ~/.config/nvim, ~/.config/zsh,
+# Three things in the clone are linked, and they are named at the foot of this
+# script: Brewfile, config and ssh. Brewfile becomes ~/.Brewfile. config and ssh
+# become real directories -- ~/.config and ~/.ssh -- holding one link for each
+# entry git tracks directly beneath them: ~/.config/nvim, ~/.config/zsh,
 # ~/.ssh/config. Everything else in those directories belongs to whichever tool
 # wrote it, and stays outside the clone, where deleting or publishing the repo
 # cannot reach it.
@@ -122,16 +123,13 @@ link_directory() {  # top-level directory name
   done <<< "$entries"
 }
 
-for DOTFILE in *; do
-  echo "$DOTFILE" | grep -qE '(^script$|^test$|^guides$|^Makefile$|\.txt$|\.md$)' && continue
-
-  if [ -d "$DOTFILE" ]
-  then
-    link_directory "$DOTFILE"
-  else
-    link_into "$DOTFILESDIR/$DOTFILE" "$HOME/.$DOTFILE"
-  fi
-done
+# What reaches $HOME, by name. Everything else at the top of the clone is the
+# repo's own -- scripts, tests, guides, whatever is added next -- and a script
+# that writes into $HOME should not pick it up by default. A new top-level
+# dotfile needs a line here.
+link_into "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"
+link_directory config
+link_directory ssh
 
 # .zshenv is the entry point that sets ZDOTDIR, and the only home-level shell
 # file we own. Where something else already manages ~/.profile, ~/.bashrc,

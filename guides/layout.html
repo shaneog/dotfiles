@@ -110,12 +110,12 @@
     </figure>
 
     <h3>The rule behind the map</h3>
-    <p><code>script/setup</code> walks the top level of the repository and does one of two things with what it finds.</p>
+    <p><code>script/setup</code> names three things in the repository, and those are the only three it links.</p>
     <ul>
-      <li><strong>A file</strong> becomes a signpost named <code>~/.&lt;name&gt;</code>. That is how <code>Brewfile</code> becomes <code>~/.Brewfile</code>.</li>
-      <li><strong>A folder</strong>, which means <code>config</code> and <code>ssh</code>, becomes a <em>real</em> folder, <code>~/.config</code> or <code>~/.ssh</code>. Inside it goes one signpost for each thing git tracks directly inside the repository's folder.</li>
+      <li><strong><code>Brewfile</code></strong> becomes a signpost named <code>~/.Brewfile</code>.</li>
+      <li><strong><code>config</code> and <code>ssh</code></strong> each become a <em>real</em> folder, <code>~/.config</code> or <code>~/.ssh</code>. Inside it goes one signpost for each thing git tracks directly inside the repository's folder.</li>
     </ul>
-    <p>Then it adds <code>~/.zshenv</code>, because that one file has to sit in the home folder for zsh to find it. The repository's own scaffolding is skipped, so it never shows up in your home folder: <code>script/</code>, <code>test/</code>, <code>guides/</code>, the <code>Makefile</code> and anything ending in <code>.md</code> or <code>.txt</code>.</p>
+    <p>Then it adds <code>~/.zshenv</code>, because that one file has to sit in the home folder for zsh to find it. Nothing else at the top of the repository is on the list, so <code>script/</code>, <code>test/</code>, <code>guides/</code>, the <code>Makefile</code> and anything added later never show up in your home folder.</p>
 
     <h3>Why one signpost per tool</h3>
     <p>Dozens of apps keep their settings in <code>~/.config</code>, and most of them have nothing to do with this repository. With one signpost per tool, their files stay in your home folder. They cannot be published by accident, and removing the dotfiles cannot delete them.</p>

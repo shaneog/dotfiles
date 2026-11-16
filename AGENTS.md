@@ -103,11 +103,11 @@ README's Tests section says what each is for.
   that causes the failure and the test that must notice. Put it beside the rows
   for the same file. At the end of the file, every open branch collides on the
   same line.
-- **A new top-level file or directory is linked into `$HOME` as `~/.<name>`**
-  unless the skip pattern in `script/setup` names it. Add it there, and to the
-  lists in `test/integration/setup.bats` ("does not link the repo's own
-  scaffolding") and `.github/workflows/provision.yml` ("Repo scaffolding stays
-  out of home"). `*.md` and `*.txt` are skipped already.
+- **A new top-level file or directory stays out of `$HOME`.** `script/setup`
+  links the three it names: `Brewfile`, `config` and `ssh`. A fourth needs a
+  line there, and the two lists of what a home holds afterwards need it too:
+  `test/integration/setup.bats` ("links the three things it names") and
+  `.github/workflows/provision.yml` ("Nothing else from the repo reaches home").
 - **A change in behaviour updates `README.md` and the matching page under
   `guides/`** in the same pull request. The guides are published, and no test
   compares them with the code.

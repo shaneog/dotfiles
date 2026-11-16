@@ -74,11 +74,13 @@ jobs:
           [ "$kept" = "keep me" ] || { echo "content was destroyed"; exit 1; }
           [ ! -e config/some-other-tool ] || { echo "it is inside the repo"; exit 1; }
 
-      - name: Repo scaffolding stays out of home
+      # The whole of the home, so that nothing has to be added here when the
+      # repo gains a top-level entry: what was seeded, and what setup names.
+      - name: Nothing else from the repo reaches home
         run: |
-          for f in .test .Makefile .script .guides .github; do
-            [ ! -e "$HOME_UNDER_TEST/$f" ] || { echo "setup linked $f"; exit 1; }
-          done
+          found="$(ls -A "$HOME_UNDER_TEST" | LC_ALL=C sort | tr '\n' ' ')"
+          expected=".Brewfile .bashrc .config .profile .ssh .zprofile .zshenv .zshrc "
+          [ "$found" = "$expected" ] || { echo "the home holds: $found"; exit 1; }
 
       - name: Running it again changes nothing
         run: |

@@ -133,12 +133,21 @@ snapshot() {
     "the clone's config directory"
 }
 
-@test "does not link the repo's own scaffolding into home" {
+@test "links the three things it names, and nothing else at the top of the clone" {
+  # Regression: setup linked every top-level entry that a skip pattern did not
+  # name, so a file added to the repo turned up in home as ~/.<name> until
+  # somebody remembered the pattern.
+  make_clone
+  mkdir -p "$CLONE/test" "$CLONE/some-new-directory"
+  echo "# ours" > "$CLONE/test/a.bats"
+  echo "# ours" > "$CLONE/some-new-directory/file"
+  echo "# ours" > "$CLONE/Makefile"
+  echo "# ours" > "$CLONE/some-new-file"
+  git -C "$CLONE" add -A
   run_setup
-  local f
-  for f in .test .Makefile .script .guides .README.md .LICENSE.md; do
-    [ ! -e "$FAKE_HOME/$f" ] || { echo "setup linked $f"; return 1; }
-  done
+  # .dotfiles is the clone itself, which make_clone keeps in the home.
+  assert_equal "$(ls -A "$FAKE_HOME" | LC_ALL=C sort | tr '\n' ' ')" \
+    ".Brewfile .config .dotfiles .ssh .zshenv " "what setup left in the home"
 }
 
 @test "does not link what git does not track" {
