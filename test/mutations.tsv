@@ -39,6 +39,11 @@ config/zsh/lib/common.zsh	s|^ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=|: |	test/integrati
 config/zsh/lib/common.zsh	s|^unsetopt CLOBBER.*|:|	test/integration/startup.bats	options are set	> overwrites a file without being asked twice
 config/zsh/lib/common.zsh	s|^setopt AUTO_PUSHD.*|:|	test/integration/startup.bats	options are set	cd - and the directory stack have nothing to go back to
 config/zsh/lib/common.zsh	s|^export LESS_TERMCAP_md=.*|:|	test/unit/guards.bats	man pages are drawn in colour	man pages lose their colour
+config/zsh/lib/common.zsh	s|^if (( ! $+functions\[_zsh_autosuggest_start\] )) \\$|if true \\|	test/unit/guards.bats	skips its autosuggestions when already loaded	two autosuggestion plugins fight over the line editor
+config/zsh/lib/common.zsh	s|^  source $HOMEBREW_PREFIX/share/zsh-autosuggestions/.*|  :|	test/integration/editor.bats	is suggested, and End takes it	nothing is suggested as you type
+config/zsh/lib/common.zsh	s|\&\& fpath+=(|\&\& fpath=(|	test/unit/guards.bats	go behind what is already on fpath	the extra completions replace every other completion
+config/zsh/lib/common.zsh	s|\&\& fpath+=(.*|\&\& :|	test/integration/startup.bats	keeps to one side	the extra completions are installed and never found
+config/zsh/lib/common.zsh	s|^  \&\& \[\[ -r $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh \]\]; then|; then|	test/unit/guards.bats	skipped without a word	a machine without the formula gets an error from every shell
 config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/cached_completion.bats	writes the completion where compinit will find it	the completion is generated but never on fpath
 config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
 config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects
@@ -95,15 +100,15 @@ config/zsh/.zshenv	s|^typeset -gU cdpath fpath path|# gone|	test/integration/sta
 config/zsh/.zshrc	s|^if (( $+commands\[launchctl\] && SHLVL <= 1 + $+TMUX )); then|if (( $+commands[launchctl] )); then|	test/integration/startup.bats	hands its PATH to GUI apps	a nested shell's PATH becomes the one every GUI app gets
 config/zsh/.zshrc	s|SHLVL <= 1 + $+TMUX|SHLVL <= 1|	test/integration/startup.bats	hands its PATH to GUI apps	tmux panes never refresh the PATH GUI apps get
 test/helpers/common.bash	s|TERM=xterm-256color SHLVL=1 |TERM=xterm-256color |	test/integration/startup.bats	suite's own shells	running the tests on a Mac leaves GUI apps with a PATH in a deleted temp home
-test/integration/cold-cache.bats	s|TERM=xterm-256color SHLVL=1 |TERM=xterm-256color |	test/static/lint.bats	started one level down	a test that builds its own shell hands a throwaway PATH to launchd
 config/zsh/.zprofile	s|^export LESSCHARSET=utf-8|LESSCHARSET=utf-8|	test/integration/startup.bats	reach child processes	less never sees the charset it was given
 config/zsh/.zprofile	s|^  export LANG=|  LANG=|	test/integration/startup.bats	reach child processes	a shell started without LANG keeps the locale to itself
 config/zsh/lib/history.zsh	s|^HISTORY_IGNORE=|HISTIGNORE=|	test/integration/startup.bats	never reach the history file	the ignore list goes back to a variable zsh does not read
 config/zsh/lib/history.zsh	s|^setopt SHARE_HISTORY|setopt INC_APPEND_HISTORY SHARE_HISTORY|	test/integration/startup.bats	without a second option	two options both append each command to the history file
 config/zsh/lib/history.zsh	s|^unsetopt HIST_EXPIRE_DUPS_FIRST|setopt HIST_EXPIRE_DUPS_FIRST|	test/integration/startup.bats	history file longer	a long history file adds seconds to every shell's startup
 config/zsh/lib/history.zsh	s|^HISTSIZE=.*|HISTSIZE=50000|	test/integration/startup.bats	history file longer	half of the history file is kept and can never be recalled
-config/zsh/lib/history.zsh	s| ver"$DOTFILES_PINS\[zsh-users/zsh-history-substring-search\]"||	test/static/lint.bats	every plugin zinit loads is pinned	a plugin installs at whatever is newest that day
 config/zsh/lib/history.zsh	s|history-substring-search-up$|up-line-or-history|	test/integration/editor.bats	Up searches history	Up walks back through every command instead of the ones that match
+config/zsh/lib/history.zsh	s|^if \[\[ -r $HOMEBREW_PREFIX/share/zsh-history-substring-search/.*|if true; then|	test/unit/guards.bats	skipped without a word	a machine without the formula gets an error from every shell
+config/zsh/lib/history.zsh	s|^  source $HOMEBREW_PREFIX/share/zsh-history-substring-search/.*|  :|	test/integration/editor.bats	Up searches history	Up is bound to a search that was never loaded
 script/macos	s|.*sed -n .*pam_tid.*|grep "^#auth" "$PAM_SUDO_TEMPLATE"|	test/unit/macos.bats	Apple's hook	the pam_tid line is copied still commented out
 script/macos	s:| sudo tee "$PAM_SUDO_LOCAL" >/dev/null:> "$PAM_SUDO_LOCAL":	test/unit/macos.bats	Apple's hook	the PAM file is written without sudo
 script/macos	s|.*if \[ -f "$BACKUP_DIR/sudo_local" \]; then|if false; then|	test/unit/macos.bats	existing sudo_local is kept	a pre-existing PAM file is recorded but never restorable
@@ -148,13 +153,6 @@ script/update	s|^    not_done="$not_done brewfile"|    :|	test/unit/update.bats	
 config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
 config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integration/startup.bats	twice is a no-op	the double-source guard goes
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
-config/zsh/.zshrc	s|^autoload -Uz "$ZDOTDIR/autoload/sync_pins" && sync_pins|:|	test/integration/startup.bats	moves a plugin that is installed	a changed pin never reaches a machine that already has the plugin
-config/zsh/.zshrc	s|"$ZDOTDIR/autoload/sync_pins"|sync_pins|	test/integration/startup.bats	moves a plugin that is installed	a base layer that replaces fpath hides the function that moves the pins
-config/zsh/autoload/sync_pins	s|git -C $dir checkout -q --detach $want|true|	test/unit/sync_pins.bats	moves a plugin installed at another commit	a plugin is announced as moved and left where it was
-config/zsh/autoload/sync_pins	s#|| git -C $dir fetch -q origin $want }#}#	test/unit/sync_pins.bats	has not seen yet	a pin newer than the install is never fetched
-config/zsh/autoload/sync_pins	s#|| print -ru2 -- "Could not move.*#|| true#	test/unit/sync_pins.bats	when the pin cannot be fetched	a pin that cannot be reached is skipped without a word
-config/zsh/pins.zsh	s|^\(  zsh-users/zsh-completions .*\)  # master$|\1|	test/static/lint.bats	Renovate reads the same pins	a pin loses the branch Renovate needs and is never updated
-.github/renovate.json	s|\[0-9a-f\]{40}|[0-9a-f]{41}|	test/static/lint.bats	Renovate reads the same pins	Renovate's pattern matches no pin at all
 config/zsh/lib/git.zsh	s|^alias gco=.*|# gone|	test/integration/startup.bats	git aliases in daily use	a git alias in daily use disappears
 config/zsh/lib/git.zsh	s|--force-with-lease|--force|	test/integration/startup.bats	git aliases in daily use	gpf force-pushes without checking the remote first
 config/zsh/lib/alias.zsh	s|commands\[ls\] == /bin/ls|commands[ls] == *|	test/unit/guards.bats	any other ls	GNU ls is given -G, which hides the group column and colours nothing
@@ -162,6 +160,9 @@ config/zsh/lib/alias.zsh	s|^  alias ls='ls -G'|  :|	test/unit/guards.bats	ls mac
 config/zsh/lib/alias.zsh	s|^alias find='noglob find'|:|	test/integration/startup.bats	everyday commands	find . -name *.md finds nothing once a file here matches
 config/zsh/lib/alias.zsh	s|^alias mkdir='mkdir -p'|:|	test/integration/startup.bats	everyday commands	mkdir a/b/c fails where it used to make all three
 config/zsh/lib/alias.zsh	s|^(( $+commands\[open\] )) \&\& ||	test/unit/guards.bats	o opens things	o names a command that is not there
+config/zsh/lib/alias.zsh	s|^  \&\& source $HOMEBREW_PREFIX/share/zsh-you-should-use/.*|  \&\& :|	test/integration/startup.bats	gets a reminder	no reminder when a command has an alias
+config/zsh/lib/alias.zsh	s|^\[\[ -r $HOMEBREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh \]\] \\$|true \\|	test/unit/guards.bats	skipped without a word	a machine without the formula gets an error from every shell
+Brewfile	s|^brew 'zsh-you-should-use'$|# gone|	test/static/lint.bats	is a formula the Brewfile installs	a plugin the shell reads is installed by nothing, and silently absent
 config/zsh/lib/editor.zsh	s|^bindkey -e$|:|	test/integration/editor.bats	still edits with the emacs keys	a tmux pane edits with the vi keys, because EDITOR is nvim
 config/zsh/lib/editor.zsh	s|^bindkey -d$|:|	test/integration/startup.bats	keys a base layer bound	a key means one thing over a base layer and another without
 config/zsh/lib/editor.zsh	s|^WORDCHARS=.*|:|	test/integration/editor.bats	stops at each part of a path	deleting a word takes the whole path with it

@@ -3,8 +3,15 @@
 ##
 # Plugins
 ##
-zinit ice ver"$DOTFILES_PINS[zsh-users/zsh-completions]"
-zinit light zsh-users/zsh-completions
+
+# The zsh plugins are Homebrew formulae, and are read from where it puts them.
+# Each is guarded on its file, so a machine without one starts without it.
+
+# More completions. Homebrew keeps these out of site-functions, so that they
+# never shadow a completion a tool installs for itself; on fpath here, behind
+# those, before .zshrc runs compinit.
+[[ -d $HOMEBREW_PREFIX/share/zsh-completions ]] \
+  && fpath+=($HOMEBREW_PREFIX/share/zsh-completions)
 
 # Highlighting is zsh-patina's, activated at the end of .zshrc. A base layer may
 # load zsh-syntax-highlighting on the same ZLE hook, which is not ours to
@@ -12,11 +19,9 @@ zinit light zsh-users/zsh-completions
 #
 # Autosuggestions are a different widget, and still ours unless something else
 # got there first -- two of those fight over the line editor just the same.
-if (( ! $+functions[_zsh_autosuggest_start] )); then
-	# atload starts it by hand: deferred loading misses the precmd hook it
-	# normally relies on.
-	zinit ice wait lucid ver"$DOTFILES_PINS[zsh-users/zsh-autosuggestions]" atload"_zsh_autosuggest_start"
-	zinit light zsh-users/zsh-autosuggestions
+if (( ! $+functions[_zsh_autosuggest_start] )) \
+  && [[ -r $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+  source $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 fi
 
 # The plugin's default is colour 8, the usual dim grey. Gotham makes that slot a

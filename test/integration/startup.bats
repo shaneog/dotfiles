@@ -240,8 +240,6 @@ STUB
   ln -s "$cfg" "$home/.config"
   ln -s "$cfg/zsh/.zshenv" "$home/.zshenv"
   mkdir -p "$home/.cache" "$home/.local/share"
-  local snapshot
-  snapshot="$(plugin_cache)" && ln -s "$snapshot" "$home/.local/share/zinit"
 
   _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 \
@@ -286,16 +284,15 @@ STUB
     || { echo "the local zshrc did not override the config"; return 1; }
 }
 
-@test "the deferred alias-tips plugin actually arrives" {
-  # Loaded with zinit turbo, so it appears only after the first prompt, which
-  # makes silence its failure mode: the feature would simply never show up.
-  # Bursting the scheduler is how a non-interactive shell reaches that point.
-  local home; home="$(make_home)"
-  run run_login_shell "$home" '@zinit-scheduler burst >/dev/null 2>&1
-    print "loaded=$+functions[_check_aliases] hooked=$preexec_functions[(r)_check_aliases]"'
-  guard_home "$home" && rm -rf "$home"
-  echo "$output" | grep -q "loaded=1 hooked=_check_aliases" \
-    || { echo "the deferred plugin never loaded: $output"; return 1; }
+@test "typing out a command that has an alias gets a reminder" {
+  # What the plugin is for, asked of it directly: the hook it puts in front of
+  # every command, given one of the git aliases spelled out.
+  needs_plugin zsh-you-should-use
+  run run_login_shell "$HOME_WITHOUT" 'print "hooked=$preexec_functions[(r)_check_aliases]"
+    _check_aliases "git push" "git push" 2>&1; _flush_ysu_buffer 2>&1'
+  assert_contains "$output" "hooked=_check_aliases"
+  assert_contains "$output" "Found existing alias for"
+  assert_contains "$output" "gp"
 }
 
 @test "zsh-patina is the only syntax highlighter" {
@@ -308,18 +305,28 @@ STUB
     || { echo "highlighting is not solely patina's: $output"; return 1; }
 }
 
-@test "everything deferred to after the first prompt actually arrives" {
-  # Three things load via zinit turbo to keep them off the critical path. Their
-  # failure mode is silence -- no error, the feature simply never appears -- so
-  # each one is asserted here. Bursting the scheduler is how a non-interactive
-  # shell reaches the point a real one reaches after drawing its prompt.
-  local home; home="$(make_home)"
-  run run_login_shell "$home" '@zinit-scheduler burst >/dev/null 2>&1
-    print "autosuggest=$+functions[_zsh_autosuggest_start]"
-    print "history_binding=$(bindkey -M emacs "^P" | grep -c history-substring-search-up)"'
-  guard_home "$home" && rm -rf "$home"
-  echo "$output" | grep -q "autosuggest=1"     || { echo "autosuggestions never arrived: $output"; return 1; }
-  echo "$output" | grep -q "history_binding=1" || { echo "history bindings never arrived: $output"; return 1; }
+@test "the completions Homebrew keeps to one side are found" {
+  # zsh has no completion for yarn of its own, so this one can only have come
+  # from the zsh-completions formula.
+  needs_plugin zsh-completions
+  run run_login_shell "$HOME_WITHOUT" 'print "yarn=$_comps[yarn]"'
+  assert_contains "$output" "yarn=_yarn"
+}
+
+@test "the extra completions are still found once the index is rebuilt" {
+  # An index more than twenty hours old is rebuilt by a compinit that looks at
+  # who may write to each directory, and leaves out any it does not trust
+  # without a word. The first index is built with no such look, so the
+  # completions would be there for a day and then gone.
+  needs_plugin zsh-completions
+  local dump
+  dump="$(run_login_shell "$HOME_WITHOUT" 'print -r -- $ZSH_COMPDUMP' | tail -1)"
+  [ -s "$dump" ] || { echo "the first shell wrote no index at: $dump"; return 1; }
+  touch -t 202001010000 "$dump"
+  run run_login_shell "$HOME_WITHOUT" 'print "yarn=$_comps[yarn]"'
+  assert_contains "$output" "yarn=_yarn"
+  [ -n "$(find "$dump" -newermt 2021-01-01 2>/dev/null)" ] \
+    || { echo "the index was not rebuilt, so this checked nothing"; return 1; }
 }
 
 @test "a suggestion is drawn in a colour the terminal profile can show" {
@@ -329,51 +336,13 @@ STUB
   # the plugin itself still draws on this repo's palette.
   local home style
   for home in "$HOME_WITHOUT" "$HOME_WITH"; do
-    run run_login_shell "$home" '@zinit-scheduler burst >/dev/null 2>&1
-      print "style=$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE"'
+    run run_login_shell "$home" 'print "style=$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE"'
     style="$(echo "$output" | sed -n 's/^style=//p')"
     case "$style" in
       fg=0|fg=8|fg=10|fg=12|"")
         echo "suggestions are drawn in '$style' in $home: $output"; return 1 ;;
     esac
   done
-}
-
-@test "what a shell runs is what pins.zsh names" {
-  run_login_shell "$HOME_WITHOUT" 'true' >/dev/null 2>&1
-  # HEAD holds the commit when one is checked out, and a branch's name otherwise.
-  local zinit="$HOME_WITHOUT/.local/share/zinit" repo commit count=0
-  while read -r repo commit; do
-    assert_equal "$(cat "$(pin_checkout "$zinit" "$repo")/.git/HEAD")" "$commit" \
-      "what $repo has checked out"
-    count=$((count + 1))
-  done < <(pins)
-  [ "$count" -ge 5 ] || { echo "only $count pins were checked"; return 1; }
-}
-
-@test "a shell moves a plugin that is installed at another commit to its pin" {
-  # How a merged pin change reaches a machine that already has the plugin.
-  # In a copy of the plugin cache, since the other tests share the snapshot.
-  local home cache plugin
-  home="$(make_home)"
-  cache="$(plugin_cache)" || { echo "there is no plugin cache to copy"; return 1; }
-  rm "$home/.local/share/zinit"
-  cp -R "$cache" "$home/.local/share/zinit"
-  plugin="$(pin_checkout "$home/.local/share/zinit" zsh-users/zsh-autosuggestions)"
-  # One commit past wherever it is: certainly not the pin.
-  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
-    git -C "$plugin" -c user.name=tester -c user.email=tester@example.com \
-    commit -q --allow-empty -m "not the pin"
-
-  # Under a base layer whose rc file sets fpath for itself, as a managed one
-  # may: the function that does the moving has to be found all the same.
-  echo 'fpath=(${fpath:#*/zsh/autoload})' > "$home/.zshrc"
-
-  run --separate-stderr run_login_shell "$home" 'true'
-  local now; now="$(git -C "$plugin" rev-parse HEAD)"
-  guard_home "$home" && rm -rf "$home"
-  assert_equal "$now" "$(pinned_commit zsh-users/zsh-autosuggestions)" "the commit the plugin is at"
-  assert_contains "$output" "Moving zsh-users/zsh-autosuggestions to its pinned commit"
 }
 
 @test "CLI completions are generated from the installed binaries" {

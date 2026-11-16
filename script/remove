@@ -178,6 +178,8 @@ sudo_askpass dscl . -create "/Users/$USER" UserShell "/bin/zsh"
 
 log "Removing the caches this config generates"
 rm -rf "$HOME/.Brewfile.lock.json"
+# zinit, prezto and fsh are from before the plugins were Homebrew formulae. A
+# machine set up then still has them.
 rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/zinit"
 for cache in zsh zinit prezto fsh starship; do
   rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/$cache"

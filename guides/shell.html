@@ -80,9 +80,8 @@
             <ol>
               <li data-step><strong>Jump into tmux</strong><span class="explain">If this is a fresh Terminal.app or Ghostty window, hand over to tmux straight away, before any expensive work. The shell inside tmux then runs this same list. More on this <a href="#tmux">below</a>.</span></li>
               <li data-step><strong>Load the base layer's rc file</strong><span class="explain">If a <code>~/.zshrc</code> exists in the home folder, read it now. Same idea as the profile: theirs first, ours on top.</span></li>
-              <li data-step><strong>Start the plugin manager</strong><span class="explain">Loads zinit, which fetches and loads shell plugins, each at the exact commit listed in <code>pins.zsh</code>. On a brand-new Mac it downloads itself first. When a listed commit has changed since the last shell, what is installed is moved to it here, once.</span></li>
               <li data-step><strong>Register the handy functions</strong><span class="explain">Every file in <code>autoload/</code> becomes a command, such as <code>kp</code> or <code>path</code>. zsh only reads the file the first time you run it.</span></li>
-              <li data-step><strong>Read lib/, one topic per file</strong><span class="explain">Sixteen small files in alphabetical order: aliases, completion, history, the prompt and so on. The <a href="#lib">cast list</a> is below.</span></li>
+              <li data-step><strong>Read lib/, one topic per file</strong><span class="explain">Sixteen small files in alphabetical order: aliases, completion, history, the prompt and so on. Three of them read a plugin that Homebrew installed: suggestions as you type, history search and alias reminders. The <a href="#lib">cast list</a> is below.</span></li>
               <li data-step><strong>Switch on tab completion</strong><span class="explain">Builds the index of what Tab can complete. The index is saved and only rebuilt when it is more than twenty hours old, which is the difference between a few milliseconds and a few hundred.</span></li>
               <li data-step><strong>Turn on syntax highlighting</strong><span class="explain">Colors commands as you type them. It goes last because the highlighter asks to be the final thing loaded.</span></li>
               <li data-step><strong>Read ~/.zshrc.local</strong><span class="explain">An optional file for this Mac only. Read at the end, so it has the final word.</span></li>
@@ -94,7 +93,6 @@
             <h3>.zlogin <small>after everything else</small></h3>
             <ol>
               <li data-step><strong>Tidy up in the background</strong><span class="explain">Compiles the completion index into a faster form. It runs detached from the shell, so it costs the shell nothing.</span></li>
-              <li data-step><strong>Draw the prompt, then load the rest</strong><span class="explain">The prompt appears. A moment later the plugins that were told to wait arrive quietly: suggestions as you type, history search and alias reminders.</span></li>
             </ol>
           </section>
         </div>
@@ -205,7 +203,7 @@
           <li><span class="label">2022, the old plugin manager</span><span class="track"><span class="fill tone-red" style="--v: 2230"></span></span><span class="value">2,230 ms</span></li>
           <li><span class="label">2022, everything loaded up front</span><span class="track"><span class="fill tone-orange" style="--v: 730"></span></span><span class="value">730 ms</span></li>
           <li><span class="label">The test's limit</span><span class="track"><span class="fill tone-yellow" style="--v: 200"></span></span><span class="value">200 ms</span></li>
-          <li><span class="label">Today</span><span class="track"><span class="fill" style="--v: 72"></span></span><span class="value">72 ms</span></li>
+          <li><span class="label">Today</span><span class="track"><span class="fill" style="--v: 60"></span></span><span class="value">60 ms</span></li>
         </ul>
       </div>
       <figcaption>
@@ -214,26 +212,21 @@
       </figcaption>
     </figure>
 
-    <p>Three habits get it there, and a fourth keeps it there.</p>
+    <p>Two habits get it there, and a third keeps it there.</p>
 
     <ul class="cards">
       <li class="card">
         <span class="card-num">Habit 1</span>
-        <h3>Wait until after the prompt</h3>
-        <p>Suggestions, history search and alias reminders are not needed to draw a prompt. They are loaded a moment after it appears. The alias reminder alone cost 47 ms when it loaded up front.</p>
-      </li>
-      <li class="card tone-cyan">
-        <span class="card-num">Habit 2</span>
         <h3>Remember the answer</h3>
         <p>Tools like Starship, fzf, mise and direnv set themselves up by printing shell code. Asking each one on every start is slow, so <code>cached_init</code> saves the answer and only asks again after the tool is upgraded.</p>
       </li>
-      <li class="card tone-yellow">
-        <span class="card-num">Habit 3</span>
+      <li class="card tone-cyan">
+        <span class="card-num">Habit 2</span>
         <h3>Let Tab fetch it later</h3>
         <p>Completions for <code>docker</code> and <code>orb</code> are saved as files that zsh only opens the first time you press Tab on that command.</p>
       </li>
       <li class="card tone-orange">
-        <span class="card-num">Habit 4</span>
+        <span class="card-num">Habit 3</span>
         <h3>Measure it, every time</h3>
         <p>A test times real shell startups with <code>hyperfine</code> and fails if the fastest one is over 200 ms. A slow change cannot slip in unnoticed.</p>
       </li>
@@ -245,10 +238,6 @@
           <div class="lane">
             <span>Needed now</span>
             <div class="lane-track"><span class="lane-block" style="--from: 0%; --to: 52%">the four startup files</span><span class="lane-mark" style="--from: 54%"></span></div>
-          </div>
-          <div class="lane">
-            <span>Can wait</span>
-            <div class="lane-track"><span class="lane-block tone-cyan" style="--from: 58%; --to: 86%; --at: 0.9s">deferred plugins</span><span class="lane-mark" style="--from: 54%"></span></div>
           </div>
           <div class="lane">
             <span>Background</span>

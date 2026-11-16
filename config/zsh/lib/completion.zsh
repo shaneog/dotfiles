@@ -5,7 +5,7 @@
 #
 # The module itself is deliberately not loaded. It runs its own compinit against
 # its own dump, and puts a vendored copy of zsh-completions on fpath that
-# common.zsh already loads through zinit -- so only the styling below is wanted.
+# common.zsh already adds from Homebrew -- so only the styling below is wanted.
 # compinit belongs to .zshrc, which is the one this repo controls.
 
 [[ $TERM == dumb ]] && return 1
