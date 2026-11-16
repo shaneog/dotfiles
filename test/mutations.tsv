@@ -12,6 +12,8 @@ config/nvim/ftplugin/gitcommit.lua	s|"en_us"|"en_gb"|	test/integration/nvim.bats
 config/tmux/tmux.conf	s|^set -g status-style|# set -g status-style|	test/integration/tmux.bats	status bar is gotham	the theme falls back to tmux's default green
 config/tmux/tmux.conf	s|@prefix_highlight_prefix_prompt '#{prefix}'|@prefix_highlight_prefix_prompt 'PREFIX'|	test/integration/tmux.bats	carries the placeholder	the prefix indicator stops naming the real key
 config/tmux/tmux.conf	s|#{prefix_highlight}||	test/integration/tmux.bats	carries the placeholder	status-left loses the plugin's placeholder
+config/tmux/tmux.conf	s|^%if .*COLORTERM.*|%if 1|	test/integration/tmux.bats	24-bit color is declared only	tmux sends 24-bit escapes to a terminal that only claims 256 colours
+config/tmux/tmux.conf	s|^set -as terminal-features ",\*:RGB"|# gone|	test/integration/tmux.bats	24-bit color is declared only	a terminal that claims 24-bit colour is given 256
 ssh/config	s|    IdentityAgent SSH_AUTH_SOCK||	test/static/ssh.bats	inbound ssh session	an inbound session loses its forwarded agent
 ssh/config	s|${SSH_CONNECTION:+set}|${SSH_CONNECTION:-set}|	test/static/ssh.bats	local session still uses	every session counts as inbound, so 1Password's agent is never asked
 ssh/config	s|ControlPath ~/.ssh/cm-%C|ControlPath /tmp/ssh-%r@%h:%p.socket|	test/static/ssh.bats	shared-connection socket	the control socket goes back to a directory anyone can write to
