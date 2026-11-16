@@ -40,7 +40,7 @@ brew-drift:
 # ones no test notices. Local only and slow (about 12s a line), so it takes a
 # time budget and resumes where it left off. Needs a clean tree.
 sweep:
-	./script/sweep
+	./script/sweep --all
 
 # Breaks each thing in test/mutations.tsv and checks that the assertion named
 # beside it notices. Needs a clean tree: it edits tracked files in place.
