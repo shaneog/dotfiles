@@ -1,0 +1,13 @@
+# Apps for hardware that sits on one desk and travels nowhere: stream deck, key
+# lights, microphone. A laptop that never meets them has no use for these, so
+# this file is opt-in, and neither linked into $HOME nor read by
+# `brew bundle --global`:
+#
+#   brew bundle --file ~/.dotfiles/Brewfile.desk
+#
+# script/audit checks these upstream like any other entry. script/brew-drift
+# counts them as declared, and does not call them absent where they were never
+# installed.
+cask 'elgato-control-center'
+cask 'elgato-stream-deck'
+cask 'elgato-wave-link'
