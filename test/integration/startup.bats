@@ -424,6 +424,42 @@ STUB
     || { echo "fzf's file command produced no files: $output"; return 1; }
 }
 
+@test "Option-C, which arrives as a c-cedilla, is fzf's directory jump" {
+  # Typed into a real line editor, because a binding that exists is not a key
+  # that works: the shell has to end up somewhere else. fzf is given one
+  # candidate and told to take it, so it never draws anything to drive.
+  command -v fzf >/dev/null || skip "fzf is not installed"
+  local home target; home="$(make_home)"
+  target="$BATS_TEST_TMPDIR/jump here"; mkdir -p "$target"
+  cat > "$BATS_TEST_TMPDIR/type-option-c" <<'DRIVER'
+zmodload zsh/zpty
+home=$1 target=$2 zsh=$3
+zpty -b shell env -i HOME=$home PATH=$PATH TERM=xterm-256color SHLVL=1 \
+  USER=${USER:-tester} ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 $zsh -li
+# Left unread, the shell's output fills the terminal and stops it.
+wait_for() {  # a file the shell writes, tenths of a second to allow
+  local junk tries=0
+  until [[ -e $1 ]]; do
+    zpty -r shell junk 2>/dev/null
+    (( ++tries > $2 )) && return 1
+    sleep 0.1
+  done
+}
+zpty -w shell "chpwd() { print -r -- \$PWD > ${(q)home}/went-to }"
+zpty -w shell "FZF_ALT_C_COMMAND=${(qq):-echo ${(qq)target}} FZF_ALT_C_OPTS=--select-1"
+zpty -w shell "print ready > ${(q)home}/ready"
+wait_for $home/ready 900 || { print "the shell never became ready"; exit 1 }
+zpty -w -n shell $'\xc3\xa7'
+wait_for $home/went-to 300 || { print "typing a c-cedilla changed nothing"; exit 1 }
+zpty -d shell
+DRIVER
+  run _timeout 180 "$ZSH_BIN" -f "$BATS_TEST_TMPDIR/type-option-c" "$home" "$target" "$ZSH_BIN"
+  local went=""; [ -f "$home/went-to" ] && went="$(cat "$home/went-to")"
+  guard_home "$home" && rm -rf "$home"
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_equal "$went" "$target" "where the shell went"
+}
+
 @test "the brew maintenance alias survives prezto's own brew aliases" {
   # prezto's homebrew module is sourced after alias.zsh and owns brewc, brewi,
   # brewl, brewo, brews, brewu and brewx. This alias is defined after that

@@ -23,3 +23,18 @@ fi
 if (( $+commands[fd] )); then
   export FZF_ALT_C_COMMAND='fd --type d --no-ignore --hidden --follow --exclude .git --exclude node_modules'
 fi
+
+# Alt-C never arrives as Alt here. Neither terminal profile turns Option into
+# Meta, because that would take away the characters Option types: # and € on a
+# British or Irish keyboard, for a start. So Option-C sends a c-cedilla, and
+# that is what gets bound, beside fzf's own binding rather than instead of it.
+#
+# Spelled as its two UTF-8 bytes: the line editor matches keys by byte, so this
+# binds the same thing whatever the locale was when this file was read.
+#
+# Guarded on the widget, which fzf leaves out when FZF_ALT_C_COMMAND is empty.
+if (( $+widgets[fzf-cd-widget] )); then
+  bindkey -M emacs $'\xc3\xa7' fzf-cd-widget
+  bindkey -M vicmd $'\xc3\xa7' fzf-cd-widget
+  bindkey -M viins $'\xc3\xa7' fzf-cd-widget
+fi
