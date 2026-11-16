@@ -167,7 +167,7 @@ PROBE
   # was also half of SAVEHIST, so half of the file was kept and never loaded.
   local histfile="$HOME_WITHOUT/.local/share/zsh/zhistory"
   mkdir -p "${histfile%/*}"
-  awk 'BEGIN { for (i = 0; i < 120000; i++) printf ": %d:0;echo unique-%d\n", 1700000000 + i, i }' \
+  awk 'BEGIN { for (i = 0; i < 200000; i++) printf ": %d:0;echo unique-%d\n", 1700000000 + i, i }' \
     > "$histfile"
   # -c shells do not read the history file by themselves, hence fc -R.
   SECONDS=0
@@ -489,6 +489,58 @@ ALIASES
     "a login shell started without them on PATH"
 }
 
+@test "directories an installer lists in /etc/paths.d reach PATH, behind what is already there" {
+  # Regression: /etc/zprofile is what reads these, and `noglobalrcs` skips it,
+  # so a tool that puts its command line on PATH this way was never found.
+  local etc="$BATS_TEST_TMPDIR/etc" tool="$BATS_TEST_TMPDIR/Some Tool.app/Contents/bin"
+  local captured out
+  mkdir -p "$etc/paths.d" "$tool"
+  printf '/usr/bin\n%s\n' "$BATS_TEST_TMPDIR/not-installed" > "$etc/paths"
+  # A space in the path and no newline at the end: what one real installer writes.
+  printf '%s' "$tool" > "$etc/paths.d/some-tool"
+  captured="$(mktemp)"
+  _timeout 60 env -i HOME="$HOME_WITHOUT" PATH="/usr/bin:/bin" TERM=xterm-256color \
+    USER="${USER:-tester}" DOTFILES_PATHS_ROOT="$etc" "$ZSH_BIN" -l -c \
+    'print "LAST=$path[-1]"; there=(${(M)path:#/usr/bin}); missing=(${(M)path:#*/not-installed})
+     print "USRBIN=$#there MISSING=$#missing"' \
+    > "$captured" 2>&1
+  out="$(cat "$captured")"; rm -f "$captured"
+
+  assert_contains "$out" "LAST=$tool" "the last directory on PATH"
+  assert_contains "$out" "USRBIN=1 MISSING=0" "a listed directory already there, and one that does not exist"
+}
+
+@test "only a shell a terminal or a tmux pane started hands its PATH to GUI apps" {
+  # Regression: every interactive shell did, so one started inside a virtualenv
+  # or a tool's subshell left its PATH as the one every app launched after it got.
+  local stubs; stubs="$(stub_dir)"
+  stub_cmd launchctl <<'STUB'
+#!/bin/sh
+[ "$1 $2" = "setenv PATH" ] && echo "$3" >> "$HOME/launchd-path"
+exit 0
+STUB
+  # zsh adds one to the SHLVL it inherits, so `level` is what the shell sees.
+  told() {
+    local level="$1" tmux="$2" captured
+    captured="$(mktemp)"
+    rm -f "$HOME_WITHOUT/launchd-path"
+    _timeout 180 env -i HOME="$HOME_WITHOUT" PATH="$stubs:$PATH" TERM=xterm-256color \
+      USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
+      SHLVL="$(( level - 1 ))" ${tmux:+TMUX="$tmux"} \
+      "$ZSH_BIN" -lic 'print "level=$SHLVL"' > "$captured" 2>&1
+    grep -qx "level=$level" "$captured" || { cat "$captured"; rm -f "$captured"; return 1; }
+    rm -f "$captured"
+    if [ -s "$HOME_WITHOUT/launchd-path" ]; then echo told; else echo quiet; fi
+  }
+  assert_equal "$(told 1 '')" "told" "a terminal window's shell"
+  assert_equal "$(told 2 '')" "quiet" "a shell started from inside that one"
+  assert_equal "$(told 2 /tmp/tmux-0/default,1,0)" "told" "a tmux pane"
+  assert_equal "$(told 3 /tmp/tmux-0/default,1,0)" "quiet" "a shell started from inside a pane"
+  # What was handed over is the PATH the shell ended up with.
+  told 1 '' >/dev/null
+  assert_contains "$(cat "$HOME_WITHOUT/launchd-path")" "$stubs" "the PATH launchd was given"
+}
+
 @test "Homebrew is on PATH before .zshrc runs" {
   # Regression, and one this repo's own layering hid. The shellenv lived in
   # lib/homebrew.zsh, which .zshrc sources two thirds of the way down -- after
@@ -503,8 +555,10 @@ ALIASES
   local stripped captured out
   stripped="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v '^/opt/homebrew' | paste -sd: -)"
   captured="$(mktemp)"
+  # No paths files: a Mac's /etc/paths.d lists Homebrew too, at the end of PATH,
+  # and tmux found that way would say nothing about the block under test.
   _timeout 60 env -i HOME="$HOME_WITHOUT" PATH="$stripped" TERM=xterm-256color \
-    USER="${USER:-tester}" "$ZSH_BIN" -l -c \
+    USER="${USER:-tester}" DOTFILES_PATHS_ROOT="$BATS_TEST_TMPDIR/no-paths" "$ZSH_BIN" -l -c \
     'print "prefix=${HOMEBREW_PREFIX:-unset} tmux=$+commands[tmux] zshrc=${__DOTFILES_ZSHRC:-no}"' \
     > "$captured" 2>&1
   out="$(cat "$captured")"; rm -f "$captured"

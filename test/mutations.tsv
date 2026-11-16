@@ -22,8 +22,11 @@ script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& fal
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
 config/zsh/lib/orbstack.zsh	s|^cached_completion docker|# cached_completion docker|	test/integration/startup.bats	CLI completions	a CLI completion stops being generated (docker: present everywhere the tests run)
 config/zsh/lib/homebrew.zsh	s|^alias brewup|# alias brewup|	test/integration/startup.bats	brew maintenance alias	the brew maintenance alias disappears
-config/zsh/autoload/cached_init	s|\[\[ ! -s $file \|\| $bin -nt $file \]\]|[[ ! -s $file ]]|	test/unit/cached_init.bats	regenerates when the tool is newer	an upgraded tool keeps the stale cache
-config/zsh/autoload/cached_init	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
+config/zsh/autoload/cached_init	s| \|\| $bin -nt $file \]\]| ]]|	test/unit/cached_init.bats	regenerates when the tool is newer	a tool replaced in place keeps the stale cache
+config/zsh/autoload/cached_init	s|\[\[ $first != $stamp \|\| |[[ ! -s $file \|\| |	test/unit/cached_init.bats	leads to another binary	a Homebrew upgrade keeps the last version's cache
+config/zsh/autoload/cached_init	s| && \[\[ -n $out \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
+config/zsh/lib/mise.zsh	s|^eval .*|source $REPLY|	test/unit/guards.bats	the PATH it starts from	every shell gets the PATH of the one that wrote mise's cache appended
+config/zsh/lib/common.zsh	s|^\[\[ -x /usr/bin/log \]\] && disable log|:|	test/unit/guards.bats	log is the system's command	zsh's log builtin hides macOS's log command
 config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/cached_completion.bats	writes the completion where compinit will find it	the completion is generated but never on fpath
 config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
 config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects
@@ -67,8 +70,12 @@ config/zsh/.zprofile	s|^  export LANG='en_US.UTF-8'|  : |	test/integration/start
 config/zsh/.zprofile	s|^LC_TIME=$LANG|# gone|	test/integration/startup.bats	locale is en_US	one LC category stops following LANG
 config/zsh/.zprofile	s|^  (( ${path\[(Ie)$__dotfiles_dir\]} )).*|  :|	test/integration/startup.bats	added when absent	/usr/local stops being put back on PATH
 config/zsh/.zprofile	s|^  path=("$HOMEBREW_PREFIX/bin".*|  :|	test/integration/startup.bats	before .zshrc runs	Homebrew lands on PATH too late for the tmux autostart
+config/zsh/.zprofile	s|^    \[\[ -d $__dotfiles_dir \]\] && |    |	test/integration/startup.bats	lists in /etc/paths.d	a listed directory that does not exist lands on PATH
+config/zsh/.zprofile	s|path+=("$__dotfiles_dir")|path=("$__dotfiles_dir" $path)|	test/integration/startup.bats	lists in /etc/paths.d	an installer's directory goes in front of everything arranged above
 config/zsh/.zprofile	s|^if \[ -z "${HOMEBREW_PREFIX}" \] && \[ -d "/opt/homebrew" \]; then|if [ -d "/opt/homebrew" ]; then|	test/unit/guards.bats	does not re-prepend	a base layer's own Homebrew order is overridden
 config/zsh/.zshenv	s|^typeset -gU cdpath fpath path|# gone|	test/integration/startup.bats	nested non-login shell	every tmux pane gets the system directories on PATH twice
+config/zsh/.zshrc	s|^if (( $+commands\[launchctl\] && SHLVL <= 1 + $+TMUX )); then|if (( $+commands[launchctl] )); then|	test/integration/startup.bats	hands its PATH to GUI apps	a nested shell's PATH becomes the one every GUI app gets
+config/zsh/.zshrc	s|SHLVL <= 1 + $+TMUX|SHLVL <= 1|	test/integration/startup.bats	hands its PATH to GUI apps	tmux panes never refresh the PATH GUI apps get
 config/zsh/.zprofile	s|^export LESSCHARSET=utf-8|LESSCHARSET=utf-8|	test/integration/startup.bats	reach child processes	less never sees the charset it was given
 config/zsh/.zprofile	s|^  export LANG=|  LANG=|	test/integration/startup.bats	reach child processes	a shell started without LANG keeps the locale to itself
 config/zsh/lib/history.zsh	s|^HISTORY_IGNORE=|HISTIGNORE=|	test/integration/startup.bats	never reach the history file	the ignore list goes back to a variable zsh does not read

@@ -69,3 +69,7 @@ export PAGER="less"
 # Default less options
 # Mouse-wheel scrolling has been disabled by -X (disable screen clearing).
 export LESS="-F -g -i -M -R -S -w -X -z-4"
+
+# zsh has a builtin called log, which is found before macOS's /usr/bin/log.
+# /etc/zshrc disables it for that reason, and `noglobalrcs` skips that file.
+[[ -x /usr/bin/log ]] && disable log

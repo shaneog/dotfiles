@@ -128,5 +128,11 @@ if [[ -f "$HOME/.zshrc.local" ]]; then
   source "$HOME/.zshrc.local"
 fi
 
-# Set the PATH for macOS
-[[ -x /bin/launchctl ]] && /bin/launchctl setenv PATH $PATH
+# Give GUI apps this PATH too: launchd hands its own to everything it starts.
+# Only from a shell that a terminal window or a tmux pane started. One nested
+# any deeper was started from inside something -- a virtualenv, direnv, a tool's
+# subshell -- and its PATH would otherwise become every app's until the next
+# shell opened.
+if (( $+commands[launchctl] && SHLVL <= 1 + $+TMUX )); then
+  launchctl setenv PATH $PATH
+fi

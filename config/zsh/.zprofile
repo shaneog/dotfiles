@@ -58,3 +58,16 @@ if [ -z "${HOMEBREW_PREFIX}" ] && [ -d "/opt/homebrew" ]; then
   export MANPATH="$HOMEBREW_PREFIX/share/man${MANPATH+:$MANPATH}:"
   export INFOPATH="$HOMEBREW_PREFIX/share/info:${INFOPATH:-}"
 fi
+
+# The directories macOS lists in /etc/paths and /etc/paths.d, which is where an
+# installer puts its command-line tools on PATH. /etc/zprofile hands them to
+# path_helper, and `noglobalrcs` in .zshenv skips that file. Appended, and only
+# a directory that exists and is not there already, so nothing arranged above
+# moves. DOTFILES_PATHS_ROOT is for the tests.
+for __dotfiles_file in ${DOTFILES_PATHS_ROOT:-/etc}/paths ${DOTFILES_PATHS_ROOT:-/etc}/paths.d/*(N); do
+  [[ -r $__dotfiles_file ]] || continue
+  for __dotfiles_dir in ${(f)"$(<$__dotfiles_file)"}; do
+    [[ -d $__dotfiles_dir ]] && (( ! ${path[(Ie)$__dotfiles_dir]} )) && path+=("$__dotfiles_dir")
+  done
+done
+unset __dotfiles_file __dotfiles_dir

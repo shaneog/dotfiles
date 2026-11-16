@@ -49,6 +49,14 @@ probe_lib() {
   assert_equal "$output" "$FAKE_HOME/.local/share/npm"
 }
 
+# --- common -----------------------------------------------------------------
+
+@test "common: log is the system's command where there is one, not zsh's builtin" {
+  [ -x /usr/bin/log ] || skip "NOT CHECKED: this machine has no /usr/bin/log for the builtin to hide"
+  run probe_lib common.zsh '' 'whence -w log'
+  assert_equal "$output" "log: command"
+}
+
 # --- mise -------------------------------------------------------------------
 
 @test "mise: inert when mise is not installed" {
@@ -64,6 +72,32 @@ echo 'MISE_ACTIVATED=yes'
 STUB
   run probe_lib mise.zsh '' 'print "activated=${MISE_ACTIVATED:-no}"'
   assert_equal "$output" "activated=yes"
+}
+
+@test "mise: the PATH it starts from is this shell's, not the one its cache was written in" {
+  # Regression: `mise activate` writes the PATH of the shell that ran it into
+  # its output, and the cached copy was sourced as it stood. Every later shell
+  # then had the first one's directories appended to its PATH.
+  STUBS="$(stub_dir)"
+  stub_cmd mise <<'STUB'
+#!/bin/sh
+echo run >> "$HOME/mise-runs"
+printf "export __MISE_ORIG_PATH='%s'\n" "$PATH"
+cat <<'SCRIPT'
+if [ -z "${__MISE_ORIG_PATH:-}" ]; then
+  export __MISE_ORIG_PATH="$PATH"
+fi
+
+PATH="$PATH:${__MISE_ORIG_PATH##*:}"
+SCRIPT
+STUB
+  run probe_lib mise.zsh 'path+=(/only/in/the/first/shell)' 'print "last=$path[-1]"'
+  assert_equal "$output" "last=/only/in/the/first/shell"
+
+  run probe_lib mise.zsh 'path+=(/second/shell)' 'print "last=$path[-1] start=${__MISE_ORIG_PATH##*:}"'
+  assert_equal "$output" "last=/second/shell start=/second/shell"
+  # Otherwise the second shell proved nothing about the cache.
+  assert_equal "$(wc -l < "$FAKE_HOME/mise-runs" | tr -d ' ')" "1" "times mise was run"
 }
 
 @test "mise: does not displace a runtime the base layer wraps" {
@@ -90,9 +124,11 @@ STUB
 # lines need Homebrew's binaries on PATH already. Same shape as probe_lib.
 probe_zprofile() {
   local before="$1" after="$2"; shift 2
+  # No paths files: what this machine's /etc/paths.d happens to list is not
+  # what these tests are about, and on a Mac it lists Homebrew.
   env -i HOME="$FAKE_HOME" PATH="${STUBS:+$STUBS:}/usr/bin:/bin" USER=tester \
       XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$FAKE_HOME/.local/share" \
-      XDG_CACHE_HOME="$FAKE_HOME/.cache" "$@" \
+      XDG_CACHE_HOME="$FAKE_HOME/.cache" DOTFILES_PATHS_ROOT="$FAKE_HOME/etc" "$@" \
       "$ZSH_BIN" -fi -c "
         $before
         source '$REPO/config/zsh/.zprofile'

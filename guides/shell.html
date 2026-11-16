@@ -71,6 +71,7 @@
               <li data-step><strong>Set the language</strong><span class="explain">Makes sure text is treated as UTF-8, so accents and symbols display properly, and passes that on to every program the shell starts.</span></li>
               <li data-step><strong>Add only what is missing</strong><span class="explain">Adds <code>/usr/local/bin</code> to PATH if it is not there already. It never reorders a PATH that a base layer arranged on purpose.</span></li>
               <li data-step><strong>Find Homebrew</strong><span class="explain">Puts <code>/opt/homebrew/bin</code> on PATH, unless a base layer already has. It happens this early because the very next file looks for tmux, and tmux comes from Homebrew.</span></li>
+              <li data-step><strong>Pick up what installers added</strong><span class="explain">Some apps announce their command-line tools by listing a folder in <code>/etc/paths.d</code>. Skipping the <code>/etc</code> files skips the step that reads that list, so it is read here. Each folder goes at the end of PATH, and only if it exists.</span></li>
             </ol>
           </section>
 
@@ -85,7 +86,7 @@
               <li data-step><strong>Switch on tab completion</strong><span class="explain">Builds the index of what Tab can complete. The index is saved and only rebuilt when it is more than twenty hours old, which is the difference between a few milliseconds and a few hundred.</span></li>
               <li data-step><strong>Turn on syntax highlighting</strong><span class="explain">Colors commands as you type them. It goes last because the highlighter asks to be the final thing loaded.</span></li>
               <li data-step><strong>Read ~/.zshrc.local</strong><span class="explain">An optional file for this Mac only. Read at the end, so it has the final word.</span></li>
-              <li data-step><strong>Tell the rest of macOS about PATH</strong><span class="explain">Hands the finished PATH to macOS itself, so apps opened from the Dock can find the same tools the terminal can.</span></li>
+              <li data-step><strong>Tell the rest of macOS about PATH</strong><span class="explain">Hands the finished PATH to macOS itself, so apps opened from the Dock can find the same tools the terminal can. Only a shell that a terminal window or a tmux pane started does this. A shell opened from inside something else, such as a Python virtualenv, keeps its PATH to itself.</span></li>
             </ol>
           </section>
 
