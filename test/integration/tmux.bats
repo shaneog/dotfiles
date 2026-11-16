@@ -336,6 +336,39 @@ wait_for() {  # window, format, expected
   assert_contains "$comm" "zsh" "the process running in the pane"
 }
 
+@test "tmux: autostart is not answered by a session whose name merely starts the same" {
+  # Regression: tmux matches a bare target by prefix, so with a session called
+  # someuser-work and none called someuser, autostart attached to someuser-work
+  # and never made its own. A real tmux, because a stub would only show which
+  # words were passed, and the bug was in what tmux does with them.
+  local stubs="$BATS_TEST_TMPDIR/stubs" log="$BATS_TEST_TMPDIR/tmux.log" real
+  real="$(command -v tmux)"
+  HOME="$TMUX_HOME" _timeout 30 tmux -L "$SOCKET" -f /dev/null \
+    new-session -d -s someuser-work >/dev/null 2>&1
+  tm has-session -t '=someuser-work' \
+    || { echo "the other session did not start"; return 1; }
+
+  # Sends the function's own commands to the test server. Starting a session
+  # fails here for want of a terminal, which is fine: the log shows what was
+  # decided.
+  mkdir -p "$stubs"
+  cat > "$stubs/tmux" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >> "$log"
+exec "$real" -L "$SOCKET" "\$@" </dev/null >/dev/null 2>&1
+EOF
+  chmod +x "$stubs/tmux"
+
+  env -i HOME="$TMUX_HOME" PATH="$stubs:/usr/bin:/bin" USER=someuser \
+    TERM_PROGRAM=Apple_Terminal XDG_CONFIG_HOME="$REPO/config" \
+    "$ZSH_BIN" -fi -c "fpath=($REPO/config/zsh/autoload \$fpath)
+                autoload -Uz tmux_autostart
+                tmux_autostart" >/dev/null 2>&1 || true
+
+  assert_contains "$(cat "$log")" 'new-session -s someuser' "the tmux log"
+  refute_contains "$(cat "$log")" 'attach-session' "the tmux log"
+}
+
 @test "tmux: pane movement and resizing are the vim keys" {
   # Named rather than counted: a count still passes when one binding is lost and
   # another gained.
