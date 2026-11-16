@@ -22,4 +22,6 @@ stashed = "≡"
 
 [git_state]
 format = '\([$state( $progress_current/$progress_total)]($style)\) '
-style = "bright-black"
+# Not "bright-black": that is colour 8, which Gotham makes a shade of the
+# background. 242 is a grey from the fixed part of the 256-colour table.
+style = "242"

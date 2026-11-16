@@ -19,6 +19,14 @@ if (( ! $+functions[_zsh_autosuggest_start] )); then
 	zinit light zsh-users/zsh-autosuggestions
 fi
 
+# The plugin's default is colour 8, the usual dim grey. Gotham makes that slot a
+# shade of the background -- tmux.conf fills the status line with it -- so a
+# suggestion drawn in it cannot be read. 242 is from the fixed part of the
+# 256-colour table, so it is the same grey under any profile.
+#
+# Outside the guard: the palette is this repo's whoever loaded the plugin.
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=242'
+
 # http://zshwiki.org/home/config/prompt
 # enable colors and predefined variables
 autoload -Uz colors && colors

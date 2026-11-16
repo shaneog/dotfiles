@@ -44,3 +44,31 @@ prompt() {  # exit status to render for
     $'\n'*) echo "the prompt starts with a newline"; return 1 ;;
   esac
 }
+
+@test "prompt: a rebase in progress is written in a colour the profile can show" {
+  # Gotham gives slots 0, 8, 10 and 12 to shades of the background, so
+  # "bright-black", the usual choice for a quiet marker, is one nobody can read.
+  local git=(env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+    git -C "$PROMPT_DIR" -c user.name=t -c user.email=t@example.invalid
+    -c commit.gpgsign=false -c init.defaultBranch=main)
+  "${git[@]}" init -q
+  echo one > "$PROMPT_DIR/f" && "${git[@]}" add f && "${git[@]}" commit -qm one
+  "${git[@]}" checkout -qb other
+  echo two > "$PROMPT_DIR/f" && "${git[@]}" commit -qam two
+  "${git[@]}" checkout -q main
+  echo three > "$PROMPT_DIR/f" && "${git[@]}" commit -qam three
+  # The conflict is the point: it is what leaves the rebase unfinished.
+  "${git[@]}" rebase -q other >/dev/null 2>&1 || true
+
+  local out before sgr
+  out="$(prompt 0)"
+  assert_contains "$out" "REBASING" "the rendered prompt"
+  # The colour is whatever was set last before the word.
+  before="${out%%REBASING*}"
+  sgr="${before##*$'\033['}"
+  sgr="${sgr%%m*}"
+  case "$sgr" in
+    30|90|92|94|*"38;5;0"|*"38;5;8"|*"38;5;10"|*"38;5;12"|"")
+      echo "the rebase marker is written with SGR '$sgr'"; return 1 ;;
+  esac
+}

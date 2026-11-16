@@ -27,6 +27,7 @@ config/zsh/autoload/cached_init	s|\[\[ $first != $stamp \|\| |[[ ! -s $file \|\|
 config/zsh/autoload/cached_init	s| && \[\[ -n $out \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
 config/zsh/lib/mise.zsh	s|^eval .*|source $REPLY|	test/unit/guards.bats	the PATH it starts from	every shell gets the PATH of the one that wrote mise's cache appended
 config/zsh/lib/common.zsh	s|^\[\[ -x /usr/bin/log \]\] && disable log|:|	test/unit/guards.bats	log is the system's command	zsh's log builtin hides macOS's log command
+config/zsh/lib/common.zsh	s|^ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=|: |	test/integration/startup.bats	suggestion is drawn	suggestions go back to the plugin's default, a colour Gotham draws as background
 config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/cached_completion.bats	writes the completion where compinit will find it	the completion is generated but never on fpath
 config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
 config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects
@@ -103,6 +104,7 @@ script/audit	s@.*\[ -d config/nvim \] && grep.*@true@	test/unit/audit.bats	archi
 script/audit	s@warn "${line#  not applied: }"@:@	test/unit/audit.bats	machine that has drifted is reported	machine drift is read but never reported
 script/audit	s@.*done <<< .*@done < /dev/null@	test/unit/audit.bats	machine that has drifted is reported	the drift lines stop being read at all
 config/starship.toml	s|^error_symbol = "\[➜\](red)".*|error_symbol = "[➜](green)"|	test/integration/prompt.bats	character module reflects the last exit status	a failed command still shows the success colour
+config/starship.toml	s|^style = "242"|style = "bright-black"|	test/integration/prompt.bats	rebase in progress	the rebase marker goes back to a colour Gotham draws as background
 script/audit	s@.*if \[ "$vm_last" .< "$vm_cutoff" \]; then@if false; then@	test/unit/audit.bats	VM tier that has not run in a month	a VM tier gone stale reports as current
 script/audit	s@warn "the VM tier has no recorded run: make test-vm"@:@	test/unit/audit.bats	VM tier that has never run	a VM tier that never ran says nothing
 config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
