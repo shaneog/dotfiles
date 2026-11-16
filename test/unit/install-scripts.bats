@@ -157,6 +157,7 @@ MACOS
   DOTFILES_URL="$FIXTURE" run run_script bootstrap
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   assert_contains "$output" "create ~/.gitconfig-user"
+  assert_contains "$output" "make -C ~/.dotfiles identity"
   assert_contains "$output" "1Password's SSH agent"
 
   # A socket's path has a short limit, and the test directory is already long,

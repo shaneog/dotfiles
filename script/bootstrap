@@ -218,7 +218,9 @@ log "Your system is now bootstrapped!"
 # still on screen when the run ends, and only about what is actually missing.
 if [ ! -f "$HOME/.gitconfig-user" ]; then
   echo "    Still to do: create ~/.gitconfig-user. Git cannot sign a commit without it,"
-  echo "    and says nothing when it is missing. The README shows what goes in it."
+  echo "    and says nothing when it is missing. Once you have signed in to the 1Password"
+  echo "    app, 'make -C ~/.dotfiles identity' writes it from there. The README shows"
+  echo "    what goes in it, for writing it by hand."
 fi
 if [ ! -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]; then
   echo "    Still to do: switch on 1Password's SSH agent, under Settings > Developer."

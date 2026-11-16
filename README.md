@@ -82,7 +82,8 @@ came with step 5. tmux installs its own plugins the first time it starts.
 > `~/.gitconfig-user`, because git cannot commit without it, and switch on
 > 1Password's SSH agent. Both are covered under
 > [commit signing](#commit-signing-required), and bootstrap ends by naming
-> whichever of the two is still missing.
+> whichever of the two is still missing. Once the 1Password app is signed in,
+> `make identity` can write the file for you.
 
 Running the same command again later is safe. So is `~/.dotfiles/script/bootstrap`.
 
@@ -107,6 +108,7 @@ just pulled, so a step added upstream runs straight away.
 | The links `script/setup` makes | A failure for each one that is missing or points somewhere else. |
 | The clone against `origin/main` | A warning when it is behind, or holds commits that were never pushed. It asks the remote and does not fetch. |
 | `~/.gitconfig-user` and 1Password's agent socket | A failure when either is missing. |
+| `~/.profile`, `~/.bashrc`, `~/.zprofile` and `~/.zshrc`, where something else manages them | A warning for each one that has changed, or gone, since it was last accepted. |
 | [`script/macos --check`](script/macos) | A warning for each setting that is not applied. |
 | [`script/brew-drift`](script/brew-drift) | A warning for each Brewfile entry that is not installed, and a count of what is installed beyond it. |
 | The last `make test-vm` | A warning when it passed more than 30 days ago, or never has on a machine with Tart. |
@@ -114,6 +116,14 @@ just pulled, so a step added upstream runs straight away.
 It exits non-zero only for failures. A check that cannot run, such as the
 remote when offline, is listed under `NOT CHECKED` and is never counted as a
 pass.
+
+The shell files are the one thing doctor keeps a note of. On a machine where
+another tool owns them, they are read as a base layer and rewritten without
+notice, so the first run notes a hash of each under
+`~/.local/state/dotfiles/shell-files`. A later run names any that no longer
+match, and keeps naming them until `script/doctor --accept` takes them as they
+are. Only the hashes are kept, only on that machine, and doctor never prints
+what the files say. A machine with none of the four gets no report.
 
 ### Installing from somewhere else
 
@@ -253,6 +263,29 @@ user.signingkey or gpg.ssh.defaultKeyCommand needs to be configured*.
 	signingkey = ssh-ed25519 AAAA...        # the public key, not a path
 ```
 
+The file can be written by hand, or from 1Password with `make identity`
+([`script/identity`](script/identity)). That is a step for after bootstrap,
+because the 1Password app has to be signed in first, with Settings, Developer,
+Integrate with 1Password CLI switched on. It reads one item, called
+`Git identity` unless you name another, with three text fields:
+
+| Field | Holds |
+| --- | --- |
+| `name` | Your name as it should appear on a commit. |
+| `email` | The address to commit with. |
+| `signingkey` | The public key, copied from the SSH key item it belongs to. |
+
+```sh
+make identity                              # the item called "Git identity"
+script/identity "Another item"             # or DOTFILES_IDENTITY_ITEM="Another item"
+script/identity --replace                  # write over a file that is already there
+```
+
+It is optional. Without `op`, signed out, or with no such item, it says so,
+shows the lines above and writes nothing. It leaves an existing file alone
+unless given `--replace`, which changes those three values and keeps anything
+else the file holds. It refuses a private key.
+
 Signing goes through 1Password's `op-ssh-sign`, so 1Password needs to be
 installed and its SSH agent enabled (Settings, Developer, Use the SSH agent).
 `git log --show-signature` verifies against
@@ -268,7 +301,7 @@ These files are not tracked, and each one is read by the config beside it:
 
 | Tracked file | Machine-specific file | Notes |
 | --- | --- | --- |
-| `config/git/config` | `~/.gitconfig-user` | Required. See above. |
+| `config/git/config` | `~/.gitconfig-user` | Required. Written by hand or by `make identity`. See above. |
 | `ssh/config` | `~/.ssh/config-local` | Created by `script/setup` if it is missing. Read first, so it can override anything. |
 | `config/zsh/.zshrc` | `~/.zshrc.local` | Optional. Sourced at the end of `.zshrc`. |
 
@@ -301,7 +334,8 @@ Dependabot looks after one other thing, the action versions in the workflows.
 | [`script/macos`](script/macos) | Applies the macOS settings. `--check` only reports, and `--reset-dock` also clears the Dock's pinned icons. The first run records the previous values under `~/.local/share/dotfiles/macos-defaults`. |
 | [`script/after-setup`](script/after-setup) | Installs Neovim's plugins and treesitter parsers, headless. |
 | [`script/update`](script/update) | Brings a machine that is already set up level with the repo, without a password. `make update`. See [keeping a machine current](#keeping-a-machine-current). |
-| [`script/doctor`](script/doctor) | Reports on this machine: links, how far behind it is, what is missing, what has drifted. Changes nothing. `make doctor`. |
+| [`script/doctor`](script/doctor) | Reports on this machine: links, how far behind it is, what is missing, what has drifted. Changes nothing but its own note of the managed shell files. `make doctor`. |
+| [`script/identity`](script/identity) | Writes `~/.gitconfig-user` from an item in 1Password. Optional, and for after bootstrap. `make identity`. See [commit signing](#commit-signing-required). |
 | [`script/remove`](script/remove) | Takes the dotfiles out again. See [Uninstall](#uninstall). |
 | [`script/audit`](script/audit) | Finds upstream rot: renamed, deprecated or archived packages and plugins, tools the config calls that no Brewfile installs, and a Neovim lockfile that has not changed in six months. It is about the repo, so it says the same on a CI runner and on a laptop. `make audit`. |
 | [`script/brew-drift`](script/brew-drift) | Compares what this machine has installed with the Brewfile, in both directions. Advisory. `make brew-drift`. `make doctor` reads it too. |

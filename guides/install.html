@@ -120,7 +120,7 @@
       <li class="card tone-yellow">
         <span class="card-num">By hand · required</span>
         <h3>Create <code>~/.gitconfig-user</code></h3>
-        <p>Your name, your email and the public half of your signing key. Commit signing is always on, and this file is where git learns which key to use.</p>
+        <p>Your name, your email and the public half of your signing key. Commit signing is always on, and this file is where git learns which key to use. Type it yourself, or let <code>make identity</code> <a href="#identity">write it from 1Password</a>.</p>
       </li>
       <li class="card tone-yellow">
         <span class="card-num">By hand · once</span>
@@ -134,6 +134,27 @@
 	name = Your Name
 	email = you@example.com
 	signingkey = ssh-ed25519 AAAA...   <span class="dim"># the public key, not a path</span></code></pre>
+
+    <h3 id="identity">Or have 1Password write it</h3>
+    <p>If you keep those three values in 1Password, one command writes the file. It comes after bootstrap, not during it, because on a new Mac you have to open the 1Password app and sign in first. In its settings, under Developer, switch on “Integrate with 1Password CLI” as well.</p>
+
+    <pre data-copy><code>make identity</code></pre>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>In 1Password</th><th>What it holds</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>An item called <code>Git identity</code></td><td>Any kind of item will do. A secure note is the plainest.</td></tr>
+          <tr><td>A text field called <code>name</code></td><td>Your name as it should appear on a commit.</td></tr>
+          <tr><td>A text field called <code>email</code></td><td>The address to commit with.</td></tr>
+          <tr><td>A text field called <code>signingkey</code></td><td>The public key, copied from your SSH key item.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>It is optional, and careful. If 1Password is not signed in, or has no such item, it tells you and writes nothing. If the file is already there it leaves it alone, unless you run <code>script/identity --replace</code>. It refuses a private key. To read a different item, name it: <code>script/identity "Another item"</code>.</p>
 
     <h2 id="timing">How long it takes</h2>
     <p>These numbers come from the virtual machine test, which installs onto a completely fresh copy of macOS. The first bar includes Apple's Command Line Tools, which Homebrew installs before anything else. Apps are left out because their download time depends on your connection.</p>
@@ -205,8 +226,9 @@ make doctor</code></pre>
           <li>Is this copy behind the one on GitHub?</li>
           <li>Are <code>~/.gitconfig-user</code> and the 1Password agent there?</li>
           <li>Has a macOS setting drifted, or is something in the Brewfile not installed?</li>
+          <li>Has a shell file that another tool manages changed?</li>
         </ul>
-        <p>It only reports, and changes nothing. A missing signpost, file or agent is a failure. Everything else is a warning.</p>
+        <p>It only reports. A missing signpost, file or agent is a failure. Everything else is a warning.</p>
       </li>
     </ul>
 
@@ -214,6 +236,14 @@ make doctor</code></pre>
       <p class="callout-title">Skipping is not passing</p>
       <p>When the doctor cannot run one of its checks, for example because the Mac is offline, it prints <code>NOT CHECKED</code> and says which. It never reports a check it skipped as a check that passed.</p>
     </div>
+
+    <h3 id="shell-files">When another tool rewrites your shell files</h3>
+    <p>On some Macs another tool owns <code>~/.profile</code>, <code>~/.bashrc</code>, <code>~/.zprofile</code> and <code>~/.zshrc</code>, and rewrites them when it likes. These dotfiles read those files first and then add their own on top, so a rewrite can change how your shell behaves without anything here changing.</p>
+    <p>The doctor watches for that. The first time it sees one of those files it makes a note of its fingerprint, a short code that changes whenever the file does. On later runs it tells you which files no longer match, and it keeps telling you until you accept them:</p>
+
+    <pre data-copy><code>script/doctor --accept</code></pre>
+
+    <p>That note is the only thing the doctor ever writes. It holds fingerprints, not the files, it stays on that Mac, and the doctor never prints what the files say. On a Mac with none of the four files there is nothing to watch, and it says nothing.</p>
 
     <h2 id="remove">Taking it all out again</h2>
     <p><code>script/remove</code> is the undo. It asks “Are you sure?” first, and by default it only removes what this repository put there.</p>

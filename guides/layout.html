@@ -194,7 +194,7 @@ ssh/*
           <tr><th>Private file</th><th>Adds to</th><th>What goes in it</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>~/.gitconfig-user</code></td><td><code>config/git/config</code></td><td>Your name, email and signing key. Required, and the only file you create by hand.</td></tr>
+          <tr><td><code>~/.gitconfig-user</code></td><td><code>config/git/config</code></td><td>Your name, email and signing key. Required, and the only file you create yourself: by hand, or with <code>make identity</code>.</td></tr>
           <tr><td><code>~/.ssh/config-local</code></td><td><code>ssh/config</code></td><td>Hosts only this Mac knows about. Setup creates it empty. It is read first, so it wins.</td></tr>
           <tr><td><code>~/.zshrc.local</code></td><td><code>config/zsh/.zshrc</code></td><td>Shell tweaks for this Mac only. Optional, and read last, so it has the final word.</td></tr>
         </tbody>

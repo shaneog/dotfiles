@@ -121,7 +121,9 @@ the pull request as not checked; do not report it as passing.
 - Anything that calls Homebrew, `launchctl` or `defaults` for real: the
   Brewfile check, `make audit`, `make brew-drift`, `make update`,
   `make doctor`, and `script/macos` and `script/bootstrap` outside their
-  stubbed unit tests.
+  stubbed unit tests. `make identity` is the same for 1Password's `op`: its
+  tests answer for `op`, and only a signed-in Mac says whether they answer as
+  it does.
 - The ssh effective-config tests, Ghostty's config check, the treesitter tests
   without `tree-sitter-cli`, and a few tests that lean on BSD `date` or a macOS
   path. These fail or skip on `main` too, so compare with `main` before blaming
@@ -167,5 +169,6 @@ dependency that "must" have been inert wasn't.
 - `make test` and `make audit` before committing; both must be clean.
 - `~/.gitconfig-user` is required and untracked — git ignores a missing include
   silently, so signing breaks with no error anywhere. It is the only file a new
-  machine has to be given by hand: `script/setup` writes `~/.ssh/config-local`
-  when it is absent, and `~/.zshrc.local` is sourced only if it exists.
+  machine has to be given, by hand or by `make identity` from 1Password:
+  `script/setup` writes `~/.ssh/config-local` when it is absent, and
+  `~/.zshrc.local` is sourced only if it exists.

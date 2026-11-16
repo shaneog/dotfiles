@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-vm lint audit brew-drift mutate sweep update doctor
+.PHONY: test test-static test-unit test-integration test-vm lint audit brew-drift mutate sweep update doctor identity
 
 test: test-static test-unit test-integration
 
@@ -27,10 +27,17 @@ update:
 	./script/update
 
 # Whether this machine is healthy: its links, how far it is behind, the two
-# things only a person can supply, and what macos --check and brew-drift say.
-# Changes nothing.
+# things only a person can supply, what macos --check and brew-drift say, and
+# whether a shell file another tool manages has changed. Changes nothing but
+# its own note of those files; `script/doctor --accept` takes them as they are.
 doctor:
 	./script/doctor
+
+# Writes ~/.gitconfig-user from an item in 1Password, once the app is signed in.
+# Optional: the file can as well be written by hand. Leaves one that is already
+# there alone. DOTFILES_IDENTITY_ITEM names the item.
+identity:
+	./script/identity
 
 # Upstream rot: renamed, deprecated or archived packages, tools the config
 # invokes that no Brewfile installs, and a Neovim lockfile nobody has moved in
