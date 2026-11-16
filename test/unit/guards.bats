@@ -124,9 +124,11 @@ STUB
 # lines need Homebrew's binaries on PATH already. Same shape as probe_lib.
 probe_zprofile() {
   local before="$1" after="$2"; shift 2
+  # No paths files: what this machine's /etc/paths.d happens to list is not
+  # what these tests are about, and on a Mac it lists Homebrew.
   env -i HOME="$FAKE_HOME" PATH="${STUBS:+$STUBS:}/usr/bin:/bin" USER=tester \
       XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$FAKE_HOME/.local/share" \
-      XDG_CACHE_HOME="$FAKE_HOME/.cache" "$@" \
+      XDG_CACHE_HOME="$FAKE_HOME/.cache" DOTFILES_PATHS_ROOT="$FAKE_HOME/etc" "$@" \
       "$ZSH_BIN" -fi -c "
         $before
         source '$REPO/config/zsh/.zprofile'
