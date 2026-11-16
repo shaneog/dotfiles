@@ -167,7 +167,7 @@ PROBE
   # was also half of SAVEHIST, so half of the file was kept and never loaded.
   local histfile="$HOME_WITHOUT/.local/share/zsh/zhistory"
   mkdir -p "${histfile%/*}"
-  awk 'BEGIN { for (i = 0; i < 120000; i++) printf ": %d:0;echo unique-%d\n", 1700000000 + i, i }' \
+  awk 'BEGIN { for (i = 0; i < 200000; i++) printf ": %d:0;echo unique-%d\n", 1700000000 + i, i }' \
     > "$histfile"
   # -c shells do not read the history file by themselves, hence fc -R.
   SECONDS=0
@@ -555,8 +555,10 @@ STUB
   local stripped captured out
   stripped="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v '^/opt/homebrew' | paste -sd: -)"
   captured="$(mktemp)"
+  # No paths files: a Mac's /etc/paths.d lists Homebrew too, at the end of PATH,
+  # and tmux found that way would say nothing about the block under test.
   _timeout 60 env -i HOME="$HOME_WITHOUT" PATH="$stripped" TERM=xterm-256color \
-    USER="${USER:-tester}" "$ZSH_BIN" -l -c \
+    USER="${USER:-tester}" DOTFILES_PATHS_ROOT="$BATS_TEST_TMPDIR/no-paths" "$ZSH_BIN" -l -c \
     'print "prefix=${HOMEBREW_PREFIX:-unset} tmux=$+commands[tmux] zshrc=${__DOTFILES_ZSHRC:-no}"' \
     > "$captured" 2>&1
   out="$(cat "$captured")"; rm -f "$captured"
