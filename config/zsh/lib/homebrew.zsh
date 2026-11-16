@@ -1,11 +1,10 @@
 #!/usr/bin/env zsh
 
-zinit snippet PZTM::homebrew
+alias brewi='brew install'
+alias brewu='brew upgrade'
+alias brewx='brew uninstall'
 
-# The whole maintenance run in one word. Defined after the snippet above, not in
-# alias.zsh: that file loads first, so an alias there would be replaced without a
-# word if prezto ever took the same name -- it already owns brewc, brewi, brewl,
-# brewo, brews, brewu and brewx.
+# The whole maintenance run in one word.
 #
 # Semicolons rather than &&: `brew doctor` exits non-zero for warnings that are
 # not failures, and a cleanup is still wanted when an upgrade fails.

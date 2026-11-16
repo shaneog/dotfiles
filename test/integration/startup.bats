@@ -51,6 +51,8 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
        print "BASE_PATH=$path[(r)/base/rc-bin]"
        print "BREWUP=${aliases[brewup]:-unset}"
        for a in g gia gco gbc gfc gfr gp gpf gr; do print "GITALIAS $a=${aliases[$a]:-unset}"; done
+       for a in grep mkdir df du find scp sftp l ll d p brewi brewu brewx; do print "ALIAS $a=${aliases[$a]:-unset}"; done
+       for o in autocd autopushd pushdignoredups pushdsilent pushdtohome cdablevars clobber longlistjobs autoresume bgnice hup checkjobs combiningchars interactivecomments rcquotes correct; do print "OPTION $o=$options[$o]"; done
        print "LANG=$LANG LC_ALL=$LC_ALL LC_TIME=$LC_TIME LC_COLLATE=$LC_COLLATE"
        print "CHILD_ENV=$(env | grep -E "^(LANG|LESSCHARSET)=" | sort | tr "\n" " ")"
        print "HISTOPTS=share:$options[sharehistory] incappend:$options[incappendhistory]"
@@ -307,18 +309,16 @@ STUB
 }
 
 @test "everything deferred to after the first prompt actually arrives" {
-  # Four things load via zinit turbo to keep them off the critical path. Their
+  # Three things load via zinit turbo to keep them off the critical path. Their
   # failure mode is silence -- no error, the feature simply never appears -- so
   # each one is asserted here. Bursting the scheduler is how a non-interactive
   # shell reaches the point a real one reaches after drawing its prompt.
   local home; home="$(make_home)"
   run run_login_shell "$home" '@zinit-scheduler burst >/dev/null 2>&1
     print "autosuggest=$+functions[_zsh_autosuggest_start]"
-    print "utility_aliases=${+aliases[ll]}"
     print "history_binding=$(bindkey -M emacs "^P" | grep -c history-substring-search-up)"'
   guard_home "$home" && rm -rf "$home"
   echo "$output" | grep -q "autosuggest=1"     || { echo "autosuggestions never arrived: $output"; return 1; }
-  echo "$output" | grep -q "utility_aliases=1" || { echo "prezto utility never arrived: $output"; return 1; }
   echo "$output" | grep -q "history_binding=1" || { echo "history bindings never arrived: $output"; return 1; }
 }
 
@@ -344,21 +344,11 @@ STUB
   # HEAD holds the commit when one is checked out, and a branch's name otherwise.
   local zinit="$HOME_WITHOUT/.local/share/zinit" repo commit count=0
   while read -r repo commit; do
-    [ "$repo" = sorin-ionescu/prezto ] && continue
     assert_equal "$(cat "$(pin_checkout "$zinit" "$repo")/.git/HEAD")" "$commit" \
       "what $repo has checked out"
     count=$((count + 1))
   done < <(pins)
   [ "$count" -ge 5 ] || { echo "only $count pins were checked"; return 1; }
-
-  # Prezto's modules are downloaded files with no commit to ask for. This is
-  # where they would be fetched from; that they were is the cold-cache job's
-  # to show, because it takes the network.
-  local prezto; prezto="$(pinned_commit sorin-ionescu/prezto)"
-  run run_login_shell "$HOME_WITHOUT" 'print -r -- "MODULES=$ZINIT_2MAP[PZTM::] DEPENDENCIES=$ZINIT_2MAP[PZT::]"'
-  assert_contains "$output" "MODULES=https://raw.githubusercontent.com/sorin-ionescu/prezto/$prezto/modules/ "
-  assert_contains "$output" "DEPENDENCIES=https://raw.githubusercontent.com/sorin-ionescu/prezto/$prezto/"
-  assert_equal "$(cat "$zinit/snippets/.prezto-commit")" "$prezto" "the commit Prezto's modules are recorded at"
 }
 
 @test "a shell moves a plugin that is installed at another commit to its pin" {
@@ -477,11 +467,7 @@ DRIVER
   assert_equal "$went" "$target" "where the shell went"
 }
 
-@test "the brew maintenance alias survives prezto's own brew aliases" {
-  # prezto's homebrew module is sourced after alias.zsh and owns brewc, brewi,
-  # brewl, brewo, brews, brewu and brewx. This alias is defined after that
-  # snippet for exactly that reason, so the assertion is that ours is what a real
-  # shell ends up with -- not merely that the line exists in a file.
+@test "the brew maintenance alias runs every step, whatever the one before did" {
   run cat "$PROBE_WITH"
   assert_contains "$output" "BREWUP=brew update; brew upgrade; brew cleanup; brew doctor"
 }
@@ -514,6 +500,74 @@ gpf=git push --force-with-lease
 gr=git rebase
 ALIASES
   done
+}
+
+@test "the everyday commands carry their flags, with and without a base layer" {
+  # Whole lines, as for the git aliases. `ls` and `o` are not here: what they
+  # stand for depends on what is installed, and guards.bats asks about each.
+  local p name expansion
+  for p in "$PROBE_WITH" "$PROBE_WITHOUT"; do
+    run cat "$p"
+    while IFS='=' read -r name expansion; do
+      printf '%s\n' "$output" | grep -qxF "ALIAS $name=$expansion" || {
+        echo "$name is not '$expansion' in $(basename "$p"):"
+        printf '%s\n' "$output" | grep "^ALIAS $name="
+        return 1
+      }
+    done <<'ALIASES'
+grep=grep --color=auto
+mkdir=mkdir -p
+df=df -kh
+du=du -kh
+find=noglob find
+scp=noglob scp
+sftp=noglob sftp
+l=ls -1A
+ll=ls -lh
+d=dirs -v
+p=${(z)PAGER}
+brewi=brew install
+brewu=brew upgrade
+brewx=brew uninstall
+ALIASES
+  done
+}
+
+@test "the shell's options are set, whatever a base layer chose" {
+  # One line each in common.zsh and nothing else that would notice one going:
+  # the first sign would be `>` overwriting a file it used to refuse to.
+  local p name state
+  for p in "$PROBE_WITH" "$PROBE_WITHOUT"; do
+    run cat "$p"
+    while read -r name state; do
+      assert_contains "$output" "OPTION $name=$state" "$(basename "$p")"
+    done <<'OPTIONS'
+autocd on
+autopushd on
+pushdignoredups on
+pushdsilent on
+pushdtohome on
+cdablevars on
+clobber off
+longlistjobs on
+autoresume on
+bgnice off
+hup off
+checkjobs off
+combiningchars on
+interactivecomments on
+rcquotes on
+correct on
+OPTIONS
+  done
+}
+
+@test "keys a base layer bound are back to zsh's defaults" {
+  # The editor's bindings are made on a clean keymap, so a key means the same
+  # thing on every machine. Esc-z is one this repo leaves as zsh has it.
+  echo "bindkey '^[z' kill-whole-line" >> "$HOME_WITH/.zshrc"
+  run run_login_shell "$HOME_WITH" 'bindkey -M emacs "^[z"'
+  assert_contains "$output" '"^[z" execute-last-named-cmd'
 }
 
 @test "the locale is en_US in every category" {

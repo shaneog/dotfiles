@@ -51,11 +51,6 @@ fi
 autoload -Uz "$ZDOTDIR/autoload/sync_pins" && sync_pins
 # Bootstrap zinit
 source "${ZINIT[ZINIT_HOME]}/zinit.zsh"
-# PZTM:: and PZT:: are zinit's shorthand for Prezto's master branch. Pointed at
-# the pinned commit instead, so that the modules named in lib/ and the ones
-# they pull in themselves all come from it.
-ZINIT_2MAP[PZT::]="https://raw.githubusercontent.com/sorin-ionescu/prezto/$DOTFILES_PINS[sorin-ionescu/prezto]/"
-ZINIT_2MAP[PZTM::]="${ZINIT_2MAP[PZT::]}modules/"
 
 # Load all the auto-completions, has to be done before any compdefs
 autoload -Uz _zinit
