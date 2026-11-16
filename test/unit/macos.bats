@@ -70,7 +70,9 @@ esac
 exit 0
 EOF
 
-  for noop in killall open chsh; do
+  # osascript too: the real one reaches the desktop session whatever $HOME says,
+  # and would close System Settings on the machine running the tests.
+  for noop in killall open chsh osascript; do
     printf '#!/bin/sh\nprintf "%s %%s\\n" "$*" >> "$CALL_LOG"\nexit 0\n' "$noop" > "$STUBS/$noop"
   done
   # dscl has to answer: the capture pipes it into awk and writes the result.
@@ -117,6 +119,26 @@ macos() {
 }
 
 writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
+
+@test "macos: --check leaves System Settings open" {
+  # Regression: the quit ran before --check was looked at, so `make audit`
+  # closed the window on whoever had it open.
+  run macos --check
+  echo "$output" | grep -qE "of [0-9]+ settings applied" \
+    || { echo "the script did not run: $output"; return 1; }
+  refute_contains "$(cat "$LOG")" "osascript" "the commands --check ran"
+}
+
+@test "macos: an apply closes System Settings before it writes" {
+  run macos
+  local first_write quit
+  quit="$(grep -n '^osascript .*System Settings.* quit' "$LOG" | head -1 | cut -d: -f1)"
+  first_write="$(grep -n '^defaults write' "$LOG" | head -1 | cut -d: -f1)"
+  [ -n "$quit" ] || { echo "System Settings was never asked to quit"; cat "$LOG"; return 1; }
+  [ -n "$first_write" ] || { echo "nothing was written"; return 1; }
+  [ "$quit" -lt "$first_write" ] \
+    || { echo "the quit came after the first write (line $quit against $first_write)"; return 1; }
+}
 
 @test "macos: --check writes nothing at all" {
   run macos --check

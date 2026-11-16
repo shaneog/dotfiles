@@ -12,7 +12,9 @@
 #        script/sweep --all
 #
 # Resumable: lines already in the output file are not repeated, so a budget that
-# runs out is picked up by the next run.
+# runs out is picked up by the next run. A result is kept for as long as the
+# line it was recorded against is still that line; one that has been edited or
+# has moved is swept again.
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
@@ -112,9 +114,30 @@ candidates() {
 	fi
 }
 
+# Drop every result whose line is no longer the one it was recorded against.
+# The rows are keyed on a line number, and an edit above a line gives its number
+# to a different line: resuming on the number alone would skip a line nothing
+# has ever swept, and leave the old verdict standing against the wrong text.
+#
+# The text is everything after the third tab, taken whole, because a line of
+# config can hold tabs of its own.
+still_current() {
+	awk '{
+		split($0, field, "\t")
+		file = field[1]; n = field[2]
+		text = substr($0, length(field[1]) + length(field[2]) + length(field[3]) + 4)
+		if (file != loaded) {
+			loaded = file; split("", lines); i = 0
+			while ((getline line < file) > 0) lines[++i] = line
+			close(file)
+		}
+		if ((n in lines) && lines[n] == text) print
+	}'
+}
+
 mkdir -p "$(dirname "$OUT")"
 : > "$OUT.new"
-[ -f "$OUT" ] && cp "$OUT" "$OUT.new"
+[ -f "$OUT" ] && still_current < "$OUT" > "$OUT.new"
 mv "$OUT.new" "$OUT"
 
 started=$(date +%s)

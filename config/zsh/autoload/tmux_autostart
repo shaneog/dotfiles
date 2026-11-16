@@ -15,11 +15,14 @@
 # Called before the alias in lib/tmux.zsh exists, so name the config outright
 local -a tmux_cmd=(tmux -f "${XDG_CONFIG_HOME}/tmux/tmux.conf")
 local session=${USER//./}
+# The = makes tmux match the name exactly. Without it a target matches any
+# session whose name starts with it, so "sam-work" would answer for "sam".
+local target="=$session"
 
-if $tmux_cmd has-session -t "$session" 2>/dev/null; then
+if $tmux_cmd has-session -t "$target" 2>/dev/null; then
   # Only attach when nothing else is on this session, so we never steal it
-  [[ -z "$($tmux_cmd list-clients -t "$session" 2>/dev/null)" ]] || return 0
-  $tmux_cmd attach-session -t "$session"
+  [[ -z "$($tmux_cmd list-clients -t "$target" 2>/dev/null)" ]] || return 0
+  $tmux_cmd attach-session -t "$target"
 else
   $tmux_cmd new-session -s "$session"
 fi

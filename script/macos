@@ -152,7 +152,12 @@ fi
 # Close System Settings, so an open pane cannot write its cached values back
 # over what we are about to change. Called "System Preferences" until Ventura
 # renamed it; the old name no longer resolves to anything.
-osascript -e 'tell application "System Settings" to quit' 2>/dev/null
+#
+# Not under --check: nothing is about to change, and script/audit runs --check
+# on a machine somebody is using.
+if [ -z "$CHECK_ONLY" ]; then
+	osascript -e 'tell application "System Settings" to quit' 2>/dev/null
+fi
 
 ###############################################################################
 # Record what was here first                                                  #
