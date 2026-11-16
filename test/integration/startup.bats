@@ -489,6 +489,27 @@ ALIASES
     "a login shell started without them on PATH"
 }
 
+@test "directories an installer lists in /etc/paths.d reach PATH, behind what is already there" {
+  # Regression: /etc/zprofile is what reads these, and `noglobalrcs` skips it,
+  # so a tool that puts its command line on PATH this way was never found.
+  local etc="$BATS_TEST_TMPDIR/etc" tool="$BATS_TEST_TMPDIR/Some Tool.app/Contents/bin"
+  local captured out
+  mkdir -p "$etc/paths.d" "$tool"
+  printf '/usr/bin\n%s\n' "$BATS_TEST_TMPDIR/not-installed" > "$etc/paths"
+  # A space in the path and no newline at the end: what one real installer writes.
+  printf '%s' "$tool" > "$etc/paths.d/some-tool"
+  captured="$(mktemp)"
+  _timeout 60 env -i HOME="$HOME_WITHOUT" PATH="/usr/bin:/bin" TERM=xterm-256color \
+    USER="${USER:-tester}" DOTFILES_PATHS_ROOT="$etc" "$ZSH_BIN" -l -c \
+    'print "LAST=$path[-1]"; there=(${(M)path:#/usr/bin}); missing=(${(M)path:#*/not-installed})
+     print "USRBIN=$#there MISSING=$#missing"' \
+    > "$captured" 2>&1
+  out="$(cat "$captured")"; rm -f "$captured"
+
+  assert_contains "$out" "LAST=$tool" "the last directory on PATH"
+  assert_contains "$out" "USRBIN=1 MISSING=0" "a listed directory already there, and one that does not exist"
+}
+
 @test "Homebrew is on PATH before .zshrc runs" {
   # Regression, and one this repo's own layering hid. The shellenv lived in
   # lib/homebrew.zsh, which .zshrc sources two thirds of the way down -- after
