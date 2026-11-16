@@ -167,23 +167,22 @@
     <h3>Four files it never touches</h3>
     <p>On a managed Mac, another tool owns <code>~/.profile</code>, <code>~/.bashrc</code>, <code>~/.zprofile</code> and <code>~/.zshrc</code>, and rewrites them from time to time. Setup neither creates nor changes any of the four. They are read as a base layer instead, which <a href="shell.html#layers">Opening a terminal</a> explains.</p>
 
-    <h2 id="gitignore">Why the ignore list is upside down</h2>
-    <p>Here is a side effect of the signposts. Because <code>~/.config/gh</code> <em>is</em> the repository's <code>config/gh</code> folder, anything the GitHub CLI saves there lands inside the repository, including its record of who is logged in. Left alone, git would offer to publish it.</p>
-    <p>So <code>.gitignore</code> works like a guest list. It starts by ignoring everything under <code>config/</code> and <code>ssh/</code>, then names the few things that are allowed in.</p>
+    <h2 id="gitignore">What git is told to ignore</h2>
+    <p>Linking one entry at a time keeps most apps out of the repository, but not all of them. <code>~/.config/gh</code> still <em>is</em> the repository's <code>config/gh</code> folder, so anything the GitHub CLI saves there lands inside the repository, including its record of who is logged in. Left alone, git would offer to publish it.</p>
+    <p>So <code>.gitignore</code> names those files one by one. The list is short, because only an app whose folder is linked can write here.</p>
 
-    <pre><code><span class="dim"># everything is turned away at the door...</span>
-config/*
+    <pre><code><span class="dim"># what apps write inside a linked folder</span>
+config/gh/hosts.yml
+config/tmux/plugins
+config/zsh/.zcompdump
+
+<span class="dim"># ssh/ holds one file of ours, and everything else is turned away</span>
 ssh/*
-
-<span class="dim"># ...except the names on the list</span>
-!config/git
-!config/zsh/
-!config/nvim/
 !ssh/config</code></pre>
 
     <div class="callout note">
       <p class="callout-title">Good to know</p>
-      <p>A test checks that every folder under <code>config/</code> has been decided on purpose: either tracked, or ignored by a rule of its own. A folder that simply appeared fails the test, so nothing gets published or forgotten by accident. Names that should not appear in a public repository go in <code>.git/info/exclude</code>, which is never shared.</p>
+      <p>Anything new under <code>config/</code> shows up in <code>git status</code>, and a test fails until someone decides what it is: tracked, or ignored by a rule of its own. Names that should not appear in a public repository go in <code>.git/info/exclude</code>, which is never shared. A key copied into <code>ssh/</code> by mistake is ignored, so <code>git add</code> passes over it.</p>
     </div>
 
     <h2 id="local">Three files that belong to one Mac</h2>

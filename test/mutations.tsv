@@ -50,6 +50,9 @@ script/remove	s|^            "$HOME"/.config/.\* "$HOME"/.config/\* \\$|        
 config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.bats	every git config key	a git config key becomes one git silently ignores
 config/git/config	s|^  gpgSign = true|  gpgSign = false|	test/static/lint.bats	a tag made with this git config is signed	tags go back to being unsigned
 config/git/config	s|conflictStyle = zdiff3|conflictStyle = diff3|	test/static/lint.bats	merge conflict shows only	a conflict repeats the lines both sides agree on
+.gitignore	s|^config/tmux/plugins$|config/*|	test/static/lint.bats	nobody has added shows as untracked	a new tool's config is ignored, so it is never linked and nothing says so
+.gitignore	s|^ssh/\*$|ssh/known_hosts|	test/static/lint.bats	cannot be added by accident	a key copied into ssh/ can be committed to a public repo
+.gitignore	s|^!ssh/config$|# gone|	test/static/lint.bats	cannot be added by accident	an ignore rule swallows a file the repo tracks
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format " #I #W "|	test/integration/tmux.bats	a window with activity	an alerting window looks like every other window
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format "#[fg=colour11,bg=colour8] #I #W#F "|	test/integration/tmux.bats	a window with activity	an inline colour shadows the alert style again
 config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.bats	a zoomed pane	a zoomed pane leaves no trace in the status line

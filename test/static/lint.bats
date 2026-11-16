@@ -297,7 +297,7 @@ for found in pin.finditer(open(sys.argv[1]).read()):
 @test "no stray runtime state is lurking under config/" {
   # The directories here are linked into ~/.config, so the tools they configure
   # write their state here. Anything new must be a deliberate decision: track
-  # it, or ignore it.
+  # it, ignore it, or name it in .git/info/exclude, which is never published.
   # Left alone, an allowlisted directory can silently accumulate state that a
   # broad `git add` would then publish.
   local stray
@@ -305,48 +305,35 @@ for found in pin.finditer(open(sys.argv[1]).read()):
   [ -z "$stray" ] || { echo "untracked and unignored under config/:"; echo "$stray"; return 1; }
 }
 
-@test "every config entry is deliberately tracked or deliberately ignored" {
-  # config/* ignores everything by default, which is the safe direction for a
-  # public repo -- but it also means a directory you meant to version is
-  # silently absent. Require each entry to be classified by a rule of its own:
-  # tracked, or matched by something more specific than the blanket rule.
-  #
-  # Machine-local or otherwise unpublishable entries belong in
-  # .git/info/exclude, which counts as an explicit rule without appearing in
-  # the tracked .gitignore.
-  local blanket unclassified="" exclude_file
-  blanket="$(grep -n '^config/\*' "$REPO/.gitignore" | cut -d: -f1 | tr '\n' ' ')"
-  exclude_file="$(cd "$REPO" && git rev-parse --absolute-git-dir)/info/exclude"
-  local entry rule line
-  for entry in "$REPO"/config/*; do
-    entry="config/$(basename "$entry")"
-    git -C "$REPO" ls-files --error-unmatch "$entry" >/dev/null 2>&1 && continue
-    rule="$(git -C "$REPO" check-ignore -v "$entry" 2>/dev/null)"
-    if [ -z "$rule" ]; then
-      unclassified="$unclassified\n  $entry (neither tracked nor ignored)"
-      continue
-    fi
-    # Only the blanket config/* rule matched, so nothing was decided about this
-    # path. .gitignore outranks .git/info/exclude, so check-ignore will always
-    # report the blanket rule even when a local classification exists -- consult
-    # the exclude file directly.
-    case "$rule" in
-      *.gitignore:*)
-        line="$(echo "$rule" | cut -d: -f2)"
-        case " $blanket " in
-          *" $line "*)
-            grep -qE "^${entry}/?\$" "$exclude_file" 2>/dev/null && continue
-            unclassified="$unclassified\n  $entry (only the blanket rule)"
-            ;;
-        esac
-        ;;
-    esac
+@test "a config entry nobody has added shows as untracked" {
+  # Regression: a blanket config/* rule ignored it instead. script/setup links
+  # only what git tracks, so a new tool's config that nobody had `git add`ed was
+  # never linked, and nothing said so.
+  local path
+  for path in config/some-new-tool config/some-new-tool/settings.toml config/some-new-file.toml; do
+    run git -C "$REPO" check-ignore -q --no-index "$path"
+    [ "$status" -eq 1 ] || { echo "$path is ignored (check-ignore exit $status)"; return 1; }
   done
-  if [ -n "$unclassified" ]; then
-    printf 'unclassified config entries:%b\n' "$unclassified"
-    echo "add a specific rule to .gitignore, or to .git/info/exclude if it should not be published"
-    return 1
-  fi
+}
+
+@test "what tools write inside the clone cannot be added by accident" {
+  # --no-index asks about the rules alone, whatever the index holds.
+  local path
+  for path in \
+    ssh/id_ed25519 ssh/id_ed25519.pub ssh/known_hosts ssh/config-local \
+    config/gh/hosts.yml config/homebrew/trust.json config/homebrew/trust.json.lock \
+    config/karabiner/automatic_backups/karabiner_20260101.json \
+    config/tmux/plugins/tpm/tpm config/zsh/.zcompdump config/zsh/.zcmpdump-host \
+    config/zsh/lib/git.zsh.zwc config/zsh/.zshrc.zwc.old
+  do
+    git -C "$REPO" check-ignore -q --no-index "$path" \
+      || { echo "$path is not ignored"; return 1; }
+  done
+  # ...and the rules that do that do not reach what is ours.
+  for path in $(git -C "$REPO" ls-files -- ssh config); do
+    run git -C "$REPO" check-ignore -q --no-index "$path"
+    [ "$status" -eq 1 ] || { echo "$path is tracked and ignored"; return 1; }
+  done
 }
 
 @test "no secrets in the history" {
