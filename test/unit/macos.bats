@@ -274,6 +274,8 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   [ ! -e "$MHOME/sudo_local" ] || { echo "--check wrote the pam file"; return 1; }
 }
 
+# Reads a file only macOS ships.
+# bats test_tags=macos
 @test "macos: the pam line is the one this OS ships, not a hand-written copy" {
   # Against the real template on purpose: it is the only way to notice Apple
   # respelling the line or moving the file. Everything else here is hermetic.
@@ -376,6 +378,8 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
     || { echo "copied the module under a directory that is not root-owned"; return 1; }
 }
 
+# /tmp is a symlink on macOS and a directory elsewhere.
+# bats test_tags=macos
 @test "macos: a root-owned symlink to a writable target is refused" {
   # /tmp is precisely this case: lrwxr-xr-x root:wheel pointing at a 1777
   # directory. `stat -f` is lstat, so a check that asks only about the link sees
@@ -384,12 +388,35 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   mkdir -p "$MHOME/brewlib"
   printf 'module\n' > "$MHOME/brewlib/pam_reattach.so"
 
+  # The one path here that is outside the test's own directory. It is named for
+  # this process and removed before anything is asserted: left behind by a run
+  # that failed, it would fail the next run too, whatever that run did.
+  local dest="/tmp/dotfiles-pam-test-$$" made=""
+  rm -rf "$dest"
+
   PAM_TRUST_DEST="" PAM_REATTACH_SRC="$MHOME/brewlib/pam_reattach.so" \
-    PAM_REATTACH_DEST="/tmp/dotfiles-pam-test/pam_reattach.so" run macos
+    PAM_REATTACH_DEST="$dest/pam_reattach.so" run macos
+  if [ -e "$dest" ]; then made=1; rm -rf "$dest"; fi
+
   echo "$output" | grep -q "Not loading pam_reattach" || { echo "$output"; return 1; }
   refute_contains "$(cat "$MHOME/sudo_local")" "pam_reattach" "the PAM file"
-  [ ! -e /tmp/dotfiles-pam-test ] \
-    || { rm -rf /tmp/dotfiles-pam-test; echo "created a directory under an untrusted path"; return 1; }
+  [ -z "$made" ] || { echo "created a directory under an untrusted path"; return 1; }
+}
+
+# /usr/lib/pam is macOS's, and so is the stat that is asked about it.
+# bats test_tags=macos
+@test "macos: a module under a path root owns all the way up is loaded" {
+  # The check has to be able to say yes. A check that refuses everything passes
+  # both refusals above, and one did: bash 3.2 rejects the quotes a "0$perms"
+  # leaves inside the arithmetic, so every path looked untrusted. A test cannot
+  # create a root-owned path, so the module macOS ships stands in for ours. No
+  # source is given, so nothing is copied there.
+  local module="/usr/lib/pam/pam_tid.so.2"
+  PAM_TRUST_DEST="" PAM_REATTACH_DEST="$module" run macos
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  refute_contains "$output" "Not loading pam_reattach" "the output"
+  grep -qE "^auth[[:space:]]+optional[[:space:]]+$module\$" "$MHOME/sudo_local" \
+    || { echo "the module never reached sudo_local: $(cat "$MHOME/sudo_local" 2>&1)"; return 1; }
 }
 
 @test "macos: a declared but uninstalled pam-reattach is reported" {

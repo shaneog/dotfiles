@@ -2,16 +2,18 @@ BATS ?= bats
 
 .PHONY: test test-static test-unit test-integration test-vm lint audit brew-drift mutate sweep update doctor identity
 
+# A test tagged macos needs a Mac. Anywhere else those are left out, and each
+# tier says how many, so a green run on Linux is not read as the whole suite.
+ifneq ($(shell uname -s),Darwin)
+BATS_FLAGS ?= --filter-tags '!macos'
+NOT_CHECKED = @echo "NOT CHECKED: the $$($(BATS) --count --filter-tags macos test/$*) tests in test/$* that need a Mac."
+endif
+
 test: test-static test-unit test-integration
 
-test-static:
-	$(BATS) test/static
-
-test-unit:
-	$(BATS) test/unit
-
-test-integration:
-	$(BATS) test/integration
+test-static test-unit test-integration: test-%:
+	$(BATS) $(BATS_FLAGS) test/$*
+	$(NOT_CHECKED)
 
 # Deliberately not part of `test`: local only, needs Tart, and takes about ten
 # minutes the first time, most of it the image download, and about three after

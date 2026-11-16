@@ -34,6 +34,19 @@ sweep() {
   PATH="$STUBS:$PATH" _timeout 120 bash "$WORK/script/sweep" --out "$OUT" "$SAMPLE"
 }
 
+@test "sweep: the line is commented out while the tests run" {
+  # The stand-in bats fails whatever it finds, so the other tests here pass
+  # when nothing was edited at all. This one keeps what the tests were shown.
+  # BSD and GNU sed disagree about how an in-place edit is spelled, and the
+  # wrong spelling edits nothing.
+  printf '#!/bin/sh\ncat "%s" >> "%s"\nexit 1\n' "$WORK/$SAMPLE" "$BATS_TEST_TMPDIR/seen" > "$STUBS/bats"
+  run sweep
+  assert_contains "$output" "2 swept: 2 noticed"
+  assert_equal "$(tr '\n' '/' < "$BATS_TEST_TMPDIR/seen")" \
+    "# alias one=1/alias two=2/alias one=1/# alias two=2/" "what the tests saw, a line at a time"
+  assert_equal "$(tr '\n' '/' < "$WORK/$SAMPLE")" "alias one=1/alias two=2/" "the file afterwards"
+}
+
 @test "sweep: a second run repeats nothing" {
   run sweep
   assert_contains "$output" "2 swept: 2 noticed"

@@ -373,6 +373,14 @@ Layering is covered by a fixture that impersonates a managed shell setup owning
 `~/.zprofile` and `~/.zshrc`, so the tests behave the same on a machine that has
 no such setup, and both configurations are asserted.
 
+Some tests need a Mac: macOS itself, Homebrew, Ghostty. Each of those is
+tagged `macos`, with the reason on the line above it. Anywhere else `make test`
+leaves them out and says how many, and everything that remains passes on Linux,
+so a change made from a Linux container gets a real pass or fail. A test that
+wants a tool the machine lacks says `NOT CHECKED` and is skipped; on a CI
+runner, where a missing tool means the workflow stopped installing it, the same
+test fails.
+
 The startup timing can be skipped:
 
 ```sh
@@ -404,7 +412,9 @@ make sweep                              # everything, 15 minutes' worth
 script/sweep config/tmux/tmux.conf      # one file
 ```
 
-Both need a clean working tree, because they edit tracked files in place.
+Both need a clean working tree, because they edit tracked files in place. Both
+run on Linux as well. There, a row whose test needs a Mac is listed as
+`NOT CHECKED` and not as caught, and `sweep` says that it left those tests out.
 
 Results accumulate in `$XDG_STATE_HOME/dotfiles/sweep.tsv` so successive runs
 build on each other, and a result is dropped once its line is edited or moves.
@@ -479,10 +489,14 @@ stdin.
 
 | Workflow | Runs | What it does |
 | --- | --- | --- |
-| [`test`](.github/workflows/test.yml) | Pull requests, pushes to `main`, weekly | The three tiers, with unit and integration against both the system and Homebrew zsh, and the mutation manifest. |
+| [`test`](.github/workflows/test.yml) | Pull requests, pushes to `main`, weekly | The three tiers on macOS, with unit and integration against both the system and Homebrew zsh, and the mutation manifest. One Linux job runs every test that does not need a Mac. |
 | [`provision`](.github/workflows/provision.yml) | Weekly, on demand | Runs `bootstrap`, `setup`, `macos` and `remove` for real on disposable runners, since they otherwise only ever run on a new machine. |
 | [`audit`](.github/workflows/audit.yml) | Weekly, on demand | `script/audit`. |
 | [`pages`](.github/workflows/pages.yml) | Pushes to `main` that touch `guides/` | Publishes the guides. |
+
+The macOS jobs install their tools from the `Brewfile` through one shared step,
+[`.github/actions/tools`](.github/actions/tools/action.yml), with the apps left
+out. A tool added to the `Brewfile` is on every runner from the next run.
 
 ## ZSH performance
 

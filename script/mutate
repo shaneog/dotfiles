@@ -16,8 +16,18 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
 	exit 1
 fi
 
+# A test tagged macos needs a Mac, and anywhere else bats is told to leave it
+# out. Its rows are then reported as not checked: such a test fails here with or
+# without the mutation, and a failure is what the loop below counts as caught.
+ON_A_MAC=""
+[ "$(uname -s)" = "Darwin" ] && ON_A_MAC=1
+run_bats() {
+	if [ -n "$ON_A_MAC" ]; then bats "$@"; else bats --filter-tags '!macos' "$@"; fi
+}
+
 caught=0
 missed=0
+unchecked=0
 FILTER="${1:-}"
 
 while IFS="$(printf '\t')" read -r file expr test_file filter note; do
@@ -36,24 +46,45 @@ while IFS="$(printf '\t')" read -r file expr test_file filter note; do
 	# Captured, not piped: `grep -q` closes the pipe on its first match, bats
 	# takes SIGPIPE, and `set -o pipefail` then reports the whole pipeline as
 	# failed -- which reads as "no test matched" for every row.
-	plan="$(bats "$test_file" --filter "$filter" 2>&1 || true)"
+	#
+	# The same run says whether the test passes with nothing broken. One that
+	# fails already, or is skipped, would give the same answer after the
+	# mutation, and that answer would be about the machine and not the assertion.
+	plan="$(run_bats "$test_file" --filter "$filter" 2>&1 || true)"
+	verdict=""
 	if ! printf '%s\n' "$plan" | grep -q '^1\.\.[1-9]'; then
-		printf '  BROKEN %-27s no test matches "%s" in %s\n' "$file" "$filter" "$test_file"
-		missed=$((missed + 1))
+		if [ -z "$ON_A_MAC" ] && [ "$(bats --count "$test_file" --filter "$filter" 2>/dev/null || echo 0)" -gt 0 ]; then
+			verdict="n/a"; why="its test needs a Mac"
+		else
+			verdict="BROKEN"; why="no test matches \"$filter\" in $test_file"
+		fi
+	elif printf '%s\n' "$plan" | grep -q '^not ok '; then
+		verdict="BROKEN"; why="\"$filter\" fails before anything is broken"
+	elif ! printf '%s\n' "$plan" | grep '^ok ' | grep -qv ' # skip'; then
+		verdict="n/a"; why="its test is skipped on this machine"
+	fi
+	if [ -n "$verdict" ]; then
+		if [ "$verdict" = "n/a" ]; then
+			printf '  n/a   %-28s NOT CHECKED, %s: %s\n' "$file" "$why" "$note"
+			unchecked=$((unchecked + 1))
+		else
+			printf '  BROKEN %-27s %s\n' "$file" "$why"
+			missed=$((missed + 1))
+		fi
 		cp "$backup" "$file"
 		rm -f "$backup"
 		trap - EXIT
 		continue
 	fi
 
-	# /usr/bin/sed: GNU sed reads the '' as its script and the expression as a
-	# filename, so a mutation would silently not apply and every row would be
-	# reported caught.
-	/usr/bin/sed -i '' "$expr" "$file"
+	# Read from the copy and written over the file, so there is no in-place
+	# flag to spell: BSD sed wants `-i ''` and GNU sed reads that as a script
+	# and a filename, after which nothing is mutated and every row is caught.
+	sed "$expr" "$backup" > "$file"
 	if git diff --quiet -- "$file"; then
 		printf '  ????  %-28s the mutation changed nothing (%s)\n' "$file" "$note"
 		missed=$((missed + 1))
-	elif bats "$test_file" --filter "$filter" >/dev/null 2>&1; then
+	elif run_bats "$test_file" --filter "$filter" >/dev/null 2>&1; then
 		printf '  MISS  %-28s %s\n' "$file" "$note"
 		printf '        nothing failed when: %s\n' "$expr"
 		missed=$((missed + 1))
@@ -68,4 +99,6 @@ while IFS="$(printf '\t')" read -r file expr test_file filter note; do
 done < test/mutations.tsv
 
 printf '\n  %s caught, %s missed\n' "$caught" "$missed"
+[ "$unchecked" -eq 0 ] \
+	|| printf '  %s NOT CHECKED on this machine. CI checks every row on macOS.\n' "$unchecked"
 [ "$missed" -eq 0 ] || exit 1

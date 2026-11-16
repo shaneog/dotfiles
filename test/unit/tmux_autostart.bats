@@ -105,7 +105,9 @@ assert_tmux() {
 }
 
 @test "does not fire when tmux is not installed" {
-  env -i HOME="$HOME" PATH="/usr/bin:/bin" USER=some.user \
+  # An empty directory, not /usr/bin: that is where a Linux package puts tmux.
+  mkdir -p "$BATS_TEST_TMPDIR/no-tmux"
+  env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/no-tmux" USER=some.user \
       TMUX_LOG="$TMUX_LOG" TERM_PROGRAM=Apple_Terminal \
       "$ZSH_BIN" -fi -c "fpath=($REPO/config/zsh/autoload \$fpath)
                   autoload -Uz tmux_autostart

@@ -9,7 +9,7 @@ load '../helpers/common'
 # the options that came out the far end rather than that the file parsed.
 
 setup() {
-  command -v tmux >/dev/null 2>&1 || skip "tmux is not installed"
+  command -v tmux >/dev/null 2>&1 || skip_unless_ci "tmux is not installed"
   SOCKET="dotfiles-test-$$-${BATS_TEST_NUMBER:-0}"
   # A throwaway $HOME with a stub tpm already in place. The config clones tpm
   # when it is missing, and ~/.config/tmux is a link into this repo, so without the
@@ -150,14 +150,16 @@ PY
 }
 
 @test "tmux: a program's OSC 52 copy reaches the terminal" {
-  command -v python3 >/dev/null 2>&1 || skip "NOT CHECKED: python3 is needed to drive a pty"
+  command -v python3 >/dev/null 2>&1 || skip_unless_ci "python3 is needed to drive a pty"
   # TERM as Terminal.app sets it. tmux decides per client, from the outer TERM.
   osc52_reaches_terminal xterm-256color \
     || { echo "an OSC 52 copy from inside a pane never reached the terminal"; return 1; }
 }
 
+# Ghostty's terminfo entry ships inside the Mac app.
+# bats test_tags=macos
 @test "tmux: a program's OSC 52 copy reaches Ghostty" {
-  command -v python3 >/dev/null 2>&1 || skip "NOT CHECKED: python3 is needed to drive a pty"
+  command -v python3 >/dev/null 2>&1 || skip_unless_ci "python3 is needed to drive a pty"
   # Ghostty keeps its terminfo inside the app and points TERMINFO at it for the
   # shells it starts, so from anywhere else the entry is found by doing the
   # same. Looking only in the system's database skipped this on a machine with

@@ -92,9 +92,16 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 
 @test "our layer wins where it should" {
   run cat "$PROBE_WITH"
-  echo "$output" | grep -q "STARSHIP=1"      # starship installed its precmd
   echo "$output" | grep -q "PURE_HOOKED=$"   # pure's hook was removed
   echo "$output" | grep -q "AUTOSUGGEST=1"   # exactly one autosuggester
+}
+
+@test "starship draws the prompt, over a base layer's and with none" {
+  command -v starship >/dev/null || skip_unless_ci "starship is not installed"
+  run cat "$PROBE_WITH"
+  assert_contains "$output" "STARSHIP=1" "the shell over a base layer"
+  run cat "$PROBE_WITHOUT"
+  assert_contains "$output" "STARSHIP=1" "the shell with no base layer"
 }
 
 @test "the base layer keeps ownership of node" {
@@ -110,7 +117,6 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
   command -v mise >/dev/null && { echo "$output" | grep -q "MISE=1" \
     || { echo "mise never activated: $output"; return 1; } }
   echo "$output" | grep -q "PROFILE_RAN=no RC_RAN=no"
-  echo "$output" | grep -q "STARSHIP=1"
   echo "$output" | grep -q "NPM_CACHE=$PROBE_HOME_WITHOUT/.local/share/npm"
 }
 
@@ -284,6 +290,8 @@ STUB
     || { echo "the local zshrc did not override the config"; return 1; }
 }
 
+# The plugin is read from Homebrew's prefix.
+# bats test_tags=macos
 @test "typing out a command that has an alias gets a reminder" {
   # What the plugin is for, asked of it directly: the hook it puts in front of
   # every command, given one of the git aliases spelled out.
@@ -295,8 +303,10 @@ STUB
   assert_contains "$output" "gp"
 }
 
+# zsh-patina comes from Homebrew and nowhere else.
+# bats test_tags=macos
 @test "zsh-patina is the only syntax highlighter" {
-  command -v zsh-patina >/dev/null || skip "zsh-patina not installed"
+  command -v zsh-patina >/dev/null || skip_unless_ci "zsh-patina is not installed"
   # It shares the line-pre-redraw hook with zsh-syntax-highlighting, which a base
   # layer may have loaded. Two of them fighting is visible as flicker, so assert
   # patina is hooked and any other has been stood down.
@@ -305,6 +315,8 @@ STUB
     || { echo "highlighting is not solely patina's: $output"; return 1; }
 }
 
+# Read from Homebrew's prefix.
+# bats test_tags=macos
 @test "the completions Homebrew keeps to one side are found" {
   # zsh has no completion for yarn of its own, so this one can only have come
   # from the zsh-completions formula.
@@ -313,6 +325,8 @@ STUB
   assert_contains "$output" "yarn=_yarn"
 }
 
+# Read from Homebrew's prefix.
+# bats test_tags=macos
 @test "the extra completions are still found once the index is rebuilt" {
   # An index more than twenty hours old is rebuilt by a compinit that looks at
   # who may write to each directory, and leaves out any it does not trust
@@ -362,7 +376,7 @@ STUB
       || { echo "$cli's completion was not generated: $output"; return 1; }
   done
   guard_home "$home" && rm -rf "$home"
-  [ "$found" -gt 0 ] || skip "neither docker nor orb is installed"
+  [ "$found" -gt 0 ] || skip_unless_ci "neither docker nor orb is installed"
 }
 
 @test "completion styling is ours, and nothing of ours runs a second compinit" {
@@ -389,7 +403,7 @@ STUB
   # fzf treats a failing command as an empty result set, so a backend nothing
   # installs is silent: the widget still exists and simply lists nothing.
   # Asserting on output is the only way to see it.
-  command -v rg >/dev/null || skip "ripgrep not installed"
+  command -v rg >/dev/null || skip_unless_ci "ripgrep is not installed"
   local home; home="$(make_home)"
   run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
@@ -405,6 +419,8 @@ STUB
   # that works: the shell has to end up somewhere else. fzf is given one
   # candidate and told to take it, so it never draws anything to drive.
   command -v fzf >/dev/null || skip_unless_ci "fzf is not installed"
+  # Ubuntu's package is from before the flag lib/fzf.zsh loads it with.
+  fzf --zsh >/dev/null 2>&1 || skip_unless_ci "this fzf has no --zsh"
   local home target; home="$(make_home)"
   target="$BATS_TEST_TMPDIR/jump here"; mkdir -p "$target"
   cat > "$BATS_TEST_TMPDIR/type-option-c" <<'DRIVER'
@@ -645,6 +661,8 @@ STUB
   assert_contains "$(cat "$HOME_WITHOUT/launchd-path")" "$stubs" "the PATH launchd was given"
 }
 
+# /opt/homebrew is where Homebrew lives on a Mac, and only there.
+# bats test_tags=macos
 @test "Homebrew is on PATH before .zshrc runs" {
   # Regression, and one this repo's own layering hid. The shellenv lived in
   # lib/homebrew.zsh, which .zshrc sources two thirds of the way down -- after

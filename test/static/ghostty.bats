@@ -16,6 +16,8 @@ ghostty_bin() {
   fi
 }
 
+# Ghostty is a Mac app here.
+# bats test_tags=macos
 @test "ghostty: the config is one Ghostty accepts" {
   local bin
   bin="$(ghostty_bin)" || skip_unless_ci "Ghostty is not installed"

@@ -24,18 +24,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The tests that need no Mac, on the platform a pull request is most often
+  # written from. A test that does need one is tagged macos (the helper file
+  # says what that covers) and is left out here and nowhere else: the macOS
+  # jobs below run every test, and the static tier fails if one of them stops.
+  linux:
+    name: linux (tests that need no Mac)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # From two places, as a Linux container is set up, so that passing here
+      # means passing there. The distribution has zsh, bats, tmux and the
+      # small tools. It has no starship, mise or tree-sitter-cli, and its fzf,
+      # gitleaks and Neovim are older than this config is written for, so
+      # those six are Homebrew's, which the runner image ships off PATH. They
+      # are linked in one by one: with Homebrew's directory on PATH, the next
+      # thing installed there would replace a distribution tool without anyone
+      # choosing that. git, jq, python3, ssh and docker are part of the image;
+      # its yq is replaced by the distribution's, which reads a filter a
+      # little differently from the one Homebrew gives the macOS jobs.
+      - name: Install tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            zsh bats tmux shellcheck ripgrep direnv fd-find hyperfine yq
+          sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
+          brew=/home/linuxbrew/.linuxbrew/bin
+          "$brew/brew" install fzf gitleaks mise neovim starship tree-sitter-cli
+          for tool in fzf gitleaks mise nvim starship tree-sitter; do
+            sudo ln -sf "$brew/$tool" "/usr/local/bin/$tool"
+          done
+      - name: Every test not tagged macos
+        env:
+          SKIP_PERF: ${{ github.event_name == 'push' && '1' || '' }}
+          DOTFILES_STARTUP_BUDGET_MS: 400
+        run: |
+          bats --print-output-on-failure --filter-tags '!macos' \
+            test/static test/unit test/integration
+
   static:
     name: static checks
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      # Ghostty for its own config check, which is the only thing that can say
-      # whether Ghostty accepts the file.
-      - name: Install tooling
-        run: |
-          brew install bats-core shellcheck jq tmux gitleaks
-          brew install --cask ghostty
+      - uses: ./.github/actions/tools
       - name: Lint and parse every config
         run: bats --print-output-on-failure test/static
 
@@ -53,10 +87,7 @@ jobs:
             path: /opt/homebrew/bin/zsh
     steps:
       - uses: actions/checkout@v7
-      - name: Install tooling
-        run: |
-          brew install bats-core
-          if [ "${{ matrix.zsh }}" = "homebrew" ]; then brew install zsh; fi
+      - uses: ./.github/actions/tools
       - name: Pin the zsh under test
         run: |
           "${{ matrix.path }}" --version
@@ -80,20 +111,11 @@ jobs:
             path: /opt/homebrew/bin/zsh
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/tools
       - name: Pin the zsh under test
         run: |
-          if [ "${{ matrix.zsh }}" = "homebrew" ]; then brew install zsh; fi
           "${{ matrix.path }}" --version
           echo "ZSH_BIN=${{ matrix.path }}" >> "$GITHUB_ENV"
-      # The shell integration for these is wired up by config/zsh/lib, and the
-      # Brewfile is what installs them, so the runner needs them too: the four
-      # zsh plugins are read from where Homebrew puts them. Ghostty is here for
-      # its terminfo entry, which the OSC 52 test hands to tmux.
-      - name: Install tooling
-        run: |
-          brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli \
-            zsh-autosuggestions zsh-completions zsh-history-substring-search zsh-patina zsh-you-should-use
-          brew install --cask ghostty
 
       # Startup timing is too noisy on a shared runner to gate every push, so the
       # perf tier runs on the weekly schedule and on demand -- not never, which is
@@ -123,9 +145,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - name: Install tooling
-        run: |
-          brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli \
-            zsh-autosuggestions zsh-completions zsh-history-substring-search zsh-patina zsh-you-should-use
+      - uses: ./.github/actions/tools
       - name: Every mutation must be caught
         run: script/mutate
