@@ -66,6 +66,32 @@ STUB
   assert_equal "$output" "activated=yes"
 }
 
+@test "mise: the PATH it starts from is this shell's, not the one its cache was written in" {
+  # Regression: `mise activate` writes the PATH of the shell that ran it into
+  # its output, and the cached copy was sourced as it stood. Every later shell
+  # then had the first one's directories appended to its PATH.
+  STUBS="$(stub_dir)"
+  stub_cmd mise <<'STUB'
+#!/bin/sh
+echo run >> "$HOME/mise-runs"
+printf "export __MISE_ORIG_PATH='%s'\n" "$PATH"
+cat <<'SCRIPT'
+if [ -z "${__MISE_ORIG_PATH:-}" ]; then
+  export __MISE_ORIG_PATH="$PATH"
+fi
+
+PATH="$PATH:${__MISE_ORIG_PATH##*:}"
+SCRIPT
+STUB
+  run probe_lib mise.zsh 'path+=(/only/in/the/first/shell)' 'print "last=$path[-1]"'
+  assert_equal "$output" "last=/only/in/the/first/shell"
+
+  run probe_lib mise.zsh 'path+=(/second/shell)' 'print "last=$path[-1] start=${__MISE_ORIG_PATH##*:}"'
+  assert_equal "$output" "last=/second/shell start=/second/shell"
+  # Otherwise the second shell proved nothing about the cache.
+  assert_equal "$(wc -l < "$FAKE_HOME/mise-runs" | tr -d ' ')" "1" "times mise was run"
+}
+
 @test "mise: does not displace a runtime the base layer wraps" {
   # The migration away from nodenv rests on this: a base layer owning node does
   # so with a shell function, and a function is found before anything mise adds
