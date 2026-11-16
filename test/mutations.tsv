@@ -104,6 +104,7 @@ script/macos	s|pam_component_is_root_owned "$p" -Lf|true|	test/unit/macos.bats	s
 script/macos	s|8#${perms:-777} & 8#22|0"${perms:-777}" \& 022|	test/unit/macos.bats	symlink to a writable target	the ownership arithmetic breaks under bash 3.2
 script/macos	s|if grep -q "^brew .pam-reattach." "$PAM_BREWFILE" 2>/dev/null; then|if false; then|	test/unit/macos.bats	declared but uninstalled pam-reattach	a half-applied Touch ID setup reports itself as complete
 script/audit	s@.*\[ -d config/nvim \] && grep.*@true@	test/unit/audit.bats	archived neovim plugin	neovim plugin upstreams stop being checked
+script/audit	s|grep -hoE "@plugin .*tmux.conf 2>/dev/null \\|true \\|	test/unit/audit.bats	archived tmux plugin	tmux plugin upstreams stop being checked
 script/audit	s@warn "${line#  not applied: }"@:@	test/unit/audit.bats	machine that has drifted is reported	machine drift is read but never reported
 script/audit	s@.*done <<< .*@done < /dev/null@	test/unit/audit.bats	machine that has drifted is reported	the drift lines stop being read at all
 config/starship.toml	s|^error_symbol = "\[➜\](red)".*|error_symbol = "[➜](green)"|	test/integration/prompt.bats	character module reflects the last exit status	a failed command still shows the success colour

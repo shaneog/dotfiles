@@ -41,6 +41,19 @@ assert_equal() {
   return 1
 }
 
+# Skip a check that cannot run here -- unless this is a CI runner. What a runner
+# has installed is the workflow's to decide, so a check that cannot run there is
+# a workflow that has stopped installing something, and a skip would go on
+# reporting it as a pass. Two harness tests and both Ghostty checks skipped on
+# every run for exactly that reason.
+skip_unless_ci() {  # why it cannot run
+  if [ -n "${CI:-}" ]; then
+    echo "NOT CHECKED, on a runner that is meant to check it: $1"
+    return 1
+  fi
+  skip "NOT CHECKED: $1"
+}
+
 # GNU timeout, BSD gtimeout, or nothing (CI runners vary).
 _timeout() {
   local secs="$1"; shift
