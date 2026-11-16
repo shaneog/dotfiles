@@ -71,7 +71,8 @@ It asks for your password once, for `sudo`, and then runs these steps in order:
 | 4 | [`script/macos`](script/macos) | Applies the macOS settings, Touch ID for `sudo`, and the Gotham profile for Terminal.app. |
 | 5 | [`Brewfile`](Brewfile) | `brew bundle --global` installs the formulae, casks and fonts. |
 | 6 | Login shell | Homebrew's zsh is added to `/etc/shells` and set with `chsh`. |
-| 7 | [`script/after-setup`](script/after-setup) | Installs Neovim's plugins at the versions in the lockfile, and its treesitter parsers. |
+| 7 | [`script/macos`](script/macos) again | Only if its own check finds something left. On a new Mac that is Touch ID inside tmux, which needs `pam-reattach` from step 5. |
+| 8 | [`script/after-setup`](script/after-setup) | Installs Neovim's plugins at the versions in the lockfile, and its treesitter parsers. |
 
 The first shell you open afterwards installs zinit and the zsh plugins, and
 tmux installs its own plugins the first time it starts.
@@ -80,12 +81,8 @@ tmux installs its own plugins the first time it starts.
 > Two things are left to do by hand on a new machine. Create
 > `~/.gitconfig-user`, because git cannot commit without it, and switch on
 > 1Password's SSH agent. Both are covered under
-> [commit signing](#commit-signing-required).
-
-> [!TIP]
-> Touch ID for `sudo` works straight away, but not inside tmux until
-> `script/macos` has run a second time. It needs `pam-reattach`, which arrives
-> with the Brewfile in step 5.
+> [commit signing](#commit-signing-required), and bootstrap ends by naming
+> whichever of the two is still missing.
 
 Running the same command again later is safe. So is `~/.dotfiles/script/bootstrap`.
 

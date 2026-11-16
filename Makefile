@@ -18,8 +18,9 @@ test-integration:
 test-cold:
 	DOTFILES_COLD_CACHE=1 $(BATS) test/integration/cold-cache.bats
 
-# Deliberately not part of `test`: local only, needs Tart, and takes the better
-# part of an hour. The one thing CI cannot cover -- a genuinely fresh macOS.
+# Deliberately not part of `test`: local only, needs Tart, and takes about ten
+# minutes the first time, most of it the image download, and about three after
+# that. The one thing CI cannot cover -- a genuinely fresh macOS.
 test-vm:
 	test/vm/run
 

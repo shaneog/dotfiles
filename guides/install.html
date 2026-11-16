@@ -87,6 +87,12 @@
               <p>Makes Homebrew's newer zsh the default shell. It happens after the shopping list on purpose: the shell has to be installed before the Mac can be pointed at it.</p>
             </div>
           </li>
+          <li class="seq tone-violet">
+            <div>
+              <h3>Finish the macOS settings <span class="who">script/macos</span></h3>
+              <p>Touch ID for <code>sudo</code> needs a helper to work inside tmux, and the helper arrived with the shopping list. So the settings are checked again, and applied again if anything is left. On a Mac that is already set up, nothing is.</p>
+            </div>
+          </li>
           <li class="seq tone-orange">
             <div>
               <h3>Finish the editor <span class="who">script/after-setup</span></h3>
@@ -108,7 +114,7 @@
     </figure>
 
     <h2 id="by-hand">Two things only you can do</h2>
-    <p>Everything above is automatic. These two are not, because they involve your identity.</p>
+    <p>Everything above is automatic. These two are not, because they involve your identity. Bootstrap ends by naming whichever of them is still missing.</p>
 
     <ul class="cards">
       <li class="card tone-yellow">
@@ -163,6 +169,7 @@
           <tr><td>macOS settings</td><td>Each setting is read first and only written if it differs. The record of the original values is never overwritten.</td></tr>
           <tr><td>Brewfile</td><td>Checked first. Nothing is installed if nothing is missing.</td></tr>
           <tr><td>Login shell</td><td>Already Homebrew's zsh, so it is left alone.</td></tr>
+          <tr><td>macOS settings, second look</td><td>Nothing is left to apply, so nothing runs, and the Dock and Finder are not restarted.</td></tr>
         </tbody>
       </table>
     </div>

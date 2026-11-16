@@ -180,6 +180,24 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   echo "$output" | grep -qE "0 changed, [0-9]+ already applied" || { echo "$output"; return 1; }
 }
 
+@test "macos: the Dock and Finder are restarted only when something they own changed" {
+  # script/bootstrap applies the settings a second time once the Brewfile is
+  # in, and a pam-reattach upgrade asks for a re-run. Neither changes anything
+  # the Dock or Finder would show, so neither should cost a restart of them.
+  run macos
+  grep -q "^killall Dock" "$LOG" \
+    || { echo "a first apply did not restart the Dock: $(cat "$LOG")"; return 1; }
+  : > "$LOG"
+  run macos
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  if grep -q "^killall" "$LOG"; then
+    echo "a run that changed nothing restarted: $(grep "^killall" "$LOG")"; return 1
+  fi
+  # Clearing the Dock is a change it has to be restarted to show.
+  run macos --reset-dock
+  grep -q "^killall Dock" "$LOG" || { echo "--reset-dock did not restart the Dock"; return 1; }
+}
+
 @test "macos: an nvram setting goes to nvram, not defaults" {
   run macos
   grep -q "^sudo nvram StartupMute=" "$LOG" \

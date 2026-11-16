@@ -4,9 +4,9 @@
 #
 # By default this undoes what this repo installed and nothing else: the symlinks
 # in $HOME, ~/.config and ~/.ssh, the clone at ~/.dotfiles, the caches its shell
-# config generates, and the login shell that script/macos changed. Homebrew, everything the Brewfile
-# installed, and the Command Line Tools are left alone: taking those out is a
-# good deal more than "remove these dotfiles" promises.
+# config generates, and the login shell that script/bootstrap changed. Homebrew,
+# everything the Brewfile installed, and the Command Line Tools are left alone:
+# taking those out is a good deal more than "remove these dotfiles" promises.
 #
 #   script/remove               the dotfiles
 #   script/remove --everything  ...and Homebrew, its packages, and the CLT
@@ -153,7 +153,7 @@ caffeinate -s -w $$ &
 
 echo "This removes these dotfiles: the symlinks in \$HOME, \$HOME/.config and"
 echo "\$HOME/.ssh, the clone at \$HOME/.dotfiles, the caches the shell config"
-echo "generates, and the login shell that script/macos set."
+echo "generates, and the login shell that script/bootstrap set."
 if [ -n "$EVERYTHING" ]; then
   echo
   echo "--everything was given, so this will ALSO uninstall Homebrew, every"
@@ -172,7 +172,7 @@ fi
 
 echo "Please remove the added themes from Terminal.app manually."
 
-# script/macos changed this, so it is ours to put back.
+# script/bootstrap changed this, so it is ours to put back.
 log "Restoring the login shell"
 sudo_askpass dscl . -create "/Users/$USER" UserShell "/bin/zsh"
 
