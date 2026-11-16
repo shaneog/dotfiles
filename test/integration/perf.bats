@@ -9,7 +9,7 @@ load '../helpers/common'
 # The defaults sit near what this configuration costs on the slowest Mac it is
 # used on -- 137-146ms and 17-19ms there -- because a ceiling several times the
 # real number only catches a catastrophe, and the drift that happens in practice
-# is a plugin loaded eagerly instead of on a turbo hook. The fastest one
+# is one more file sourced or one more program run at startup. The fastest one
 # measures 72ms and 5ms, so on a machine that fast the defaults are loose, and
 # a lower DOTFILES_STARTUP_BUDGET_MS is what would notice the same drift.
 # Runners are slower and set their own values.

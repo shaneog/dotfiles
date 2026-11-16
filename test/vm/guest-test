@@ -89,12 +89,14 @@ done
 say "the macOS defaults were applied"
 [ "$(defaults read com.apple.dock tilesize)" = "48" ] || die "script/macos did not apply"
 
+# The plugins too: they are Homebrew's files, so the first shell has them
+# without fetching anything.
 say "a first login shell is fully wired"
-probe='print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"'
+probe='print "starship=$+functions[prompt_starship_precmd] direnv=$+functions[_direnv_hook] fzf=$+functions[fzf-file-widget] suggest=$+functions[_zsh_autosuggest_start] search=$+widgets[history-substring-search-up] reminder=$+functions[_check_aliases] dump=$([[ -s $ZSH_COMPDUMP ]] && print yes || print no)"'
 out="$(TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic "$probe")"
 echo "    $out"
 case "$out" in
-  *"starship=1 direnv=1 fzf=1 dump=yes"*) ;;
+  *"starship=1 direnv=1 fzf=1 suggest=1 search=1 reminder=1 dump=yes"*) ;;
   *) die "the shell came up incomplete" ;;
 esac
 

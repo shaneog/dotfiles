@@ -35,19 +35,19 @@ loads afterwards and wins where it should.
   `config/` and `ssh/`. Other tools' state stays out of the clone, so the index
   is the list of what is ours: a new tool's config has to be `git add`ed before
   `script/setup` will link it.
-- **Third-party shell code runs at a pinned commit.** `config/zsh/pins.zsh` is
-  the list, Renovate proposes the bumps, and the autoloaded `sync_pins` moves a
-  machine that already has the code. A new `zinit light` needs a line there and
-  `ver"$DOTFILES_PINS[...]"` on its ice; the static tier fails without both.
+- **zsh plugins are Homebrew formulae.** The `Brewfile` installs them, and the
+  lib file that wants one sources it from `$HOMEBREW_PREFIX/share`, guarded on
+  the file being there. No shell fetches anything, so a first shell needs no
+  network. A new plugin is a `brew` line and a guarded `source`; the static
+  tier fails when the second has no first.
 - **Runtimes are mise's**, and no tools are declared globally: a base layer's
   wrappers are shell functions, found before anything mise adds to `PATH`.
 - **Startup cost is a feature**: 70 to 145ms for this repo alone, depending on
   the Mac, which is the number the perf tier measures and gates. A machine with
   a managed base layer beneath it was ~330ms where this repo alone was ~146ms —
   the base layer costs more than this repo does, and that half is not ours to
-  fix, so quote the isolated number when talking about this repo. Defer with
-  zinit turbo (`wait lucid`), cache tool init with `cached_init`, and measure
-  before claiming a win.
+  fix, so quote the isolated number when talking about this repo. Cache tool
+  init with `cached_init`, and measure before claiming a win.
 
 ## Tests must be able to fail
 
@@ -80,9 +80,9 @@ make mutate                # every row of test/mutations.tsv; needs a clean tree
 The fourth line is the suite as **bash 3.2** runs it, which is the bash a stock
 Mac and the CI runners have, and on a new Mac the one the scripts run under. It
 has no associative arrays, no `${var,,}` and no `mapfile`, and it ends a `$( )`
-at the first unbalanced `)` in a heredoc inside it. `make test-cold`,
-`make test-vm`, `make sweep` and `make brew-drift` are slow or local only; the
-README's Tests section says what each is for.
+at the first unbalanced `)` in a heredoc inside it. `make test-vm`,
+`make sweep` and `make brew-drift` are slow or local only; the README's Tests
+section says what each is for.
 
 ## What the static tier rejects
 

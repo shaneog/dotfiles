@@ -111,7 +111,8 @@ given_lockfile_committed() {  # date
 @test "audit: its working files go where TMPDIR says, and are gone afterwards" {
   local scratch="$BATS_TEST_TMPDIR/tmp" seen="$BATS_TEST_TMPDIR/seen"
   mkdir -p "$scratch"
-  echo "zinit light some/plugin" >> "$FIX/config/zsh/lib/fzf.zsh"
+  mkdir -p "$FIX/config/tmux"
+  echo "set -g @plugin 'some/plugin'" > "$FIX/config/tmux/tmux.conf"
   # gh is asked about that plugin partway through, which is the only moment the
   # working files can be seen from outside.
   cat > "$STUBS/gh" <<'EOF'
@@ -186,7 +187,8 @@ EOF
 }
 
 @test "audit: an archived plugin repository fails" {
-  echo "zinit light some/plugin" >> "$FIX/config/zsh/lib/fzf.zsh"
+  mkdir -p "$FIX/config/tmux"
+  echo "set -g @plugin 'some/plugin'" > "$FIX/config/tmux/tmux.conf"
   cat > "$STUBS/gh" <<'EOF'
 #!/bin/sh
 case "$1" in
@@ -201,7 +203,8 @@ EOF
 }
 
 @test "audit: a long-silent repository warns without failing" {
-  echo "zinit light some/plugin" >> "$FIX/config/zsh/lib/fzf.zsh"
+  mkdir -p "$FIX/config/tmux"
+  echo "set -g @plugin 'some/plugin'" > "$FIX/config/tmux/tmux.conf"
   cat > "$STUBS/gh" <<'EOF'
 #!/bin/sh
 case "$1" in
@@ -304,8 +307,7 @@ EOF
 
 @test "audit: an archived neovim plugin fails too" {
   # lazy.nvim pins its plugins in a committed lockfile and never updates itself,
-  # so an archived one would sit there untouched. The zinit list was checked for
-  # this from the start and the Lua specs were not.
+  # so an archived one would sit there untouched.
   mkdir -p "$FIX/config/nvim/lua"
   printf 'return {\n  { "someone/dead.nvim" },\n}\n' > "$FIX/config/nvim/lua/plugins.lua"
   cat > "$STUBS/gh" <<'EOF'

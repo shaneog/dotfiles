@@ -227,7 +227,22 @@ TYPE
   assert_equal "$TYPED" "on" "application mode at the prompt"
 }
 
+@test "a line from history is suggested, and End takes it" {
+  needs_plugin zsh-autosuggestions
+  typed suggested <<'TYPE'
+line "print -r -- taken-from-history > ${(q)home}/suggested"
+line "rm ${(q)home}/suggested"
+keys "print -r -- taken-f"
+# The suggestion is fetched in the background.
+sleep 1
+keys $'\C-e'
+line ""
+TYPE
+  assert_equal "$TYPED" "taken-from-history" "what the completed line wrote"
+}
+
 @test "Up searches history for what has been typed so far" {
+  needs_plugin zsh-history-substring-search
   # The key as a terminal in application mode sends it, which is what
   # history.zsh binds. Plain Up would bring back the line before this one,
   # which removes the file.
@@ -235,8 +250,6 @@ TYPE
 up="$(echoti kcuu1)"
 line "true fir && print -r -- again > ${(q)home}/recalled"
 line "rm ${(q)home}/recalled"
-# The search arrives after the first prompt, with the other deferred plugins.
-sleep 2
 keys "true fir"
 keys "$up"
 line ""

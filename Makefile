@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift mutate sweep update doctor
+.PHONY: test test-static test-unit test-integration test-vm lint audit brew-drift mutate sweep update doctor
 
 test: test-static test-unit test-integration
 
@@ -12,11 +12,6 @@ test-unit:
 
 test-integration:
 	$(BATS) test/integration
-
-# Every plugin installed from nothing, the way a new machine's first shell does.
-# Not part of `test`: slow and network bound. Runs weekly in CI.
-test-cold:
-	DOTFILES_COLD_CACHE=1 $(BATS) test/integration/cold-cache.bats
 
 # Deliberately not part of `test`: local only, needs Tart, and takes about ten
 # minutes the first time, most of it the image download, and about three after

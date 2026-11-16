@@ -4,8 +4,7 @@ bats_require_minimum_version 1.5.0
 
 load '../helpers/common'
 
-# The harness itself. The tests of the plugin cache snapshot are in
-# test/integration/harness.bats, with the tier that has a plugin cache.
+# The harness itself.
 
 @test "harness: guard_home refuses anything outside a temp directory" {
   run guard_home "$REAL_HOME"

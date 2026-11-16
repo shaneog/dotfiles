@@ -7,7 +7,11 @@ brew 'pam-reattach'
 
 # Shell
 brew 'zsh'
+brew 'zsh-autosuggestions'
+brew 'zsh-completions'
+brew 'zsh-history-substring-search'
 brew 'zsh-patina'
+brew 'zsh-you-should-use'
 
 # CLI/Term Tools
 brew 'diff-so-fancy'

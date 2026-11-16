@@ -86,43 +86,14 @@ jobs:
           "${{ matrix.path }}" --version
           echo "ZSH_BIN=${{ matrix.path }}" >> "$GITHUB_ENV"
       # The shell integration for these is wired up by config/zsh/lib, and the
-      # Brewfile is what installs them, so the runner needs them too. Ghostty is
-      # here for its terminfo entry, which the OSC 52 test hands to tmux.
+      # Brewfile is what installs them, so the runner needs them too: the four
+      # zsh plugins are read from where Homebrew puts them. Ghostty is here for
+      # its terminfo entry, which the OSC 52 test hands to tmux.
       - name: Install tooling
         run: |
-          brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+          brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli \
+            zsh-autosuggestions zsh-completions zsh-history-substring-search zsh-patina zsh-you-should-use
           brew install --cask ghostty
-
-      # The plugin set is defined by the zsh libs, and its commits by pins.zsh,
-      # so key the cache on them. A changed pin restores the previous cache, and
-      # the warm-up below moves it to the new commits as any machine would.
-      - name: Restore plugin cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.local/share/zinit
-          key: zinit-${{ runner.os }}-${{ matrix.zsh }}-${{ hashFiles('config/zsh/lib/*.zsh', 'config/zsh/.zshrc', 'config/zsh/pins.zsh') }}
-          restore-keys: zinit-${{ runner.os }}-${{ matrix.zsh }}-
-
-      # Populates ~/.local/share/zinit, which make_home links into each fake
-      # $HOME. ZDOTDIR points at the repo, so $HOME is left untouched.
-      - name: Warm the plugin cache
-        run: |
-          # TERM matters: without it, tput writes to stderr during startup.
-          warm() { ZDOTDIR="$PWD/config/zsh" TERM=xterm-256color \
-                     ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
-                     zsh -lic 'true' "$@"; }
-          warm
-          # Second run must be quiet: the tests assert startup is silent, so a
-          # still-downloading cache would surface as a confusing test failure.
-          warm 2>/tmp/warm.err || true
-          # Same filter the tests use: ZLE cannot initialise without a
-          # controlling terminal, so that warning is harness noise.
-          if grep -v "can't change option: zle" /tmp/warm.err \
-               | grep -q '[[:alpha:]]'; then
-            echo "plugin cache did not settle; startup still writes to stderr:"
-            cat /tmp/warm.err
-            exit 1
-          fi
 
       # Startup timing is too noisy on a shared runner to gate every push, so the
       # perf tier runs on the weekly schedule and on demand -- not never, which is
@@ -141,14 +112,6 @@ jobs:
           DOTFILES_STARTUP_BUDGET_MS: 400
         run: bats --print-output-on-failure test/integration
 
-  # Every plugin installed from nothing. Weekly rather than per-push: it is slow
-  # and entirely network bound, and it is the one job whose failure means a new
-  # machine is broken. cold.yml also runs it for a pull request that moves a pin.
-  cold:
-    name: cold plugin cache
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    uses: ./.github/workflows/cold.yml
-
   # Breaks each thing in test/mutations.tsv and checks the named assertion
   # notices. Runs on every push and pull request, not weekly: the moment an
   # assertion is worth re-checking is the change that touches it, and finding out
@@ -161,8 +124,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install tooling
-        run: brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
-      - name: Warm the plugin cache
-        run: ZDOTDIR="$PWD/config/zsh" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 zsh -lic 'true'
+        run: |
+          brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli \
+            zsh-autosuggestions zsh-completions zsh-history-substring-search zsh-patina zsh-you-should-use
       - name: Every mutation must be caught
         run: script/mutate

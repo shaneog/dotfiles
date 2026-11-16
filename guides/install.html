@@ -102,7 +102,7 @@
           <li class="seq you">
             <div>
               <h3>Open a new terminal window <span class="who">you</span></h3>
-              <p>The first shell fetches its own plugins, which takes around twelve seconds, once. Every shell after that starts in a fraction of a second.</p>
+              <p>The first shell has nothing to fetch, because its plugins came with the Brewfile. It builds its index for Tab once, and every shell after that starts in a fraction of a second.</p>
             </div>
           </li>
         </ol>
@@ -145,7 +145,6 @@
           <li><span class="label"><code>script/macos</code></span><span class="track"><span class="fill tone-violet" style="--v: 0.5"></span></span><span class="value">&lt;1 s</span></li>
           <li><span class="label">Brewfile, command-line tools</span><span class="track"><span class="fill tone-yellow" style="--v: 55"></span></span><span class="value">55 s</span></li>
           <li><span class="label"><code>script/after-setup</code></span><span class="track"><span class="fill tone-orange" style="--v: 7"></span></span><span class="value">7 s</span></li>
-          <li><span class="label">First shell, installing plugins</span><span class="track"><span class="fill tone-cyan" style="--v: 12"></span></span><span class="value">12 s</span></li>
         </ul>
       </div>
       <figcaption>
@@ -225,7 +224,7 @@ make doctor</code></pre>
         <h3>The dotfiles</h3>
         <ul>
           <li>The login shell goes back to <code>/bin/zsh</code>.</li>
-          <li>The plugin and shell caches are deleted.</li>
+          <li>The shell's caches are deleted.</li>
           <li><code>~/.dotfiles</code> is deleted, and so is every signpost in your home folder, <code>~/.config</code> and <code>~/.ssh</code> that pointed into it. A signpost that was already broken belongs to something else and is left alone.</li>
         </ul>
       </li>

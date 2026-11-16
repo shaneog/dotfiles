@@ -36,9 +36,9 @@ script takes it out again.
 - **Links entries, not directories.** `~/.config` and `~/.ssh` stay real
   directories. Only what git tracks is linked into them, so other tools' files
   never end up in the clone.
-- **Third-party shell code is pinned.** zinit and the zsh plugins run at
-  the commits in [`config/zsh/pins.zsh`](config/zsh/pins.zsh), and Renovate
-  proposes the bumps.
+- **Plugins come from Homebrew.** The four zsh plugins are formulae in the
+  [`Brewfile`](Brewfile). There is no plugin manager, and a shell never
+  downloads anything.
 - **Startup time is tested.** An interactive login shell starts in 70 to 145ms,
   depending on the Mac, and a test fails when it goes over budget.
 
@@ -74,8 +74,8 @@ It asks for your password once, for `sudo`, and then runs these steps in order:
 | 7 | [`script/macos`](script/macos) again | Only if its own check finds something left. On a new Mac that is Touch ID inside tmux, which needs `pam-reattach` from step 5. |
 | 8 | [`script/after-setup`](script/after-setup) | Installs Neovim's plugins at the versions in the lockfile, and its treesitter parsers. |
 
-The first shell you open afterwards installs zinit and the zsh plugins, and
-tmux installs its own plugins the first time it starts.
+The first shell you open afterwards has nothing to install: the zsh plugins
+came with step 5. tmux installs its own plugins the first time it starts.
 
 > [!IMPORTANT]
 > Two things are left to do by hand on a new machine. Create
@@ -139,14 +139,14 @@ it is pulled on whatever branch it has checked out.
 ├── config/         one entry per tool, each linked as ~/.config/<name>
 │   ├── gh/  ghostty/  git/  homebrew/  karabiner/  mise/  nvim/  tmux/
 │   ├── starship.toml
-│   └── zsh/        .zshenv, .zprofile, .zshrc, .zlogin and pins.zsh
+│   └── zsh/        .zshenv, .zprofile, .zshrc and .zlogin
 │       ├── autoload/   functions, loaded the first time each is called
 │       └── lib/        one file per concern, sourced by .zshrc
 ├── ssh/config      linked as ~/.ssh/config
 ├── script/         bootstrap, setup, macos, after-setup, remove, and the test tooling
 ├── test/           static, unit, integration and vm tiers
 ├── guides/         the pages published at ogrady.ie/dotfiles
-└── .github/        workflows, Dependabot and Renovate
+└── .github/        workflows and Dependabot
 ```
 
 ### What gets linked
@@ -204,7 +204,7 @@ does not own.
 flowchart LR
     env["~/.zshenv<br/>sets ZDOTDIR to<br/>~/.config/zsh"]
     profile["config/zsh/.zprofile<br/>locale, PATH, Homebrew"]
-    rc["config/zsh/.zshrc<br/>tmux, pinned plugins,<br/>lib/*.zsh, completion"]
+    rc["config/zsh/.zshrc<br/>tmux, lib/*.zsh,<br/>completion"]
     login["config/zsh/.zlogin<br/>compiles the completion<br/>dump in the background"]
     hprofile(["~/.zprofile<br/>managed, if present"])
     hrc(["~/.zshrc<br/>managed, if present"])
@@ -220,7 +220,7 @@ flowchart LR
 
 | Area | What you get |
 | --- | --- |
-| **Shell** | zsh with [zinit](https://github.com/zdharma-continuum/zinit), autosuggestions, extra completions, history substring search and `you-should-use`. Syntax highlighting is [zsh-patina](https://github.com/michel-kraemer/zsh-patina). |
+| **Shell** | zsh with autosuggestions, extra completions, history substring search and `you-should-use`, each a Homebrew formula sourced from where Homebrew puts it. Syntax highlighting is [zsh-patina](https://github.com/michel-kraemer/zsh-patina). |
 | **Prompt** | [Starship](https://starship.rs/), configured in [`config/starship.toml`](config/starship.toml). |
 | **Terminal** | [Ghostty](https://ghostty.org) and Terminal.app, both in the Gotham palette with FiraMono Nerd Font. |
 | **tmux** | Starts by itself in a Ghostty or Terminal.app window and nowhere else. Prefix is `C-a`. Sessions are saved and restored by tmux-resurrect and tmux-continuum. |
@@ -279,23 +279,17 @@ These files are not tracked, and each one is read by the config beside it:
 | `ZSH_NO_TMUX_AUTOSTART` | Don't attach a tmux session for this shell. Autostart only ever fires from Terminal.app or Ghostty, so editors, IDE terminals, ssh sessions and scripts are already left alone. |
 | `ZSH_NO_ZCOMPILE` | Skip the background compile of the completion dump. |
 | `DOTFILES_URL`, `DOTFILES_REF`, `GITHUB_USER` | Where `script/bootstrap` installs from. |
-| `DOTFILES_COLD_CACHE`, `SKIP_PERF` | Turn the cold-cache tests on and the startup timing off. See [Tests](#tests). |
+| `SKIP_PERF` | Turn the startup timing off. See [Tests](#tests). |
 | `DOTFILES_STARTUP_BUDGET_MS` | The startup ceiling the timing test enforces. 200 by default. |
 
 ## Plugin versions
 
-zinit and the zsh plugins run at the commits listed in
-[`config/zsh/pins.zsh`](config/zsh/pins.zsh), one line each. Renovate opens one
-pull request, at most weekly, when any of their branches has moved
-([`.github/renovate.json`](.github/renovate.json)), and CI installs them from
-nothing at the proposed commits on that pull request.
+The zsh plugins are Homebrew formulae, so each is at the release Homebrew
+ships, and `brew upgrade` moves them with everything else. Nothing in this repo
+names a version or fetches one.
 
-Nothing needs running after a pin changes. The next shell on each machine moves
-what it has installed to the new commits and says so once. `zinit update` does
-not move a pinned plugin. To try a newer commit, change its line.
-
-tmux's plugins are not pinned: tpm installs a branch, never a commit. The
-weekly audit does check that none of their repositories has been archived.
+tmux's plugins are not pinned either: tpm installs a branch, never a commit.
+The weekly audit does check that none of their repositories has been archived.
 Dependabot looks after one other thing, the action versions in the workflows.
 
 ## Scripts
@@ -345,11 +339,10 @@ Layering is covered by a fixture that impersonates a managed shell setup owning
 `~/.zprofile` and `~/.zshrc`, so the tests behave the same on a machine that has
 no such setup, and both configurations are asserted.
 
-One suite is opt-in, being slow and network bound, and one can be skipped:
+The startup timing can be skipped:
 
 ```sh
-make test-cold                       # install every plugin from an empty cache
-SKIP_PERF=1 make test-integration    # skip startup timing (CI skips it on push)
+SKIP_PERF=1 make test-integration    # CI skips it on push
 ```
 
 The suite has to pass under **bash 3.2**, which is what a stock Mac and the CI
@@ -432,7 +425,6 @@ The image is tens of gigabytes on first use, but it is cached after that.
 | &nbsp;&nbsp;`script/setup` and `script/macos` | 1s |
 | &nbsp;&nbsp;Brewfile, formulae only | 55s |
 | &nbsp;&nbsp;`after-setup` | 7s |
-| First login shell, installing every plugin | 12s |
 | **Whole run, image cached** | **195s** |
 
 So a bare machine reaches a working shell inside three minutes, plus whatever
@@ -453,7 +445,6 @@ stdin.
 | Workflow | Runs | What it does |
 | --- | --- | --- |
 | [`test`](.github/workflows/test.yml) | Pull requests, pushes to `main`, weekly | The three tiers, with unit and integration against both the system and Homebrew zsh, and the mutation manifest. |
-| [`cold`](.github/workflows/cold.yml) | Pull requests that change `pins.zsh`, weekly | Installs every plugin from an empty cache. |
 | [`provision`](.github/workflows/provision.yml) | Weekly, on demand | Runs `bootstrap`, `setup`, `macos` and `remove` for real on disposable runners, since they otherwise only ever run on a new machine. |
 | [`audit`](.github/workflows/audit.yml) | Weekly, on demand | `script/audit`. |
 | [`pages`](.github/workflows/pages.yml) | Pushes to `main` that touch `guides/` | Publishes the guides. |
@@ -475,9 +466,10 @@ measured on every run:
 hyperfine --warmup 3 'zsh -lic exit'
 ```
 
-Most of what remains is plugin loading. Two things dominated it historically and
-are worth remembering: a completion dump that was never cached cost ~340ms per
-shell, and compiling the zsh sources to `.zwc` saved nothing measurable.
+About a third of what remains is the three plugins read at startup. Two things
+dominated it historically and are worth remembering: a completion dump that was
+never cached cost ~340ms per shell, and compiling the zsh sources to `.zwc`
+saved nothing measurable.
 
 <details>
 <summary>Historical log from 2022, kept for the shape of the curve and not as current figures</summary>

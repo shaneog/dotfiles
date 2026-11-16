@@ -5,26 +5,39 @@ bats_require_minimum_version 1.5.0
 load '../helpers/common'
 
 setup() {
-  ZINIT_LOG="$BATS_TEST_TMPDIR/zinit.log"
-  : > "$ZINIT_LOG"
   FAKE_HOME="$BATS_TEST_TMPDIR/home"
   mkdir -p "$FAKE_HOME/.local/share" "$FAKE_HOME/.cache"
+
+  # A Homebrew prefix holding stand-ins for the zsh plugins, and for two
+  # highlighters nothing here should touch. Each one records that it was
+  # sourced, which is all a guard test needs to know.
+  PREFIX="$BATS_TEST_TMPDIR/prefix"
+  SOURCED="$BATS_TEST_TMPDIR/sourced"
+  : > "$SOURCED"
+  local plugin
+  for plugin in zsh-autosuggestions/zsh-autosuggestions.zsh \
+                zsh-history-substring-search/zsh-history-substring-search.zsh \
+                zsh-you-should-use/you-should-use.plugin.zsh \
+                zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+                zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh; do
+    mkdir -p "$PREFIX/share/${plugin%/*}"
+    echo "print -r -- ${plugin%/*} >> '$SOURCED'" > "$PREFIX/share/$plugin"
+  done
+  mkdir -p "$PREFIX/share/zsh-completions"
 }
 
 # probe_lib <lib> <code before source> <code after source> [VAR=val ...]
-# Sources one lib in a bare shell with zinit stubbed out, so the only thing
-# under test is the lib's own guard logic. The pins are the real ones, as
-# .zshrc has them by the time it reaches a lib.
+# Sources one lib in a bare shell, so the only thing under test is the lib's
+# own guard logic. Homebrew is the stand-in prefix above unless a test says
+# otherwise.
 probe_lib() {
   local lib="$1" before="$2" after="$3"; shift 3
   env -i HOME="$FAKE_HOME" PATH="${STUBS:+$STUBS:}/usr/bin:/bin" USER=tester \
       XDG_CONFIG_HOME="$REPO/config" XDG_DATA_HOME="$FAKE_HOME/.local/share" \
-      XDG_CACHE_HOME="$FAKE_HOME/.cache" ZINIT_LOG="$ZINIT_LOG" "$@" \
+      XDG_CACHE_HOME="$FAKE_HOME/.cache" HOMEBREW_PREFIX="$PREFIX" "$@" \
       "$ZSH_BIN" -fi -c "
         fpath=($REPO/config/zsh/autoload \$fpath)
         autoload -Uz \$fpath[1]/*(.:t)
-        zinit() { print -r -- \"zinit \$*\" >> \$ZINIT_LOG }
-        source '$REPO/config/zsh/pins.zsh'
         $before
         source '$REPO/config/zsh/lib/$lib'
         $after"
@@ -149,23 +162,59 @@ probe_zprofile() {
   [[ "$output" == *"/opt/homebrew/bin"* ]] || { echo "not on PATH: $output"; return 1; }
 }
 
-# --- syntax highlighting / autosuggestions ----------------------------------
+# --- plugins ----------------------------------------------------------------
 
-@test "common: no longer loads a syntax highlighter of its own" {
-  # zsh-patina does the highlighting now, activated from .zshrc. Two plugins on
-  # the same ZLE hook show up as flicker, so nothing here may load one.
+@test "common: loads no syntax highlighter of its own" {
+  # zsh-patina does the highlighting, activated from .zshrc. Two plugins on the
+  # same ZLE hook show up as flicker, so nothing here may load one, installed
+  # or not.
   probe_lib common.zsh '' ':'
-  refute_contains "$(cat "$ZINIT_LOG")" "syntax-highlighting" "the zinit log"
+  refute_contains "$(cat "$SOURCED")" "highlighting" "what was sourced"
 }
 
 @test "common: skips its autosuggestions when already loaded" {
   probe_lib common.zsh '_zsh_autosuggest_start() { : }' ':'
-  refute_contains "$(cat "$ZINIT_LOG")" "zsh-autosuggestions" "the zinit log"
+  refute_contains "$(cat "$SOURCED")" "zsh-autosuggestions" "what was sourced"
 }
 
 @test "common: loads autosuggestions when nothing else provides them" {
   probe_lib common.zsh '' ':'
-  grep -q "zsh-autosuggestions" "$ZINIT_LOG"
+  assert_contains "$(cat "$SOURCED")" "zsh-autosuggestions" "what was sourced"
+}
+
+@test "common: the extra completions go behind what is already on fpath" {
+  # Homebrew keeps them apart so that they never shadow a completion a tool
+  # ships for itself, which holds only if they are searched last.
+  run probe_lib common.zsh 'fpath=(/first $fpath)' 'print -r -- $fpath[1] $fpath[-1]'
+  assert_equal "$output" "/first $PREFIX/share/zsh-completions"
+}
+
+@test "history and alias: each sources its plugin from Homebrew's prefix" {
+  probe_lib history.zsh '' ':'
+  probe_lib alias.zsh '' ':'
+  assert_equal "$(sort "$SOURCED" | tr '\n' ' ')" "zsh-history-substring-search zsh-you-should-use " "what was sourced"
+}
+
+@test "a plugin Homebrew has not installed is skipped without a word" {
+  # A new machine between its first shell and `brew bundle`, or any machine
+  # where one formula was removed: the shell still has to start.
+  local lib where
+  for where in "HOMEBREW_PREFIX=$BATS_TEST_TMPDIR/empty" "HOMEBREW_PREFIX="; do
+    for lib in alias.zsh common.zsh history.zsh; do
+      run --separate-stderr probe_lib "$lib" '' 'print ok' "$where"
+      assert_equal "$output" "ok" "$lib with $where"
+      local noise; noise="$(printf '%s\n' "$stderr" | strip_harness_noise)"
+      [ -z "$noise" ] || { echo "$lib with $where wrote: $noise"; return 1; }
+    done
+  done
+  assert_equal "$(cat "$SOURCED")" "" "what was sourced"
+}
+
+@test "history: Up and Down are bound only when the search is there to bind them to" {
+  run probe_lib history.zsh '' 'bindkey -M emacs "^P"'
+  assert_contains "$output" "history-substring-search-up"
+  run probe_lib history.zsh '' 'bindkey -M emacs "^P"' "HOMEBREW_PREFIX=$BATS_TEST_TMPDIR/empty"
+  assert_contains "$output" "up-line-or-history"
 }
 
 # --- prompt -----------------------------------------------------------------

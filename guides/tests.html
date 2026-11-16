@@ -122,7 +122,6 @@
         <tbody>
           <tr><td><code>test</code></td><td>Every pull request, every push to <code>main</code>, and Mondays</td><td>Runs the static, unit and integration tiers against both the built-in zsh and Homebrew's, then the mutation list.</td></tr>
           <tr><td><code>provision</code></td><td>Mondays, or on demand</td><td>Runs the install scripts for real: <code>setup</code>, the Brewfile, <code>macos</code>, <code>remove</code>, and <code>bootstrap</code> from start to finish.</td></tr>
-          <tr><td><code>cold plugin cache</code></td><td>Mondays, on demand, and any pull request that changes a plugin's pinned commit</td><td>Installs every shell plugin from nothing, the way a new Mac does, and checks each one arrived at its pinned commit.</td></tr>
           <tr><td><code>audit</code></td><td>Mondays, or on demand</td><td>Runs <code>make audit</code>.</td></tr>
         </tbody>
       </table>
@@ -132,7 +131,7 @@
 
     <p>The Monday runs matter because Homebrew packages are not pinned. A tool can change on a Tuesday, and the following Monday's run is what notices.</p>
 
-    <p>The shell plugins are pinned: <code>config/zsh/pins.zsh</code> lists the exact commit of each. A robot called Renovate watches them and opens a pull request, at most once a week, when any has something newer. The tests run on that pull request, so a new version is tried on GitHub's Macs before it reaches one of yours. tmux's plugins are the exception and still install at whatever is newest.</p>
+    <p>The shell plugins are Homebrew packages too, so the same Monday run is what notices a new release of one. tmux's plugins install at whatever is newest.</p>
 
     <h2 id="habit">The habit</h2>
     <p>Before committing a change, both of these should come back clean.</p>

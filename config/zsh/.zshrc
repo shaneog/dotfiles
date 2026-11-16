@@ -31,32 +31,6 @@ fi
 unset __dotfiles_zdotdir
 
 ##
-# Zinit
-##
-declare -A ZINIT
-ZINIT[ZINIT_HOME]="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit"
-ZINIT[ZCOMPDUMP_PATH]=$ZSH_COMPDUMP
-# zinit and everything it loads run at the commits pins.zsh names.
-source "$ZDOTDIR/pins.zsh"
-# Check for and install if necessary
-if [[ ! -d $ZINIT[ZINIT_HOME] ]]; then
-  echo "Installing zinit..."
-  mkdir -p "$(dirname $ZINIT[ZINIT_HOME])"
-  git clone -q https://github.com/zdharma-continuum/zinit.git "$ZINIT[ZINIT_HOME]"
-fi
-# Before zinit is sourced, so that the zinit that runs is the pinned one: on a
-# machine where a pin has changed, and on a new one, where the clone above is of
-# whatever is newest. By path, because a base layer's rc file may have replaced
-# fpath since it was set above.
-autoload -Uz "$ZDOTDIR/autoload/sync_pins" && sync_pins
-# Bootstrap zinit
-source "${ZINIT[ZINIT_HOME]}/zinit.zsh"
-
-# Load all the auto-completions, has to be done before any compdefs
-autoload -Uz _zinit
-(( ${+_comps} )) && _comps[zinit]=_zinit
-
-##
 # Set up autoloaded functions
 ##
 fpath=($ZDOTDIR/autoload "${fpath[@]}")
@@ -89,8 +63,6 @@ if [[ -n ${ZSH_COMPDUMP}(#qN.mh+20) ]]; then
 else
   compinit -C -d "$ZSH_COMPDUMP";
 fi
-
-zinit cdreplay -q
 
 # compinit above resets $_comps, which drops completions the base layer
 # registered through bashcompinit. Re-register the ones we know about.

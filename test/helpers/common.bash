@@ -54,6 +54,12 @@ skip_unless_ci() {  # why it cannot run
   skip "NOT CHECKED: $1"
 }
 
+# For a test of a zsh plugin the Brewfile installs. .zprofile looks for
+# Homebrew at /opt/homebrew, so that is where the shell under test finds it.
+needs_plugin() {  # the formula
+  [ -d "/opt/homebrew/share/$1" ] || skip_unless_ci "$1 is not installed"
+}
+
 # GNU timeout, BSD gtimeout, or nothing (CI runners vary).
 _timeout() {
   local secs="$1"; shift
@@ -70,21 +76,6 @@ guard_home() {
     /tmp/*|/private/var/folders/*|/var/folders/*) return 0 ;;
     *) echo "REFUSING: '$1' is not a temp dir" >&2; return 1 ;;
   esac
-}
-
-# A snapshot of the plugin cache, cloned once per bats invocation and shared by
-# every disposable home in it. The real cache is not linked: a test that
-# installed or updated a plugin would write into it, and results would depend on
-# what happened to be installed on the machine. Cloning 60MB on APFS costs about
-# a third of a second, once.
-plugin_cache() {
-  local snapshot="${BATS_SUITE_TMPDIR:?bats did not set BATS_SUITE_TMPDIR}/zinit"
-  local real="$REAL_HOME/.local/share/zinit"
-  if [ ! -d "$snapshot" ] && [ -d "$real" ]; then
-    cp -Rc "$real" "$snapshot" 2>/dev/null || cp -R "$real" "$snapshot"
-  fi
-  [ -d "$snapshot" ] || return 1
-  printf '%s' "$snapshot"
 }
 
 # Link the repo's config into the home at $1 the way script/setup does: a real
@@ -106,31 +97,7 @@ make_home() {
   guard_home "$home" || return 1
   link_config "$home"
   mkdir -p "$home/.cache" "$home/.local/share"
-  local snapshot
-  if snapshot="$(plugin_cache)"; then
-    ln -s "$snapshot" "$home/.local/share/zinit"
-  fi
   echo "$home"
-}
-
-# What config/zsh/pins.zsh pins, as zsh reads it: "repository commit", one to a
-# line.
-pins() {
-  "$ZSH_BIN" -fc 'source $1
-    for repo commit in "${(@kv)DOTFILES_PINS}"; do print -r -- "$repo $commit"; done' \
-    zsh "$REPO/config/zsh/pins.zsh"
-}
-
-pinned_commit() {  # repository
-  pins | awk -v repo="$1" '$1 == repo { print $2 }'
-}
-
-# Where the checkout of a pinned repository lives.
-pin_checkout() {  # zinit's directory, repository
-  case "$2" in
-    zdharma-continuum/zinit) echo "$1/zinit" ;;
-    *)                       echo "$1/plugins/${2%%/*}---${2#*/}" ;;
-  esac
 }
 
 # Install a fake base layer into $1, impersonating a managed setup that owns
@@ -171,7 +138,7 @@ run_login_shell() {
   # leave a background process behind -- a plugin's daemon, say -- and anything
   # inheriting the shell's stdout holds the write end of the caller's pipe, so a
   # reader waits for an EOF that never arrives. That is a hang rather than a
-  # failure: a cold CI job sat for twenty-nine minutes on one.
+  # failure: a CI job sat for twenty-nine minutes on one.
   local captured status
   captured="$(mktemp)"
   # SHLVL=1: the shell is one level down from whoever ran the tests, and env -i
@@ -204,5 +171,5 @@ strip_harness_noise() {
 }
 
 # The final filter drops lines with no letters at all, which is what curl
-# progress bars are ("####### 100.0%"). A plugin download on a cold cache is
-# not a config defect, and any genuine diagnostic contains words.
+# progress bars are ("####### 100.0%"). A download's progress is not a config
+# defect, and any genuine diagnostic contains words.
