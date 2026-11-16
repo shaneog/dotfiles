@@ -384,28 +384,24 @@ brew install openai/tools/tart
 so it installs the current branch rather than whatever is on the default one.
 
 <details>
-<summary>How long a run takes, measured on macOS 26 in August 2026</summary>
+<summary>How long a run takes, measured on macOS 27 in November 2026</summary>
 
 <br>
 
-The base image is tens of gigabytes on first use, but it is cached after that.
+The image is tens of gigabytes on first use, but it is cached after that.
 
 | | |
 | --- | --: |
-| Pulling the base image (once) | 546s |
-| Boot, ssh, copy the tree in | ~20s |
-| `script/bootstrap`, of which | 44s |
-| &nbsp;&nbsp;Homebrew from scratch | 10s |
-| &nbsp;&nbsp;`script/macos` | 1s |
-| &nbsp;&nbsp;Brewfile, formulae only | 29s |
-| &nbsp;&nbsp;`after-setup` | 30s |
-| First login shell, installing every plugin | 24s |
-| **Whole run, image cached** | **95s** |
+| Pulling the image (once) | 394s |
+| Boot, ssh, copy the tree in | 20s |
+| Everything inside the VM: `script/bootstrap`, the first shells, the assertions | 174s |
+| **Whole run, image cached** | **195s** |
 
-So a bare machine reaches a working shell inside two minutes, plus whatever the
-casks cost.
+So a bare machine reaches a working shell inside three minutes, plus whatever
+the casks cost. That includes the command line tools, which Homebrew installs
+first on a machine that has never had them.
 
-This test has earned its keep twice. `script/macos` used to take 121s of that,
+This test has earned its keep twice. `script/macos` used to take 121s of a run,
 all of it an AppleScript waiting on an AppleEvent that a headless machine can
 never deliver. And `after-setup` could hang indefinitely on a "Press ENTER"
 prompt. It did so intermittently, which is why it needed a real machine to
