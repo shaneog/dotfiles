@@ -26,6 +26,7 @@ config/zsh/autoload/cached_init	s| \|\| $bin -nt $file \]\]| ]]|	test/unit/cache
 config/zsh/autoload/cached_init	s|\[\[ $first != $stamp \|\| |[[ ! -s $file \|\| |	test/unit/cached_init.bats	leads to another binary	a Homebrew upgrade keeps the last version's cache
 config/zsh/autoload/cached_init	s| && \[\[ -n $out \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
 config/zsh/lib/mise.zsh	s|^eval .*|source $REPLY|	test/unit/guards.bats	the PATH it starts from	every shell gets the PATH of the one that wrote mise's cache appended
+config/zsh/lib/common.zsh	s|^\[\[ -x /usr/bin/log \]\] && disable log|:|	test/unit/guards.bats	log is the system's command	zsh's log builtin hides macOS's log command
 config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/cached_completion.bats	writes the completion where compinit will find it	the completion is generated but never on fpath
 config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
 config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects

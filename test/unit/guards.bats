@@ -49,6 +49,14 @@ probe_lib() {
   assert_equal "$output" "$FAKE_HOME/.local/share/npm"
 }
 
+# --- common -----------------------------------------------------------------
+
+@test "common: log is the system's command where there is one, not zsh's builtin" {
+  [ -x /usr/bin/log ] || skip "NOT CHECKED: this machine has no /usr/bin/log for the builtin to hide"
+  run probe_lib common.zsh '' 'whence -w log'
+  assert_equal "$output" "log: command"
+}
+
 # --- mise -------------------------------------------------------------------
 
 @test "mise: inert when mise is not installed" {
