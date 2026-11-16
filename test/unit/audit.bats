@@ -296,6 +296,26 @@ EOF
   echo "$output" | grep -q "someone/dead.nvim is archived upstream" || { echo "$output"; return 1; }
 }
 
+@test "audit: an archived tmux plugin fails too" {
+  # tpm installs each plugin at whatever is newest and nothing pins them, so
+  # they are the upstreams most worth watching, and they were the one set the
+  # audit never asked about.
+  mkdir -p "$FIX/config/tmux"
+  printf "set -g @plugin 'someone/dead-tmux-plugin'\n" > "$FIX/config/tmux/tmux.conf"
+  cat > "$STUBS/gh" <<'EOF'
+#!/bin/sh
+case "$1" in
+  auth) exit 0 ;;
+  api)  printf 'true\t2026-08-01\n' ;;
+  run)  printf '0\n' ;;
+esac
+EOF
+  chmod +x "$STUBS/gh"
+  run audit
+  [ "$status" -eq 1 ] || { echo "an archived plugin must fail the run: $output"; return 1; }
+  echo "$output" | grep -q "someone/dead-tmux-plugin is archived upstream" || { echo "$output"; return 1; }
+}
+
 @test "audit: a machine that has drifted is reported, and counted" {
   # The gap this closes: script/macos --check knows about a setting the OS reset
   # or a PAM module copy left behind by an upgrade, and nothing ran it. The
