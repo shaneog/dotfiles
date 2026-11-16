@@ -364,10 +364,12 @@ make test-vm            # boot macOS 27 in Tart, install end to end, destroy
 test/vm/run --keep      # leave the VM up to poke at
 ```
 
-`VM_IMAGE` picks another release, such as the one before:
+It boots the `-vanilla` image, which is macOS and nothing else. The `-base`
+images already have Homebrew and the command line tools, and the run refuses
+them. `VM_IMAGE` picks another release, such as the one before:
 
 ```sh
-VM_IMAGE=ghcr.io/cirruslabs/macos-tahoe-base:latest make test-vm   # macOS 26
+VM_IMAGE=ghcr.io/cirruslabs/macos-tahoe-vanilla:latest make test-vm   # macOS 26
 ```
 
 It needs Apple Silicon, about 60GB of free disk, and [Tart](https://tart.run),
