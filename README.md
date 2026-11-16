@@ -39,8 +39,8 @@ script takes it out again.
 - **Third-party shell code is pinned.** zinit, Prezto and the zsh plugins run at
   the commits in [`config/zsh/pins.zsh`](config/zsh/pins.zsh), and Renovate
   proposes the bumps.
-- **Startup time is tested.** An interactive login shell starts in about 146ms,
-  and a test fails when it goes over budget.
+- **Startup time is tested.** An interactive login shell starts in 70 to 145ms,
+  depending on the Mac, and a test fails when it goes over budget.
 
 ## Guides
 
@@ -426,9 +426,12 @@ stdin.
 
 ## ZSH performance
 
-Currently **~146ms** for an interactive login shell in isolation, and ~330ms on
-a machine that also has a managed shell setup layered underneath. That setup
-costs more than this repo does, and none of it is this repo's to reclaim.
+Currently **~72ms** for an interactive login shell in isolation on the fastest
+Mac this repo is used on, ~143ms on the slowest, and between 130 and 185ms on a
+shared CI runner. A machine that also has a managed shell setup layered
+underneath came to ~330ms when last measured, against ~146ms there for this
+repo alone. That setup costs more than this repo does, and none of it is this
+repo's to reclaim.
 
 Measured with `hyperfine` and guarded by a budget in
 [`test/integration/perf.bats`](test/integration/perf.bats), which prints what it

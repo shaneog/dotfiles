@@ -129,12 +129,12 @@ jobs:
       # what gating it on 'schedule' alone amounted to while no schedule had yet
       # fired.
       #
-      # A runner measures 141ms on system zsh and 173ms on homebrew zsh, against
-      # 137-146ms on the machine this repo is used on: the same ballpark, not the
-      # several-times-slower one a loose ceiling here assumed. 400ms leaves room
-      # for a shared runner's noise without waving through a real regression. The
-      # non-interactive ceiling needs no override at all -- 6-9ms measured here
-      # against a 50ms default.
+      # A runner's mean lands between about 130 and 185ms, on either zsh and
+      # varying from run to run, against 72 to 146ms on the Macs this repo is
+      # used on: slower, but not the several-times-slower a loose ceiling here
+      # assumed. 400ms leaves room for a shared runner's noise without waving
+      # through a real regression. The non-interactive ceiling needs no override
+      # at all -- under 25ms measured here against a 50ms default.
       - name: Layering and setup behavior
         env:
           SKIP_PERF: ${{ github.event_name == 'push' && '1' || '' }}

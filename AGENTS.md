@@ -12,9 +12,11 @@ loads afterwards and wins where it should.
 - **Only change files in this repo**, or the four home files above. Anything
   else is rewritten by the managed setup, so a change there is lost.
 - **This repo is public.** Comments and docs describe capabilities, never an
-  employer or its internal tooling by name. Machine-specific paths a managed
-  setup creates are excluded through `.git/info/exclude` rather than
-  `.gitignore`, so internal names never reach a tracked file.
+  employer or its internal tooling by name. The same goes for the machines it
+  runs on: no hostname, model or OS version, in a file, a commit message or a
+  pull request. "The fastest Mac this is used on" is enough. Machine-specific
+  paths a managed setup creates are excluded through `.git/info/exclude` rather
+  than `.gitignore`, so internal names never reach a tracked file.
 - **No private keys on disk, ever.** SSH auth and commit signing both go through
   1Password's agent. (OrbStack's loopback-only key is the one allowed exception.) `ssh/config` sets `IdentityAgent` for processes that never
   sourced a shell; `lib/1password.zsh` exports `SSH_AUTH_SOCK` for agent clients
@@ -39,12 +41,13 @@ loads afterwards and wins where it should.
   `ver"$DOTFILES_PINS[...]"` on its ice; the static tier fails without both.
 - **Runtimes are mise's**, and no tools are declared globally: a base layer's
   wrappers are shell functions, found before anything mise adds to `PATH`.
-- **Startup cost is a feature**: ~145ms for this repo alone, which is the number
-  the perf tier measures and gates. A machine with a managed base layer beneath
-  it is ~330ms — the base layer costs more than this repo does, and that half is
-  not ours to fix, so quote the isolated number when talking about this repo. Defer
-  with zinit turbo (`wait lucid`), cache tool init with `cached_init`, and
-  measure before claiming a win.
+- **Startup cost is a feature**: 70 to 145ms for this repo alone, depending on
+  the Mac, which is the number the perf tier measures and gates. A machine with
+  a managed base layer beneath it was ~330ms where this repo alone was ~146ms —
+  the base layer costs more than this repo does, and that half is not ours to
+  fix, so quote the isolated number when talking about this repo. Defer with
+  zinit turbo (`wait lucid`), cache tool init with `cached_init`, and measure
+  before claiming a win.
 
 ## Tests must be able to fail
 
