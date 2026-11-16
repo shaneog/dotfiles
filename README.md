@@ -265,7 +265,8 @@ Nothing needs running after a pin changes. The next shell on each machine moves
 what it has installed to the new commits and says so once. `zinit update` does
 not move a pinned plugin. To try a newer commit, change its line.
 
-tmux's plugins are not pinned: tpm installs a branch, never a commit.
+tmux's plugins are not pinned: tpm installs a branch, never a commit. The
+weekly audit does check that none of their repositories has been archived.
 Dependabot looks after one other thing, the action versions in the workflows.
 
 ## Scripts
@@ -348,7 +349,8 @@ script/sweep config/tmux/tmux.conf      # one file
 Both need a clean working tree, because they edit tracked files in place.
 
 Results accumulate in `$XDG_STATE_HOME/dotfiles/sweep.tsv` so successive runs
-build on each other. `--out` points it elsewhere.
+build on each other, and a result is dropped once its line is edited or moves.
+`--out` points it elsewhere.
 
 The tests it runs per file are declared in the script rather than derived from
 the filename: a `grep` for `plugins.lua` finds nothing, while `nvim.bats` clearly

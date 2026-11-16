@@ -158,8 +158,17 @@ PY
 
 @test "tmux: a program's OSC 52 copy reaches Ghostty" {
   command -v python3 >/dev/null 2>&1 || skip "NOT CHECKED: python3 is needed to drive a pty"
-  infocmp xterm-ghostty >/dev/null 2>&1 \
-    || skip "NOT CHECKED: no xterm-ghostty terminfo here (Ghostty is not installed)"
+  # Ghostty keeps its terminfo inside the app and points TERMINFO at it for the
+  # shells it starts, so from anywhere else the entry is found by doing the
+  # same. Looking only in the system's database skipped this on a machine with
+  # Ghostty installed, unless the suite happened to be run from a Ghostty window.
+  local bundled=/Applications/Ghostty.app/Contents/Resources/terminfo
+  if ! infocmp xterm-ghostty >/dev/null 2>&1; then
+    [ -d "$bundled" ] || skip_unless_ci "Ghostty is not installed, so there is no xterm-ghostty terminfo"
+    export TERMINFO="$bundled"
+    infocmp xterm-ghostty >/dev/null 2>&1 \
+      || { echo "Ghostty is installed, but $bundled has no xterm-ghostty entry"; return 1; }
+  fi
   osc52_reaches_terminal xterm-ghostty \
     || { echo "an OSC 52 copy from inside a pane never reached Ghostty"; return 1; }
 }
@@ -334,6 +343,39 @@ wait_for() {  # window, format, expected
   [ -n "$pid" ] || { echo "no pane pid"; return 1; }
   comm="$(ps -o comm= -p "$pid" | tr -d ' ')"
   assert_contains "$comm" "zsh" "the process running in the pane"
+}
+
+@test "tmux: autostart is not answered by a session whose name merely starts the same" {
+  # Regression: tmux matches a bare target by prefix, so with a session called
+  # someuser-work and none called someuser, autostart attached to someuser-work
+  # and never made its own. A real tmux, because a stub would only show which
+  # words were passed, and the bug was in what tmux does with them.
+  local stubs="$BATS_TEST_TMPDIR/stubs" log="$BATS_TEST_TMPDIR/tmux.log" real
+  real="$(command -v tmux)"
+  HOME="$TMUX_HOME" _timeout 30 tmux -L "$SOCKET" -f /dev/null \
+    new-session -d -s someuser-work >/dev/null 2>&1
+  tm has-session -t '=someuser-work' \
+    || { echo "the other session did not start"; return 1; }
+
+  # Sends the function's own commands to the test server. Starting a session
+  # fails here for want of a terminal, which is fine: the log shows what was
+  # decided.
+  mkdir -p "$stubs"
+  cat > "$stubs/tmux" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >> "$log"
+exec "$real" -L "$SOCKET" "\$@" </dev/null >/dev/null 2>&1
+EOF
+  chmod +x "$stubs/tmux"
+
+  env -i HOME="$TMUX_HOME" PATH="$stubs:/usr/bin:/bin" USER=someuser \
+    TERM_PROGRAM=Apple_Terminal XDG_CONFIG_HOME="$REPO/config" \
+    "$ZSH_BIN" -fi -c "fpath=($REPO/config/zsh/autoload \$fpath)
+                autoload -Uz tmux_autostart
+                tmux_autostart" >/dev/null 2>&1 || true
+
+  assert_contains "$(cat "$log")" 'new-session -s someuser' "the tmux log"
+  refute_contains "$(cat "$log")" 'attach-session' "the tmux log"
 }
 
 @test "tmux: pane movement and resizing are the vim keys" {

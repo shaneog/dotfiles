@@ -18,7 +18,7 @@ ghostty_bin() {
 
 @test "ghostty: the config is one Ghostty accepts" {
   local bin
-  bin="$(ghostty_bin)" || skip "NOT CHECKED: Ghostty is not installed"
+  bin="$(ghostty_bin)" || skip_unless_ci "Ghostty is not installed"
   run "$bin" +validate-config --config-file="$GHOSTTY_CONFIG"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
 }

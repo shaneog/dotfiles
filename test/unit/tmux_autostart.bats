@@ -115,7 +115,7 @@ assert_tmux() {
 
 @test "attaches to an existing session with no clients" {
   STUB_HAS_SESSION=0 STUB_CLIENTS= autostart TERM_PROGRAM=Apple_Terminal
-  assert_tmux 'attach-session -t someuser'
+  assert_tmux 'attach-session -t =someuser'
 }
 
 @test "never steals a session that already has a client" {

@@ -10,3 +10,11 @@ end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
+# make only accepts a tab in front of a recipe.
+[Makefile]
+indent_style = tab
+
+# The scripts that are indented with tabs. An editor that follows the default
+# above would mix the two in whichever one it touched next.
+[script/{after-setup,brew-drift,macos,mutate,sweep}]
+indent_style = tab

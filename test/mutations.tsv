@@ -8,6 +8,7 @@ config/zsh/lib/fzf.zsh	s|'rg --files|'rgx --files|	test/integration/startup.bats
 config/zsh/lib/fzf.zsh	s|^  bindkey -M emacs \$'.xc3.xa7' fzf-cd-widget|  :|	test/integration/startup.bats	Option-C	Option-C goes back to typing a letter at the prompt
 config/nvim/lua/plugins.lua	s|pcall(vim.treesitter.start)|-- pcall(vim.treesitter.start)|	test/integration/nvim.bats	treesitter highlights	nothing starts treesitter highlighting
 config/nvim/ftplugin/gitcommit.lua	s|"en_us"|"en_gb"|	test/integration/nvim.bats	commit message buffer	the spelling region drifts back to a guess
+.editorconfig	s|^\[Makefile\]$|[Makefile.off]|	test/integration/nvim.bats	tab stays a tab	Neovim puts spaces where a Makefile recipe needs a tab
 config/tmux/tmux.conf	s|^set -g status-style|# set -g status-style|	test/integration/tmux.bats	status bar is gotham	the theme falls back to tmux's default green
 config/tmux/tmux.conf	s|@prefix_highlight_prefix_prompt '#{prefix}'|@prefix_highlight_prefix_prompt 'PREFIX'|	test/integration/tmux.bats	carries the placeholder	the prefix indicator stops naming the real key
 config/tmux/tmux.conf	s|#{prefix_highlight}||	test/integration/tmux.bats	carries the placeholder	status-left loses the plugin's placeholder
@@ -19,7 +20,9 @@ config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select
 script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comments() { cat; }|	test/unit/audit.bats	prose mentioning	the audit reads comments as invocations
 script/audit	s|^trap 'rm -rf "$SCRATCH"' EXIT|:|	test/unit/audit.bats	TMPDIR says	each audit leaves its working directory behind
 script/brew-drift	s|comm -13 "\$WORK/installed-formulae"|comm -13 "$WORK/requested-formulae"|	test/unit/brew-drift.bats	not called absent	dependencies get reported as missing
+script/sweep	s|still_current < "$OUT" > "$OUT.new"|cp "$OUT" "$OUT.new"|	test/unit/sweep.bats	has moved	sweep resumes on line numbers alone and skips lines nothing has swept
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
+script/macos	s|^if \[ -z "\$CHECK_ONLY" \]; then$|if true; then|	test/unit/macos.bats	leaves System Settings open	--check closes System Settings on whoever has it open
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
 config/zsh/lib/orbstack.zsh	s|^cached_completion docker|# cached_completion docker|	test/integration/startup.bats	CLI completions	a CLI completion stops being generated (docker: present everywhere the tests run)
 config/zsh/lib/homebrew.zsh	s|^alias brewup|# alias brewup|	test/integration/startup.bats	brew maintenance alias	the brew maintenance alias disappears
@@ -36,6 +39,7 @@ config/zsh/autoload/tmux_autostart	s|== (Apple_Terminal\|ghostty)|!= nothing|	te
 config/zsh/autoload/tmux_autostart	s/(Apple_Terminal|ghostty)/Apple_Terminal/	test/unit/tmux_autostart.bats	starts a session from Ghostty	Ghostty windows stop getting a session
 config/zsh/autoload/tmux_autostart	s|^  \[\[ -z "$($tmux_cmd list-clients.*|  true|	test/unit/tmux_autostart.bats	never steals a session that already has a client	a session in use elsewhere is stolen
 config/zsh/autoload/tmux_autostart	s|tmux -f "${XDG_CONFIG_HOME}/tmux/tmux.conf"|tmux|	test/unit/tmux_autostart.bats	uses the repo tmux.conf rather than the default	the autostarted session ignores this repo
+config/zsh/autoload/tmux_autostart	s|local target="=$session"|local target="$session"|	test/integration/tmux.bats	merely starts the same	autostart attaches to a session whose name only starts the same
 test/helpers/common.bash	s@/tmp/\*|/private/var/folders/\*|/var/folders/\*) return 0@*) return 0@	test/unit/harness.bats	guard_home refuses anything outside a temp directory	the harness would accept the real home
 script/setup	s|^link_into "$DOTFILESDIR/config/zsh/.zshenv" "$HOME/.zshenv"|&; ln -sfv "$HOME/.config/zsh/.zshrc" "$HOME/.zshrc"|	test/integration/setup.bats	never creates the four externally managed shell files	setup takes over a file the base layer owns
 script/setup	s|^    if \[ "$1" = "ssh" \] && ls "$target"/id_\* >/dev/null 2>&1|    if false|	test/integration/setup.bats	leaves an ssh directory holding a private key alone	a managed ssh config is moved aside and replaced by ours
@@ -101,6 +105,7 @@ script/macos	s|pam_component_is_root_owned "$p" -Lf|true|	test/unit/macos.bats	s
 script/macos	s|8#${perms:-777} & 8#22|0"${perms:-777}" \& 022|	test/unit/macos.bats	symlink to a writable target	the ownership arithmetic breaks under bash 3.2
 script/macos	s|if grep -q "^brew .pam-reattach." "$PAM_BREWFILE" 2>/dev/null; then|if false; then|	test/unit/macos.bats	declared but uninstalled pam-reattach	a half-applied Touch ID setup reports itself as complete
 script/audit	s@.*\[ -d config/nvim \] && grep.*@true@	test/unit/audit.bats	archived neovim plugin	neovim plugin upstreams stop being checked
+script/audit	s|grep -hoE "@plugin .*tmux.conf 2>/dev/null \\|true \\|	test/unit/audit.bats	archived tmux plugin	tmux plugin upstreams stop being checked
 script/audit	s@warn "${line#  not applied: }"@:@	test/unit/audit.bats	machine that has drifted is reported	machine drift is read but never reported
 script/audit	s@.*done <<< .*@done < /dev/null@	test/unit/audit.bats	machine that has drifted is reported	the drift lines stop being read at all
 config/starship.toml	s|^error_symbol = "\[➜\](red)".*|error_symbol = "[➜](green)"|	test/integration/prompt.bats	character module reflects the last exit status	a failed command still shows the success colour
