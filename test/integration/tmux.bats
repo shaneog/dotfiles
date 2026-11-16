@@ -158,8 +158,17 @@ PY
 
 @test "tmux: a program's OSC 52 copy reaches Ghostty" {
   command -v python3 >/dev/null 2>&1 || skip "NOT CHECKED: python3 is needed to drive a pty"
-  infocmp xterm-ghostty >/dev/null 2>&1 \
-    || skip "NOT CHECKED: no xterm-ghostty terminfo here (Ghostty is not installed)"
+  # Ghostty keeps its terminfo inside the app and points TERMINFO at it for the
+  # shells it starts, so from anywhere else the entry is found by doing the
+  # same. Looking only in the system's database skipped this on a machine with
+  # Ghostty installed, unless the suite happened to be run from a Ghostty window.
+  local bundled=/Applications/Ghostty.app/Contents/Resources/terminfo
+  if ! infocmp xterm-ghostty >/dev/null 2>&1; then
+    [ -d "$bundled" ] || skip_unless_ci "Ghostty is not installed, so there is no xterm-ghostty terminfo"
+    export TERMINFO="$bundled"
+    infocmp xterm-ghostty >/dev/null 2>&1 \
+      || { echo "Ghostty is installed, but $bundled has no xterm-ghostty entry"; return 1; }
+  fi
   osc52_reaches_terminal xterm-ghostty \
     || { echo "an OSC 52 copy from inside a pane never reached Ghostty"; return 1; }
 }

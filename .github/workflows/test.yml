@@ -30,8 +30,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      # Ghostty for its own config check, which is the only thing that can say
+      # whether Ghostty accepts the file.
       - name: Install tooling
-        run: brew install bats-core shellcheck jq tmux gitleaks
+        run: |
+          brew install bats-core shellcheck jq tmux gitleaks
+          brew install --cask ghostty
       - name: Lint and parse every config
         run: bats --print-output-on-failure test/static
 
@@ -82,9 +86,12 @@ jobs:
           "${{ matrix.path }}" --version
           echo "ZSH_BIN=${{ matrix.path }}" >> "$GITHUB_ENV"
       # The shell integration for these is wired up by config/zsh/lib, and the
-      # Brewfile is what installs them, so the runner needs them too.
+      # Brewfile is what installs them, so the runner needs them too. Ghostty is
+      # here for its terminfo entry, which the OSC 52 test hands to tmux.
       - name: Install tooling
-        run: brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+        run: |
+          brew install bats-core direnv docker fd fzf hyperfine mise neovim ripgrep starship tmux tree-sitter-cli zsh-patina
+          brew install --cask ghostty
 
       # The plugin set is defined by the zsh libs, and its commits by pins.zsh,
       # so key the cache on them. A changed pin restores the previous cache, and
