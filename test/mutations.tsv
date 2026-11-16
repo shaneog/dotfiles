@@ -74,6 +74,8 @@ config/zsh/.zprofile	s|^    \[\[ -d $__dotfiles_dir \]\] && |    |	test/integrat
 config/zsh/.zprofile	s|path+=("$__dotfiles_dir")|path=("$__dotfiles_dir" $path)|	test/integration/startup.bats	lists in /etc/paths.d	an installer's directory goes in front of everything arranged above
 config/zsh/.zprofile	s|^if \[ -z "${HOMEBREW_PREFIX}" \] && \[ -d "/opt/homebrew" \]; then|if [ -d "/opt/homebrew" ]; then|	test/unit/guards.bats	does not re-prepend	a base layer's own Homebrew order is overridden
 config/zsh/.zshenv	s|^typeset -gU cdpath fpath path|# gone|	test/integration/startup.bats	nested non-login shell	every tmux pane gets the system directories on PATH twice
+config/zsh/.zshrc	s|^if (( $+commands\[launchctl\] && SHLVL <= 1 + $+TMUX )); then|if (( $+commands[launchctl] )); then|	test/integration/startup.bats	hands its PATH to GUI apps	a nested shell's PATH becomes the one every GUI app gets
+config/zsh/.zshrc	s|SHLVL <= 1 + $+TMUX|SHLVL <= 1|	test/integration/startup.bats	hands its PATH to GUI apps	tmux panes never refresh the PATH GUI apps get
 config/zsh/.zprofile	s|^export LESSCHARSET=utf-8|LESSCHARSET=utf-8|	test/integration/startup.bats	reach child processes	less never sees the charset it was given
 config/zsh/.zprofile	s|^  export LANG=|  LANG=|	test/integration/startup.bats	reach child processes	a shell started without LANG keeps the locale to itself
 config/zsh/lib/history.zsh	s|^HISTORY_IGNORE=|HISTIGNORE=|	test/integration/startup.bats	never reach the history file	the ignore list goes back to a variable zsh does not read

@@ -510,6 +510,37 @@ ALIASES
   assert_contains "$out" "USRBIN=1 MISSING=0" "a listed directory already there, and one that does not exist"
 }
 
+@test "only a shell a terminal or a tmux pane started hands its PATH to GUI apps" {
+  # Regression: every interactive shell did, so one started inside a virtualenv
+  # or a tool's subshell left its PATH as the one every app launched after it got.
+  local stubs; stubs="$(stub_dir)"
+  stub_cmd launchctl <<'STUB'
+#!/bin/sh
+[ "$1 $2" = "setenv PATH" ] && echo "$3" >> "$HOME/launchd-path"
+exit 0
+STUB
+  # zsh adds one to the SHLVL it inherits, so `level` is what the shell sees.
+  told() {
+    local level="$1" tmux="$2" captured
+    captured="$(mktemp)"
+    rm -f "$HOME_WITHOUT/launchd-path"
+    _timeout 180 env -i HOME="$HOME_WITHOUT" PATH="$stubs:$PATH" TERM=xterm-256color \
+      USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
+      SHLVL="$(( level - 1 ))" ${tmux:+TMUX="$tmux"} \
+      "$ZSH_BIN" -lic 'print "level=$SHLVL"' > "$captured" 2>&1
+    grep -qx "level=$level" "$captured" || { cat "$captured"; rm -f "$captured"; return 1; }
+    rm -f "$captured"
+    if [ -s "$HOME_WITHOUT/launchd-path" ]; then echo told; else echo quiet; fi
+  }
+  assert_equal "$(told 1 '')" "told" "a terminal window's shell"
+  assert_equal "$(told 2 '')" "quiet" "a shell started from inside that one"
+  assert_equal "$(told 2 /tmp/tmux-0/default,1,0)" "told" "a tmux pane"
+  assert_equal "$(told 3 /tmp/tmux-0/default,1,0)" "quiet" "a shell started from inside a pane"
+  # What was handed over is the PATH the shell ended up with.
+  told 1 '' >/dev/null
+  assert_contains "$(cat "$HOME_WITHOUT/launchd-path")" "$stubs" "the PATH launchd was given"
+}
+
 @test "Homebrew is on PATH before .zshrc runs" {
   # Regression, and one this repo's own layering hid. The shellenv lived in
   # lib/homebrew.zsh, which .zshrc sources two thirds of the way down -- after
