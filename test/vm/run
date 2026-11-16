@@ -19,7 +19,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 VM_NAME="${VM_NAME:-dotfiles-e2e}"
-VM_IMAGE="${VM_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-base:latest}"   # macOS 26
+VM_IMAGE="${VM_IMAGE:-ghcr.io/cirruslabs/macos-golden-gate-base:latest}"   # macOS 27
 VM_USER="${VM_USER:-admin}"
 VM_PASS="${VM_PASS:-admin}"
 KEEP=""

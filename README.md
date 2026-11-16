@@ -360,8 +360,14 @@ A fresh-machine test runs locally only, since CI runners are not fresh Macs:
 Homebrew, the command line tools, pyenv and nvm are all preinstalled there.
 
 ```sh
-make test-vm            # boot macOS 26 in Tart, install end to end, destroy
+make test-vm            # boot macOS 27 in Tart, install end to end, destroy
 test/vm/run --keep      # leave the VM up to poke at
+```
+
+`VM_IMAGE` picks another release, such as the one before:
+
+```sh
+VM_IMAGE=ghcr.io/cirruslabs/macos-tahoe-base:latest make test-vm   # macOS 26
 ```
 
 It needs Apple Silicon, about 60GB of free disk, and [Tart](https://tart.run),
