@@ -19,6 +19,9 @@ load '../helpers/common'
 
 setup_file() {
   command -v nvim >/dev/null 2>&1 || return 0
+  nvim --headless -u NONE -c 'lua os.exit(vim.fn.has("nvim-0.11") == 1 and 0 or 1)' \
+    </dev/null >/dev/null 2>&1 || return 0
+  export NVIM_NEW_ENOUGH=1
 
   local key
   key="$(cat "$REPO/config/nvim/init.lua" "$REPO/config/nvim/lua/plugins.lua" \
@@ -62,9 +65,18 @@ probe() {
 }
 
 setup() {
-  command -v nvim >/dev/null 2>&1 || skip "neovim is not installed"
+  command -v nvim >/dev/null 2>&1 || skip_unless_ci "neovim is not installed"
+  # The pinned plugins stop with an error on anything older, which is what
+  # Ubuntu's package is, and a test then finds whatever was set up first.
+  [ -n "${NVIM_NEW_ENOUGH:-}" ] || skip_unless_ci "this Neovim is older than 0.11"
   [ -d "${NVIM_DATA:-}/nvim/lazy/lazy.nvim" ] \
     || { echo "provisioning failed; see $NVIM_DATA/provision.log"; return 1; }
+}
+
+# script/after-setup builds no parser without tree-sitter-cli, and says so.
+needs_parsers() {
+  command -v tree-sitter >/dev/null 2>&1 \
+    || skip_unless_ci "tree-sitter-cli is not installed, so no parser was built"
 }
 
 @test "nvim: the config loads without complaining" {
@@ -102,6 +114,7 @@ setup() {
   # nothing -- so highlighting silently never happens. Asserting that a parser
   # is configured would not have caught that; asserting the highlighter attached
   # does.
+  needs_parsers
   run probe "$REPO/config/zsh/lib/mise.zsh" -c 'lua
     local buf = vim.api.nvim_get_current_buf()
     vim.wait(5000, function() return vim.treesitter.highlighter.active[buf] ~= nil end)
@@ -114,6 +127,7 @@ setup() {
 }
 
 @test "nvim: every parser in the list actually built" {
+  needs_parsers
   run probe -c 'lua
     local seen, want = {}, {}
     for _, p in pairs(require("parsers")) do

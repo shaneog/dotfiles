@@ -30,10 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install what the Brewfile provides for the shell
-        run: |
-          brew install direnv fzf starship \
-            zsh-autosuggestions zsh-completions zsh-history-substring-search zsh-patina zsh-you-should-use
+      - uses: ./.github/actions/tools
 
       # A real home that has already been lived in: an externally managed shell
       # setup, and other tools' files under ~/.config.

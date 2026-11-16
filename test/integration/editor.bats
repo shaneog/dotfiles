@@ -227,6 +227,8 @@ TYPE
   assert_equal "$TYPED" "on" "application mode at the prompt"
 }
 
+# The plugin is read from Homebrew's prefix.
+# bats test_tags=macos
 @test "a line from history is suggested, and End takes it" {
   needs_plugin zsh-autosuggestions
   typed suggested <<'TYPE'
@@ -241,6 +243,8 @@ TYPE
   assert_equal "$TYPED" "taken-from-history" "what the completed line wrote"
 }
 
+# The plugin is read from Homebrew's prefix.
+# bats test_tags=macos
 @test "Up searches history for what has been typed so far" {
   needs_plugin zsh-history-substring-search
   # The key as a terminal in application mode sends it, which is what

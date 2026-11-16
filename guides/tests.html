@@ -57,6 +57,10 @@
     <p>Tests that start a shell build a temporary home folder first and link the repository into it, the way <code>script/setup</code> would. A safety check refuses to run against anything that is not a temporary folder, so a test can never damage the files it is testing.</p>
     <p>The tests also bring their own <strong>pretend base layer</strong>: stand-in <code>~/.zprofile</code> and <code>~/.zshrc</code> files that behave like a managed setup. That way the layering is tested on every Mac, with and without one, whatever that Mac really has installed.</p>
 
+    <h3>Some tests need a Mac, and say so</h3>
+    <p>Most of the tests only need a shell, so they run on Linux too. A few cannot: they ask Homebrew something, or open Ghostty, or read a file that only macOS has. Each of those carries a label, <code>macos</code>, with the reason written beside it.</p>
+    <p>On a Mac <code>make test</code> runs everything. Anywhere else it leaves the labelled tests out, tells you how many, and the rest still has to pass. So a change made on a Linux machine gets a real pass or fail, and GitHub runs the labelled tests on a Mac before the change is merged.</p>
+
     <h2 id="fail">A test has to be able to fail</h2>
     <p>Most of the real bugs in this repository hid behind a test that could not fail. It passed when the feature worked and it passed when the feature was broken, which makes it worse than no test at all. Two scripts hunt for exactly that.</p>
 
@@ -114,13 +118,13 @@
     </div>
 
     <h2 id="ci">Robots on GitHub</h2>
-    <p>Four workflows run on GitHub's disposable Macs, so problems show up as a notification and not as a broken shell.</p>
+    <p>Four workflows run on GitHub's disposable machines, nearly all of them Macs, so problems show up as a notification and not as a broken shell.</p>
 
     <div class="table-wrap">
       <table>
         <thead><tr><th>Workflow</th><th>When</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td><code>test</code></td><td>Every pull request, every push to <code>main</code>, and Mondays</td><td>Runs the static, unit and integration tiers against both the built-in zsh and Homebrew's, then the mutation list.</td></tr>
+          <tr><td><code>test</code></td><td>Every pull request, every push to <code>main</code>, and Mondays</td><td>Runs the static, unit and integration tiers on a Mac, against both the built-in zsh and Homebrew's, then the mutation list. A Linux machine runs every test that does not need a Mac.</td></tr>
           <tr><td><code>provision</code></td><td>Mondays, or on demand</td><td>Runs the install scripts for real: <code>setup</code>, the Brewfile, <code>macos</code>, <code>remove</code>, and <code>bootstrap</code> from start to finish.</td></tr>
           <tr><td><code>audit</code></td><td>Mondays, or on demand</td><td>Runs <code>make audit</code>.</td></tr>
         </tbody>
@@ -128,6 +132,8 @@
     </div>
 
     <p>A fifth workflow, <code>pages</code>, is not a test: it publishes these guides whenever a change to them reaches <code>main</code>.</p>
+
+    <p>The Macs install their tools from the same <code>Brewfile</code> a real Mac uses, leaving out the apps. There is no second list to keep in step.</p>
 
     <p>The Monday runs matter because Homebrew packages are not pinned. A tool can change on a Tuesday, and the following Monday's run is what notices.</p>
 

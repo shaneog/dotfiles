@@ -274,6 +274,8 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   [ ! -e "$MHOME/sudo_local" ] || { echo "--check wrote the pam file"; return 1; }
 }
 
+# Reads a file only macOS ships.
+# bats test_tags=macos
 @test "macos: the pam line is the one this OS ships, not a hand-written copy" {
   # Against the real template on purpose: it is the only way to notice Apple
   # respelling the line or moving the file. Everything else here is hermetic.
@@ -376,6 +378,8 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
     || { echo "copied the module under a directory that is not root-owned"; return 1; }
 }
 
+# /tmp is a symlink on macOS and a directory elsewhere.
+# bats test_tags=macos
 @test "macos: a root-owned symlink to a writable target is refused" {
   # /tmp is precisely this case: lrwxr-xr-x root:wheel pointing at a 1777
   # directory. `stat -f` is lstat, so a check that asks only about the link sees

@@ -24,6 +24,12 @@ script/brew-drift	s|comm -23 "\$WORK/installed-casks" "\$WORK/known-casks"|comm 
 script/brew-drift	s|comm -13 "\$WORK/installed-casks" "\$WORK/declared-casks"|comm -13 "$WORK/installed-casks" "$WORK/known-casks"|	test/unit/brew-drift.bats	not absent where it was never installed	opt-in casks get reported as missing
 script/audit	s|Brewfile Brewfile.desk|Brewfile|	test/unit/audit.bats	opt-in Brewfile fails too	the opt-in Brewfile stops being checked upstream
 script/sweep	s|still_current < "$OUT" > "$OUT.new"|cp "$OUT" "$OUT.new"|	test/unit/sweep.bats	has moved	sweep resumes on line numbers alone and skips lines nothing has swept
+script/sweep	s#sed "${n}s|^|$prefix |" "$backup" > "$file"#:#	test/unit/sweep.bats	commented out while the tests run	sweep runs the tests against a file it never edited, and records every line as noticed
+script/mutate	s|sed "$expr" "$backup" > "$file"|:|	test/unit/mutate.bats	is caught, and the file is put back	no mutation is ever applied
+script/mutate	s|grep -q '^not ok '|grep -q '^never '|	test/unit/mutate.bats	fails before anything is broken	a test that fails anyway counts as catching the mutation
+script/mutate	s|grep -qv ' # skip'|grep -q .|	test/unit/mutate.bats	this machine skips	a skipped test is reported as an assertion that missed
+script/mutate	s|bats --filter-tags '!macos' "$@"; fi|bats "$@"; fi|	test/unit/mutate.bats	not checked anywhere else	off a Mac, the tests that need one are run and their failures counted as caught
+script/mutate	s|^\[ "$(uname -s)" = "Darwin" \] && ON_A_MAC=1|:|	test/unit/mutate.bats	on a Mac the same test is run	a Mac leaves out the tests only it can run
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
 script/macos	s|^if \[ -z "\$CHECK_ONLY" \]; then$|if true; then|	test/unit/macos.bats	leaves System Settings open	--check closes System Settings on whoever has it open
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
@@ -53,6 +59,7 @@ config/zsh/autoload/tmux_autostart	s/(Apple_Terminal|ghostty)/Apple_Terminal/	te
 config/zsh/autoload/tmux_autostart	s|^  \[\[ -z "$($tmux_cmd list-clients.*|  true|	test/unit/tmux_autostart.bats	never steals a session that already has a client	a session in use elsewhere is stolen
 config/zsh/autoload/tmux_autostart	s|tmux -f "${XDG_CONFIG_HOME}/tmux/tmux.conf"|tmux|	test/unit/tmux_autostart.bats	uses the repo tmux.conf rather than the default	the autostarted session ignores this repo
 config/zsh/autoload/tmux_autostart	s|local target="=$session"|local target="$session"|	test/integration/tmux.bats	merely starts the same	autostart attaches to a session whose name only starts the same
+config/zsh/autoload/tmux_autostart	s|^(( $+commands\[tmux\] )) .*|:|	test/unit/tmux_autostart.bats	tmux is not installed	a shell without tmux tries to start it
 test/helpers/common.bash	s@/tmp/\*|/private/var/folders/\*|/var/folders/\*) return 0@*) return 0@	test/unit/harness.bats	guard_home refuses anything outside a temp directory	the harness would accept the real home
 script/setup	s|^link_into "$DOTFILESDIR/config/zsh/.zshenv" "$HOME/.zshenv"|&; ln -sfv "$HOME/.config/zsh/.zshrc" "$HOME/.zshrc"|	test/integration/setup.bats	never creates the four externally managed shell files	setup takes over a file the base layer owns
 script/setup	s|^    if \[ "$1" = "ssh" \] && ls "$target"/id_\* >/dev/null 2>&1|    if false|	test/integration/setup.bats	leaves an ssh directory holding a private key alone	a managed ssh config is moved aside and replaced by ours
@@ -131,6 +138,7 @@ script/doctor	s@warn "${line#  not applied: }"@:@	test/unit/doctor.bats	drifted 
 script/doctor	s@.*done <<< .*grep 'not applied:'.*@done < /dev/null@	test/unit/doctor.bats	drifted are reported	the drift lines stop being read at all
 config/starship.toml	s|^error_symbol = "\[➜\](red)".*|error_symbol = "[➜](green)"|	test/integration/prompt.bats	character module reflects the last exit status	a failed command still shows the success colour
 config/starship.toml	s|^style = "242"|style = "bright-black"|	test/integration/prompt.bats	rebase in progress	the rebase marker goes back to a colour Gotham draws as background
+config/zsh/lib/prompt.zsh	s|^cached_init starship|# cached_init starship|	test/integration/startup.bats	starship draws the prompt	starship is never started, and the prompt is whatever was there before
 script/doctor	s@.*if \[ "$vm_last" .< "$vm_cutoff" \]; then@if false; then@	test/unit/doctor.bats	VM tier that has not run in a month	a VM tier gone stale reports as current
 script/doctor	s@warn "the VM tier has no recorded run: make test-vm"@:@	test/unit/doctor.bats	VM tier that has never run	a VM tier that never ran says nothing
 script/doctor	s@^elif ! command -v tart >/dev/null 2>&1; then@elif false; then@	test/unit/doctor.bats	cannot run says so	a machine without tart is nagged to run the VM tier
@@ -181,6 +189,10 @@ config/zsh/lib/alias.zsh	s|^(( $+commands\[open\] )) \&\& ||	test/unit/guards.ba
 config/zsh/lib/alias.zsh	s|^  \&\& source $HOMEBREW_PREFIX/share/zsh-you-should-use/.*|  \&\& :|	test/integration/startup.bats	gets a reminder	no reminder when a command has an alias
 config/zsh/lib/alias.zsh	s|^\[\[ -r $HOMEBREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh \]\] \\$|true \\|	test/unit/guards.bats	skipped without a word	a machine without the formula gets an error from every shell
 Brewfile	s|^brew 'zsh-you-should-use'$|# gone|	test/static/lint.bats	is a formula the Brewfile installs	a plugin the shell reads is installed by nothing, and silently absent
+.github/workflows/test.yml	s|bats --print-output-on-failure test/unit|bats --print-output-on-failure --filter-tags '!macos' test/unit|	test/static/lint.bats	only the Linux job leaves any out	a macOS job leaves out the tests that need a Mac, so they run nowhere
+.github/workflows/test.yml	s|--filter-tags '!macos' ||	test/static/lint.bats	only the Linux job leaves any out	the Linux job runs tests that cannot pass there
+.github/workflows/provision.yml	s|- uses: ./.github/actions/tools|- run: brew install direnv fzf starship|	test/static/lint.bats	through one shared step	a job goes back to a tool list of its own
+.github/workflows/test.yml	s|^      - uses: ./.github/actions/tools$|      - run: true|	test/static/lint.bats	through one shared step	the macOS jobs stop installing the tools
 config/zsh/lib/editor.zsh	s|^bindkey -e$|:|	test/integration/editor.bats	still edits with the emacs keys	a tmux pane edits with the vi keys, because EDITOR is nvim
 config/zsh/lib/editor.zsh	s|^bindkey -d$|:|	test/integration/startup.bats	keys a base layer bound	a key means one thing over a base layer and another without
 config/zsh/lib/editor.zsh	s|^WORDCHARS=.*|:|	test/integration/editor.bats	stops at each part of a path	deleting a word takes the whole path with it

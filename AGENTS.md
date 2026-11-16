@@ -69,7 +69,7 @@ VM that installs onto fresh macOS end to end, local only, via `make test-vm`.
 ## Commands
 
 ```sh
-make test                  # static, unit and integration
+make test                  # static, unit and integration; on Linux, without the macos tag
 make test-unit             # one tier; also test-static, test-integration
 bats test/unit/macos.bats -f "check writes nothing"    # one file, one test
 /bin/bash "$(command -v bats)" test/static test/unit test/integration
@@ -88,8 +88,9 @@ section says what each is for.
 
 `test/static/lint.bats` enforces these. The reason for each is beside its test.
 
-- **A flag only BSD accepts names the BSD binary**: `/usr/bin/sed -i ''`,
-  `/usr/bin/stat -f`. GNU coreutils can be earlier on `PATH`.
+- **A flag only BSD accepts names the BSD binary**: `/usr/bin/stat -f`. GNU
+  coreutils can be earlier on `PATH`. A script that also runs on Linux avoids
+  the flag: `sed` reads a copy and writes the file, with no `-i` to spell.
 - **A test shell started with `env -i` that reads `.zshrc` passes `SHLVL=1`.**
   That makes it a nested shell, which leaves launchd's `PATH` alone; a
   first-level one sets it for the whole login session. A test that needs a
@@ -114,24 +115,37 @@ section says what each is for.
 
 ## Working away from a Mac
 
-Linux has zsh, bats and tmux, so most of the unit and integration tiers run
-there. The rest has not been tested until CI or a Mac has run it. Name it in
-the pull request as not checked; do not report it as passing.
+`make test` on Linux runs every test that is not tagged `macos`, says how many
+it left out, and ends green. CI runs the same tests on Ubuntu on every pull
+request. A tagged test has not been tested until CI's macOS jobs or a Mac have
+run it: name it in the pull request as not checked; do not report it as
+passing.
 
-- Anything that calls Homebrew, `launchctl` or `defaults` for real: the
-  Brewfile check, `make audit`, `make brew-drift`, `make update`,
+- **A test that needs a Mac carries `# bats test_tags=macos`**, with the reason
+  on the line above it: macOS itself, Homebrew or its prefix, Ghostty, a file
+  only macOS ships. The tag takes the test away from Linux and from nowhere
+  else. The macOS jobs run with no filter, and the static tier fails if one
+  gains one. A test that fails on Linux for a reason a Mac would share is a
+  bug, not a candidate for the tag.
+- **A test that needs a tool asks with `skip_unless_ci`**, which says
+  `NOT CHECKED` on a laptop or in a container and fails on a runner, where what
+  is installed is the workflow's decision. The Linux job in `test.yml` is the
+  list of what Linux needs: zsh, bats, tmux and the small tools from the
+  distribution, and starship, fzf, gitleaks, Neovim, mise and tree-sitter-cli
+  from somewhere newer, because Ubuntu either lacks them or packages a version
+  older than this config is written for.
+- **`make mutate` and `make sweep` run on Linux.** A row whose test is tagged,
+  or skipped for want of a tool, is listed as `NOT CHECKED` there and not as
+  caught.
+- **No test on Linux reaches** anything that calls Homebrew, `launchctl` or
+  `defaults` for real: `make audit`, `make brew-drift`, `make update`,
   `make doctor`, and `script/macos` and `script/bootstrap` outside their
   stubbed unit tests. `make identity` is the same for 1Password's `op`: its
   tests answer for `op`, and only a signed-in Mac says whether they answer as
-  it does.
-- The ssh effective-config tests, Ghostty's config check, the treesitter tests
-  without `tree-sitter-cli`, and a few tests that lean on BSD `date` or a macOS
-  path. These fail or skip on `main` too, so compare with `main` before blaming
-  a change.
-- `script/mutate` and `script/sweep`, which call BSD `sed`. Apply a row's
-  expression by hand with GNU `sed -i`, watch the named test fail, and restore
-  the file from a copy.
-- `make test-vm`, which needs Tart on Apple Silicon.
+  it does. Nor `make test-vm`, which needs Tart on Apple Silicon.
+- **CI's macOS jobs get their tools from the `Brewfile`**, through
+  `.github/actions/tools`. A tool a test needs goes in the `Brewfile`; a
+  workflow that types out `brew install` fails the static tier.
 
 ## Measure, don't assert
 

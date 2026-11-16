@@ -9,7 +9,7 @@ load '../helpers/common'
 # A broken prompt is loud when you notice it and silent in CI.
 
 setup() {
-  command -v starship >/dev/null 2>&1 || skip "starship is not installed"
+  command -v starship >/dev/null 2>&1 || skip_unless_ci "starship is not installed"
   PROMPT_DIR="$BATS_TEST_TMPDIR/somedir"
   mkdir -p "$PROMPT_DIR"
 }

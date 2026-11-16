@@ -1,0 +1,30 @@
+name: Install the tools
+description: What the Brewfile gives a machine, minus the apps, on a macOS runner.
+
+# One list for a machine and for CI: a tool added to the Brewfile is on every
+# runner from the next run, and a job cannot pass because it was never given
+# what a test needed. Each job installs a few formulae it does not use, which
+# costs it seconds.
+
+runs:
+  using: composite
+  steps:
+    # Casks are gigabytes and most of them need a GUI. brew bundle can skip
+    # named entries through the environment, so the Brewfile needs no
+    # test-only variant.
+    - name: Formulae from the Brewfile
+      shell: bash
+      run: |
+        casks="$(grep -oE "^cask '[^']+'" Brewfile | cut -d\' -f2 | tr '\n' ' ')"
+        HOMEBREW_BUNDLE_CASK_SKIP="$casks" brew bundle install --file Brewfile
+
+    # The two things a test needs that only a cask provides on a real machine.
+    # docker is OrbStack's there; the formula is the same CLI, which is all the
+    # completion test asks for. Ghostty is the one cask worth its download: its
+    # config check is the only thing that can say whether Ghostty accepts the
+    # file, and its terminfo entry is what the OSC 52 test hands to tmux.
+    - name: Stand-ins for two casks
+      shell: bash
+      run: |
+        brew install docker
+        brew install --cask ghostty

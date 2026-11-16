@@ -41,6 +41,17 @@ assert_equal() {
   return 1
 }
 
+# A test that needs a Mac is tagged, on the line above it, with the reason
+# above that:
+#
+#   # bats test_tags=macos
+#
+# That means macOS itself, Homebrew or its prefix, Ghostty, or a tool only
+# Homebrew has. Every test without the tag passes on Linux: `make test` leaves
+# the tagged ones out there and says how many, CI runs the rest on Ubuntu, and
+# the macOS jobs run all of them. A tool that Linux can have is not a reason to
+# tag: ask for it with skip_unless_ci, below.
+
 # Skip a check that cannot run here -- unless this is a CI runner. What a runner
 # has installed is the workflow's to decide, so a check that cannot run there is
 # a workflow that has stopped installing something, and a skip would go on

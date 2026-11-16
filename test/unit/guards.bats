@@ -64,6 +64,8 @@ probe_lib() {
 
 # --- common -----------------------------------------------------------------
 
+# /usr/bin/log is macOS's.
+# bats test_tags=macos
 @test "common: log is the system's command where there is one, not zsh's builtin" {
   [ -x /usr/bin/log ] || skip "NOT CHECKED: this machine has no /usr/bin/log for the builtin to hide"
   run probe_lib common.zsh '' 'whence -w log'
@@ -148,6 +150,8 @@ probe_zprofile() {
         $after"
 }
 
+# /opt/homebrew is where Homebrew lives on a Mac, and only there.
+# bats test_tags=macos
 @test "homebrew: does not re-prepend when the base layer set HOMEBREW_PREFIX" {
   [ -d /opt/homebrew ] || skip "no /opt/homebrew on this machine"
   run probe_zprofile '' 'print $PATH' HOMEBREW_PREFIX=/base/brew
@@ -155,6 +159,8 @@ probe_zprofile() {
     || { echo "re-prepended over the base layer's own order: $output"; return 1; }
 }
 
+# /opt/homebrew again.
+# bats test_tags=macos
 @test "homebrew: sets up shellenv when nothing else did" {
   [ -d /opt/homebrew ] || skip "no /opt/homebrew on this machine"
   run probe_zprofile '' 'print "${HOMEBREW_PREFIX:-unset} $PATH"'

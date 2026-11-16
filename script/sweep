@@ -53,6 +53,15 @@ if [ -n "$(git status --porcelain)" ]; then
 	exit 1
 fi
 
+# A test tagged macos needs a Mac, and anywhere else bats is told to leave it
+# out: run regardless, it fails whatever the line under it says, and every line
+# would be recorded as noticed.
+ON_A_MAC=""
+[ "$(uname -s)" = "Darwin" ] && ON_A_MAC=1
+run_bats() {
+	if [ -n "$ON_A_MAC" ]; then bats "$@"; else bats --filter-tags '!macos' "$@"; fi
+}
+
 # Which tests could possibly notice a change to a given file. Declared rather
 # than derived: a grep for the filename finds fixtures that merely name it and
 # misses the tests that exercise it without ever saying its name.
@@ -193,11 +202,13 @@ for file in $(candidates); do
 		trap "cp '$backup' '$file'; rm -f '$backup'" EXIT
 		# shellcheck disable=SC2064
 		trap "cp '$backup' '$file'; rm -f '$backup'; exit 130" INT TERM
-		/usr/bin/sed -i '' "${n}s|^|$prefix |" "$file"
+		# From the copy and over the file: BSD and GNU sed spell an in-place
+		# edit differently, and neither is needed.
+		sed "${n}s|^|$prefix |" "$backup" > "$file"
 
 		if ! parses "$file"; then
 			verdict="invalid"; invalid=$((invalid + 1))
-		elif bats $mapped >/dev/null 2>&1; then
+		elif run_bats $mapped >/dev/null 2>&1; then
 			verdict="UNPROTECTED"; unprotected=$((unprotected + 1))
 			printf '  ??    %-4s %s\n' "$n" "$(printf '%s' "$line" | cut -c1-72)"
 		else
@@ -215,4 +226,6 @@ printf '\n  %s swept: %s noticed, %s unprotected, %s invalid mutations\n' \
 [ "$unreached" -eq 0 ] \
 	|| printf '  %s lines not reached: the %ss budget ran out. Run again to continue.\n' \
 		"$unreached" "$BUDGET"
+[ -n "$ON_A_MAC" ] \
+	|| printf '  Not on a Mac: the tests that need one were left out, so a line only they\n  protect is listed as unprotected.\n'
 printf '  results: %s\n' "$OUT"

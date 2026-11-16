@@ -90,7 +90,7 @@ load '../helpers/common'
 }
 
 @test "a tag made with this git config is signed, as a commit is" {
-  command -v ssh-keygen >/dev/null 2>&1 || skip "ssh-keygen is not installed"
+  command -v ssh-keygen >/dev/null 2>&1 || skip_unless_ci "ssh-keygen is not installed"
   local home="$BATS_TEST_TMPDIR/home" repo="$BATS_TEST_TMPDIR/repo"
   mkdir -p "$home" "$repo"
   ssh-keygen -q -t ed25519 -N '' -f "$home/key"
@@ -174,6 +174,8 @@ load '../helpers/common'
     || { echo "the config fetched plugins during a static test"; return 1; }
 }
 
+# Homebrew reads its own file, so this needs Homebrew.
+# bats test_tags=macos
 @test "Brewfile is parseable and declares the test tooling" {
   run brew bundle list --file "$REPO/Brewfile"
   [ "$status" -eq 0 ]
@@ -181,6 +183,8 @@ load '../helpers/common'
   echo "$output" | grep -qx shellcheck
 }
 
+# Homebrew again.
+# bats test_tags=macos
 @test "the opt-in Brewfile is parseable" {
   run brew bundle list --cask --file "$REPO/Brewfile.desk"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
@@ -229,7 +233,7 @@ load '../helpers/common'
 }
 
 @test "workflows ask for no more than they need" {
-  command -v yq >/dev/null || skip "yq not installed"
+  command -v yq >/dev/null || skip_unless_ci "yq is not installed"
   # The repository default is a write token, so a workflow that says nothing gets
   # one. Neither of these writes to the repo.
   local wf
@@ -242,7 +246,7 @@ load '../helpers/common'
 }
 
 @test "github workflows are valid yaml and run the whole suite" {
-  command -v yq >/dev/null || skip "yq not installed"
+  command -v yq >/dev/null || skip_unless_ci "yq is not installed"
   local wf="$REPO/.github/workflows/test.yml"
   run yq -e '.jobs | keys' "$wf"
   [ "$status" -eq 0 ]
@@ -251,6 +255,44 @@ load '../helpers/common'
   for tier in static unit integration; do
     grep -q "bats.*test/$tier" "$wf" || { echo "CI never runs test/$tier"; return 1; }
   done
+}
+
+@test "the macOS jobs run every test, and only the Linux job leaves any out" {
+  command -v yq >/dev/null || skip_unless_ci "yq is not installed"
+  # A tag takes a test away from Linux and from nowhere else. If a macOS job
+  # filtered on it too, the tagged tests would run nowhere and every job would
+  # still be green.
+  local wf="$REPO/.github/workflows/test.yml" macos linux tier
+  macos="$(yq -r '.jobs[] | select(.["runs-on"] | test("macos")) | .steps[] | .run // ""' "$wf")"
+  linux="$(yq -r '.jobs[] | select(.["runs-on"] | test("ubuntu")) | .steps[] | .run // ""' "$wf")"
+  for tier in static unit integration; do
+    printf '%s\n' "$macos" | grep -q "bats .*test/$tier" \
+      || { echo "no macOS job runs test/$tier"; return 1; }
+  done
+  assert_contains "$macos" "script/mutate" "what the macOS jobs run"
+  refute_contains "$macos" "filter-tags" "what the macOS jobs run"
+  assert_contains "$linux" "--filter-tags '!macos'" "what the Linux job runs"
+}
+
+@test "runners get their tools from the Brewfile, through one shared step" {
+  command -v yq >/dev/null || skip_unless_ci "yq is not installed"
+  # A list typed into a workflow is a second copy of the Brewfile, and the one
+  # that goes stale: a job passes because it was never given what a test needs.
+  local wf jobs uses
+  for wf in "$REPO"/.github/workflows/*.yml; do
+    # The Linux job cannot run the macOS step, and installs by hand what its
+    # distribution lacks.
+    run yq -r '.jobs[] | select(.["runs-on"] | test("macos")) | .steps[] | .run // ""' "$wf"
+    refute_contains "$output" "brew install" "a macOS job in $(basename "$wf")"
+  done
+  wf="$REPO/.github/workflows/test.yml"
+  jobs="$(yq -r '.jobs[] | select(.["runs-on"] | test("macos")) | .name' "$wf" | grep -c .)"
+  uses="$(yq -r '.jobs[] | select(.["runs-on"] | test("macos")) | .steps[] | .uses // ""' "$wf" \
+    | grep -c '^\./\.github/actions/tools$')"
+  [ "$jobs" -ge 4 ] || { echo "only found $jobs macOS jobs, the search did not work"; return 1; }
+  assert_equal "$uses" "$jobs" "macOS jobs in test.yml that use the shared step"
+  grep -q 'brew bundle install --file Brewfile' "$REPO/.github/actions/tools/action.yml" \
+    || { echo "the shared step no longer installs from the Brewfile"; return 1; }
 }
 
 @test "no stray runtime state is lurking under config/" {
@@ -296,7 +338,9 @@ load '../helpers/common'
 }
 
 @test "no secrets in the history" {
-  command -v gitleaks >/dev/null || skip "gitleaks not installed"
+  command -v gitleaks >/dev/null || skip_unless_ci "gitleaks is not installed"
+  # Ubuntu's package is from before the subcommand this uses.
+  gitleaks git --help >/dev/null 2>&1 || skip_unless_ci "this gitleaks has no git subcommand"
   # A custom format.pretty stops gitleaks finding commit boundaries: it reports
   # "0 commits scanned" and then "no leaks found", which reads exactly like a
   # pass. This repo no longer sets one, but the caller's own config might, so
