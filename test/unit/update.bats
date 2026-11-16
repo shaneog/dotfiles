@@ -127,8 +127,11 @@ NEWER
   : > "$LOG"
   BREW_CHECK=1 run update
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  # The clone as the script names it: with links resolved, which on a Mac puts
+  # /private in front of a temporary directory.
+  local brewfile; brewfile="$(cd "$CLONE" && pwd -P)/Brewfile"
   assert_equal "$(grep '^brew' "$LOG" | tr '\n' ',')" \
-    "brew bundle check --file=$CLONE/Brewfile,brew bundle --file=$CLONE/Brewfile," \
+    "brew bundle check --file=$brewfile,brew bundle --file=$brewfile," \
     "what brew was asked, in order"
 }
 
