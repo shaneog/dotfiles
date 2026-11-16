@@ -133,7 +133,7 @@ probe='print "PATH_DUPES=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 print "NESTED level=$SHLVL login=$options[login] dupes=$(print -l $path | sort | uniq -d | tr "\n" ",")"
 PROBE
   run run_login_shell "$HOME_WITHOUT" "'$ZSH_BIN' -ic 'source ~/nested-probe.zsh'; true"
-  printf '%s\n' "$output" | grep -qx "NESTED level=2 login=off dupes=" || {
+  printf '%s\n' "$output" | grep -qx "NESTED level=3 login=off dupes=" || {
     echo "duplicated PATH entries in a nested shell:"; echo "$output"; return 1; }
 }
 
@@ -198,10 +198,20 @@ PROBE
 @test "a non-login interactive shell reads our .zprofile, not the base one" {
   # Regression: the prezto fallback used to run before ZDOTDIR was assigned, so
   # it sourced $HOME/.zprofile (the base layer's) instead of ours.
-  run --separate-stderr env -i HOME="$HOME_WITH" PATH="$PATH" \
+  #
+  # .zshenv falls back to .zprofile only at the first level, so this shell has
+  # to be there (zsh adds one to SHLVL), and a first-level shell calls launchctl:
+  # it gets a stand-in, and the test fails if the stand-in was not what it found.
+  local stubs; stubs="$(stub_dir)"
+  stub_cmd launchctl <<'STUB'
+#!/bin/sh
+: > "$HOME/launchctl-stood-in"
+STUB
+  run --separate-stderr env -i HOME="$HOME_WITH" PATH="$stubs:$PATH" SHLVL=0 \
     USER="${USER:-tester}" TERM=xterm-256color ZSH_NO_TMUX_AUTOSTART=1 "$ZSH_BIN" -ic \
     'print "OURS=${LESSCHARSET:-no} BASE=${BASE_LAYER_PROFILE_RAN:-no}"'
   assert_equal "$output" "OURS=utf-8 BASE=1"
+  [ -e "$HOME_WITH/launchctl-stood-in" ] || { echo "the stand-in launchctl was not called"; return 1; }
 }
 
 @test "completions registered by the base layer survive our compinit" {
@@ -210,7 +220,7 @@ PROBE
 #!/bin/sh
 exit 0
 STUB
-  run env -i HOME="$HOME_WITH" PATH="$stubs:$PATH" USER="${USER:-tester}" \
+  run env -i HOME="$HOME_WITH" PATH="$stubs:$PATH" USER="${USER:-tester}" SHLVL=1 \
     TERM="${TERM:-xterm}" ZSH_NO_TMUX_AUTOSTART=1 "$ZSH_BIN" -lic \
     'print "AWS=${_comps[aws]:-MISSING}"'
   echo "$output" | grep -q "AWS=_bash_complete"
@@ -231,7 +241,7 @@ STUB
   local snapshot
   snapshot="$(plugin_cache)" && ln -s "$snapshot" "$home/.local/share/zinit"
 
-  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 \
     "$ZSH_BIN" -lic 'true' >/dev/null 2>&1
   sleep 1   # .zlogin forks its work
@@ -252,7 +262,7 @@ STUB
   # compinit. Measured 572ms versus 231ms, so this is the single most expensive
   # thing that can regress here.
   local home; home="$(make_home)"
-  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
     "$ZSH_BIN" -lic 'true' >/dev/null 2>&1
   local cached=no
@@ -385,7 +395,7 @@ STUB
   # Both halves are asserted because either failing is silent -- completion just
   # behaves differently, and a stray dump is invisible until it goes stale.
   local home; home="$(make_home)"
-  run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+  run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
     "$ZSH_BIN" -lic '
       print "menu=$(zstyle -L ":completion:*:*:*:*:*" | grep -c "menu select")"
@@ -405,7 +415,7 @@ STUB
   # Asserting on output is the only way to see it.
   command -v rg >/dev/null || skip "ripgrep not installed"
   local home; home="$(make_home)"
-  run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+  run _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
     "$ZSH_BIN" -lic "cd $REPO && eval \"\$FZF_DEFAULT_COMMAND\" | wc -l"
   guard_home "$home" && rm -rf "$home"
@@ -510,6 +520,24 @@ ALIASES
   assert_contains "$out" "USRBIN=1 MISSING=0" "a listed directory already there, and one that does not exist"
 }
 
+@test "the suite's own shells do not hand their PATH to GUI apps" {
+  # Regression: env -i wipes SHLVL, so every test shell looked like a terminal's
+  # own. On a Mac a run of this tier left launchd, and so every app opened
+  # afterwards, with a PATH inside a temp home that had already been deleted.
+  local stubs saved="$PATH"; stubs="$(stub_dir)"
+  stub_cmd launchctl <<'STUB'
+#!/bin/sh
+echo "$*" >> "$HOME/launchctl-calls"
+STUB
+  PATH="$stubs:$PATH"
+  run run_login_shell "$HOME_WITHOUT" 'print "stand-in=$+commands[launchctl]"'
+  PATH="$saved"
+  # Otherwise the absence of a call below would prove nothing.
+  assert_contains "$output" "stand-in=1" "launchctl as the shell found it"
+  [ ! -e "$HOME_WITHOUT/launchctl-calls" ] \
+    || { echo "launchctl was called: $(cat "$HOME_WITHOUT/launchctl-calls")"; return 1; }
+}
+
 @test "only a shell a terminal or a tmux pane started hands its PATH to GUI apps" {
   # Regression: every interactive shell did, so one started inside a virtualenv
   # or a tool's subshell left its PATH as the one every app launched after it got.
@@ -610,7 +638,7 @@ EOF
   chmod +x "$stubs/tmux"
 
   local captured="$BATS_TEST_TMPDIR/shell.out"
-  _timeout 180 env -i HOME="$HOME_WITHOUT" PATH="$stubs:/usr/bin:/bin" \
+  _timeout 180 env -i HOME="$HOME_WITHOUT" PATH="$stubs:/usr/bin:/bin" SHLVL=1 \
     TERM=xterm-256color USER="${USER:-tester}" TERM_PROGRAM=Apple_Terminal \
     HOMEBREW_PREFIX=/nonexistent ZSH_NO_ZCOMPILE=1 \
     "$ZSH_BIN" -lic 'exit' > "$captured" 2>&1 || true

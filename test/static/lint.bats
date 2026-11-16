@@ -14,6 +14,28 @@ load '../helpers/common'
   done
 }
 
+@test "every test shell that reads .zshrc is started one level down" {
+  # run_login_shell says why. This is for the tests that build their own
+  # environment: -f shells are exempt, since they read no startup file. A test
+  # that needs a first-level shell says SHLVL=0 and puts a stand-in launchctl
+  # on PATH.
+  local offenders
+  offenders="$(awk '
+    { line = line $0 }
+    /\\$/ { sub(/\\$/, " ", line); next }
+    {
+      if (line ~ /env -i / && line ~ /ZSH_BIN"? -[a-eg-z]*i[a-eg-z]* / && line !~ /SHLVL=/)
+        print FILENAME ": " line
+      line = ""
+    }
+  ' "$REPO"/test/helpers/*.bash "$REPO"/test/*/*.bats)"
+  [ -z "$offenders" ] || {
+    echo "interactive shells started with env -i and no SHLVL:"
+    echo "$offenders"
+    return 1
+  }
+}
+
 @test "every autoloaded function parses" {
   local f
   for f in "$REPO"/config/zsh/autoload/*; do

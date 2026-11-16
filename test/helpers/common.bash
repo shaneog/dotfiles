@@ -161,8 +161,13 @@ run_login_shell() {
   # failure: a cold CI job sat for twenty-nine minutes on one.
   local captured status
   captured="$(mktemp)"
+  # SHLVL=1: the shell is one level down from whoever ran the tests, and env -i
+  # would hide that. A first-level shell hands its PATH to launchd, which on a
+  # Mac is the login session's and not this throwaway home's, so every GUI app
+  # opened afterwards would get a PATH inside a temp directory.
+  #
   # _timeout is a shell function, so it has to wrap env rather than the reverse
-  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color \
+  _timeout 180 env -i HOME="$home" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
     "$ZSH_BIN" -lic "$@" > "$captured" 2> "$captured.err"
   status=$?

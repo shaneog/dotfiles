@@ -28,7 +28,7 @@ teardown() {
 cold_shell() {
   local captured status
   captured="$(mktemp)"
-  _timeout 600 env -i HOME="$COLD_HOME" PATH="$PATH" TERM=xterm-256color \
+  _timeout 600 env -i HOME="$COLD_HOME" PATH="$PATH" TERM=xterm-256color SHLVL=1 \
     USER="${USER:-tester}" ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 \
     "$ZSH_BIN" -lic "$@" > "$captured" 2> "$captured.err"
   status=$?
