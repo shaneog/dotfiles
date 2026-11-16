@@ -36,7 +36,7 @@ script takes it out again.
 - **Links entries, not directories.** `~/.config` and `~/.ssh` stay real
   directories. Only what git tracks is linked into them, so other tools' files
   never end up in the clone.
-- **Third-party shell code is pinned.** zinit, Prezto and the zsh plugins run at
+- **Third-party shell code is pinned.** zinit and the zsh plugins run at
   the commits in [`config/zsh/pins.zsh`](config/zsh/pins.zsh), and Renovate
   proposes the bumps.
 - **Startup time is tested.** An interactive login shell starts in 70 to 145ms,
@@ -220,7 +220,7 @@ flowchart LR
 
 | Area | What you get |
 | --- | --- |
-| **Shell** | zsh with [zinit](https://github.com/zdharma-continuum/zinit), a handful of [Prezto](https://github.com/sorin-ionescu/prezto) modules, autosuggestions, extra completions, history substring search and `you-should-use`. Syntax highlighting is [zsh-patina](https://github.com/michel-kraemer/zsh-patina). |
+| **Shell** | zsh with [zinit](https://github.com/zdharma-continuum/zinit), autosuggestions, extra completions, history substring search and `you-should-use`. Syntax highlighting is [zsh-patina](https://github.com/michel-kraemer/zsh-patina). |
 | **Prompt** | [Starship](https://starship.rs/), configured in [`config/starship.toml`](config/starship.toml). |
 | **Terminal** | [Ghostty](https://ghostty.org) and Terminal.app, both in the Gotham palette with FiraMono Nerd Font. |
 | **tmux** | Starts by itself in a Ghostty or Terminal.app window and nowhere else. Prefix is `C-a`. Sessions are saved and restored by tmux-resurrect and tmux-continuum. |
@@ -284,7 +284,7 @@ These files are not tracked, and each one is read by the config beside it:
 
 ## Plugin versions
 
-zinit, Prezto and the zsh plugins run at the commits listed in
+zinit and the zsh plugins run at the commits listed in
 [`config/zsh/pins.zsh`](config/zsh/pins.zsh), one line each. Renovate opens one
 pull request, at most weekly, when any of their branches has moved
 ([`.github/renovate.json`](.github/renovate.json)), and CI installs them from

@@ -82,7 +82,7 @@
               <li data-step><strong>Load the base layer's rc file</strong><span class="explain">If a <code>~/.zshrc</code> exists in the home folder, read it now. Same idea as the profile: theirs first, ours on top.</span></li>
               <li data-step><strong>Start the plugin manager</strong><span class="explain">Loads zinit, which fetches and loads shell plugins, each at the exact commit listed in <code>pins.zsh</code>. On a brand-new Mac it downloads itself first. When a listed commit has changed since the last shell, what is installed is moved to it here, once.</span></li>
               <li data-step><strong>Register the handy functions</strong><span class="explain">Every file in <code>autoload/</code> becomes a command, such as <code>kp</code> or <code>path</code>. zsh only reads the file the first time you run it.</span></li>
-              <li data-step><strong>Read lib/, one topic per file</strong><span class="explain">Fourteen small files in alphabetical order: aliases, completion, history, the prompt and so on. The <a href="#lib">cast list</a> is below.</span></li>
+              <li data-step><strong>Read lib/, one topic per file</strong><span class="explain">Sixteen small files in alphabetical order: aliases, completion, history, the prompt and so on. The <a href="#lib">cast list</a> is below.</span></li>
               <li data-step><strong>Switch on tab completion</strong><span class="explain">Builds the index of what Tab can complete. The index is saved and only rebuilt when it is more than twenty hours old, which is the difference between a few milliseconds and a few hundred.</span></li>
               <li data-step><strong>Turn on syntax highlighting</strong><span class="explain">Colors commands as you type them. It goes last because the highlighter asks to be the final thing loaded.</span></li>
               <li data-step><strong>Read ~/.zshrc.local</strong><span class="explain">An optional file for this Mac only. Read at the end, so it has the final word.</span></li>
@@ -153,10 +153,11 @@
         </thead>
         <tbody>
           <tr><td><code>1password.zsh</code></td><td>Points SSH at the 1Password agent. See <a href="keys.html">Keys and 1Password</a>.</td></tr>
-          <tr><td><code>alias.zsh</code></td><td>Short names such as <code>vim</code> for Neovim, and a reminder when you type out something that has an alias.</td></tr>
-          <tr><td><code>common.zsh</code></td><td>The core plugins, a handful of Prezto modules, and the default editor and pager.</td></tr>
+          <tr><td><code>alias.zsh</code></td><td>Short names such as <code>vim</code> for Neovim and <code>ll</code> for a long listing, colour for <code>ls</code> and <code>grep</code>, and a reminder when you type out something that has an alias.</td></tr>
+          <tr><td><code>common.zsh</code></td><td>The core plugins, the shell's options, and the default editor and pager.</td></tr>
           <tr><td><code>completion.zsh</code></td><td>How the Tab menu looks and matches: ignores capitals, forgives typos, groups results.</td></tr>
           <tr><td><code>direnv.zsh</code></td><td>Per-folder environment variables.</td></tr>
+          <tr><td><code>editor.zsh</code></td><td>What the keys do at the prompt: moving by word, <code>....</code> for three folders up, quoting a pasted URL.</td></tr>
           <tr><td><code>fzf.zsh</code></td><td>The fuzzy finder and its keys.</td></tr>
           <tr><td><code>git.zsh</code></td><td>Nine git shortcuts. They are listed in the <a href="tools.html#git">Toolbox</a>.</td></tr>
           <tr><td><code>history.zsh</code></td><td>A large history shared between all open shells, without duplicates or throwaway commands like a bare <code>ls</code>.</td></tr>
@@ -165,7 +166,8 @@
           <tr><td><code>node.zsh</code></td><td>Where npm keeps its cache, unless a base layer owns Node.</td></tr>
           <tr><td><code>orbstack.zsh</code></td><td>Tab completion for <code>docker</code> and <code>orb</code>.</td></tr>
           <tr><td><code>prompt.zsh</code></td><td>The Starship prompt.</td></tr>
-          <tr><td><code>tmux.zsh</code></td><td>tmux shortcuts, and where its config file is.</td></tr>
+          <tr><td><code>terminal.zsh</code></td><td>The window and tab title, outside tmux: the folder at the prompt, the command while it runs.</td></tr>
+          <tr><td><code>tmux.zsh</code></td><td>Where tmux's config file is.</td></tr>
         </tbody>
       </table>
     </div>

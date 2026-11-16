@@ -233,6 +233,44 @@ run_zlogin() {
   assert_equal "$output" "nvim/nvim"
 }
 
+@test "common: man pages are drawn in colour" {
+  run probe_lib common.zsh '' 'print -r -- "${(t)LESS_TERMCAP_md} ${(V)LESS_TERMCAP_md} ${(V)LESS_TERMCAP_us} ${(V)LESS_TERMCAP_me}"'
+  assert_equal "$output" "scalar-export ^[[01;31m ^[[01;32m ^[[0m"
+}
+
+# --- ls ---------------------------------------------------------------------
+
+@test "alias: the ls macOS ships is asked for colour the way it understands" {
+  # BSD ls reads -G as colour. GNU ls reads it as "leave the group out".
+  run probe_lib alias.zsh 'OSTYPE=darwin24.0; hash ls=/bin/ls' 'print -r -- "$aliases[ls] / ${(t)LSCOLORS} $LSCOLORS"'
+  assert_equal "$output" "ls -G / scalar-export exfxcxdxbxGxDxabagacad"
+}
+
+@test "alias: any other ls is asked with --color" {
+  run probe_lib alias.zsh 'OSTYPE=darwin24.0; hash ls=/opt/homebrew/opt/coreutils/libexec/gnubin/ls' 'print -r -- "$aliases[ls]"'
+  assert_equal "$output" "ls --group-directories-first --color=auto"
+  run probe_lib alias.zsh 'OSTYPE=linux-gnu; hash ls=/bin/ls' 'print -r -- "$aliases[ls]"'
+  assert_equal "$output" "ls --group-directories-first --color=auto"
+}
+
+@test "alias: o opens things where there is an open to do it" {
+  run probe_lib alias.zsh 'hash open=/usr/bin/true' 'print -r -- "${aliases[o]:-unset}"'
+  assert_equal "$output" "open"
+  run probe_lib alias.zsh 'path=(/nowhere)' 'print -r -- "${aliases[o]:-unset}"'
+  assert_equal "$output" "unset"
+}
+
+# --- line editor ------------------------------------------------------------
+
+@test "editor: a terminal that does not describe a key is not an error" {
+  # vt100 has no Home, Insert or Shift-Tab, and binding an empty sequence is
+  # an error: one for each, in every shell opened on such a terminal.
+  run --separate-stderr probe_lib editor.zsh '' 'bindkey -M emacs "^[b"' TERM=vt100
+  local noise; noise="$(printf '%s\n' "$stderr" | strip_harness_noise)"
+  [ -z "$noise" ] || { echo "stderr: $noise"; return 1; }
+  assert_contains "$output" "emacs-backward-word"
+}
+
 # --- prompt under a dumb terminal -------------------------------------------
 
 # A stub starship whose init script is observable once sourced.

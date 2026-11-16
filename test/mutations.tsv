@@ -29,12 +29,16 @@ script/macos	s|^if \[ -z "\$CHECK_ONLY" \]; then$|if true; then|	test/unit/macos
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
 config/zsh/lib/orbstack.zsh	s|^cached_completion docker|# cached_completion docker|	test/integration/startup.bats	CLI completions	a CLI completion stops being generated (docker: present everywhere the tests run)
 config/zsh/lib/homebrew.zsh	s|^alias brewup|# alias brewup|	test/integration/startup.bats	brew maintenance alias	the brew maintenance alias disappears
+config/zsh/lib/homebrew.zsh	s|^alias brewx=.*|:|	test/integration/startup.bats	everyday commands	a brew shortcut in regular use disappears
 config/zsh/autoload/cached_init	s| \|\| $bin -nt $file \]\]| ]]|	test/unit/cached_init.bats	regenerates when the tool is newer	a tool replaced in place keeps the stale cache
 config/zsh/autoload/cached_init	s|\[\[ $first != $stamp \|\| |[[ ! -s $file \|\| |	test/unit/cached_init.bats	leads to another binary	a Homebrew upgrade keeps the last version's cache
 config/zsh/autoload/cached_init	s| && \[\[ -n $out \]\]||	test/unit/cached_init.bats	reports failure when the tool succeeds but writes nothing	an empty init script is cached and sourced
 config/zsh/lib/mise.zsh	s|^eval .*|source $REPLY|	test/unit/guards.bats	the PATH it starts from	every shell gets the PATH of the one that wrote mise's cache appended
 config/zsh/lib/common.zsh	s|^\[\[ -x /usr/bin/log \]\] && disable log|:|	test/unit/guards.bats	log is the system's command	zsh's log builtin hides macOS's log command
 config/zsh/lib/common.zsh	s|^ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=|: |	test/integration/startup.bats	suggestion is drawn	suggestions go back to the plugin's default, a colour Gotham draws as background
+config/zsh/lib/common.zsh	s|^unsetopt CLOBBER.*|:|	test/integration/startup.bats	options are set	> overwrites a file without being asked twice
+config/zsh/lib/common.zsh	s|^setopt AUTO_PUSHD.*|:|	test/integration/startup.bats	options are set	cd - and the directory stack have nothing to go back to
+config/zsh/lib/common.zsh	s|^export LESS_TERMCAP_md=.*|:|	test/unit/guards.bats	man pages are drawn in colour	man pages lose their colour
 config/zsh/autoload/cached_completion	s|^fpath=($dir $fpath)|# fpath|	test/unit/cached_completion.bats	writes the completion where compinit will find it	the completion is generated but never on fpath
 config/zsh/autoload/cached_completion	s| \|\| \[\[ ! -s $tmp \]\]||	test/unit/cached_completion.bats	reports failure when the tool succeeds but writes nothing	an empty completion is put on fpath
 config/zsh/autoload/randommac	s@0xFE) | 0x02@0xFE) | 0x01@	test/unit/randommac.bats	locally administered unicast address	the address becomes multicast, which the interface rejects
@@ -99,6 +103,7 @@ config/zsh/lib/history.zsh	s|^setopt SHARE_HISTORY|setopt INC_APPEND_HISTORY SHA
 config/zsh/lib/history.zsh	s|^unsetopt HIST_EXPIRE_DUPS_FIRST|setopt HIST_EXPIRE_DUPS_FIRST|	test/integration/startup.bats	history file longer	a long history file adds seconds to every shell's startup
 config/zsh/lib/history.zsh	s|^HISTSIZE=.*|HISTSIZE=50000|	test/integration/startup.bats	history file longer	half of the history file is kept and can never be recalled
 config/zsh/lib/history.zsh	s| ver"$DOTFILES_PINS\[zsh-users/zsh-history-substring-search\]"||	test/static/lint.bats	every plugin zinit loads is pinned	a plugin installs at whatever is newest that day
+config/zsh/lib/history.zsh	s|history-substring-search-up$|up-line-or-history|	test/integration/editor.bats	Up searches history	Up walks back through every command instead of the ones that match
 script/macos	s|.*sed -n .*pam_tid.*|grep "^#auth" "$PAM_SUDO_TEMPLATE"|	test/unit/macos.bats	Apple's hook	the pam_tid line is copied still commented out
 script/macos	s:| sudo tee "$PAM_SUDO_LOCAL" >/dev/null:> "$PAM_SUDO_LOCAL":	test/unit/macos.bats	Apple's hook	the PAM file is written without sudo
 script/macos	s|.*if \[ -f "$BACKUP_DIR/sudo_local" \]; then|if false; then|	test/unit/macos.bats	existing sudo_local is kept	a pre-existing PAM file is recorded but never restorable
@@ -145,18 +150,36 @@ config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integrat
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
 config/zsh/.zshrc	s|^autoload -Uz "$ZDOTDIR/autoload/sync_pins" && sync_pins|:|	test/integration/startup.bats	moves a plugin that is installed	a changed pin never reaches a machine that already has the plugin
 config/zsh/.zshrc	s|"$ZDOTDIR/autoload/sync_pins"|sync_pins|	test/integration/startup.bats	moves a plugin that is installed	a base layer that replaces fpath hides the function that moves the pins
-config/zsh/.zshrc	s|^ZINIT_2MAP\[PZT::\]=.*|:|	test/integration/startup.bats	what pins.zsh names	Prezto's modules are fetched from master again
 config/zsh/autoload/sync_pins	s|git -C $dir checkout -q --detach $want|true|	test/unit/sync_pins.bats	moves a plugin installed at another commit	a plugin is announced as moved and left where it was
 config/zsh/autoload/sync_pins	s#|| git -C $dir fetch -q origin $want }#}#	test/unit/sync_pins.bats	has not seen yet	a pin newer than the install is never fetched
 config/zsh/autoload/sync_pins	s#|| print -ru2 -- "Could not move.*#|| true#	test/unit/sync_pins.bats	when the pin cannot be fetched	a pin that cannot be reached is skipped without a word
-config/zsh/autoload/sync_pins	s|rm -rf $home/snippets/PZT\*(N)|true|	test/unit/sync_pins.bats	when the pinned commit changes	a new Prezto pin leaves the old modules in place
-config/zsh/autoload/sync_pins	s|PZT\*(N)|*(N)|	test/unit/sync_pins.bats	and only those	every snippet is deleted with Prezto's
-config/zsh/autoload/sync_pins	s|rm -f $home/completions/\*(-@N)|true|	test/unit/sync_pins.bats	leaves dangling	completions of a deleted Prezto module stay linked and compinit complains about each
-config/zsh/autoload/sync_pins	s|print -r -- $want > $stamp|:|	test/unit/sync_pins.bats	with nothing installed	Prezto's modules are deleted and fetched again by every shell
 config/zsh/pins.zsh	s|^\(  zsh-users/zsh-completions .*\)  # master$|\1|	test/static/lint.bats	Renovate reads the same pins	a pin loses the branch Renovate needs and is never updated
 .github/renovate.json	s|\[0-9a-f\]{40}|[0-9a-f]{41}|	test/static/lint.bats	Renovate reads the same pins	Renovate's pattern matches no pin at all
 config/zsh/lib/git.zsh	s|^alias gco=.*|# gone|	test/integration/startup.bats	git aliases in daily use	a git alias in daily use disappears
 config/zsh/lib/git.zsh	s|--force-with-lease|--force|	test/integration/startup.bats	git aliases in daily use	gpf force-pushes without checking the remote first
+config/zsh/lib/alias.zsh	s|commands\[ls\] == /bin/ls|commands[ls] == *|	test/unit/guards.bats	any other ls	GNU ls is given -G, which hides the group column and colours nothing
+config/zsh/lib/alias.zsh	s|^  alias ls='ls -G'|  :|	test/unit/guards.bats	ls macOS ships	ls on a Mac is one colour
+config/zsh/lib/alias.zsh	s|^alias find='noglob find'|:|	test/integration/startup.bats	everyday commands	find . -name *.md finds nothing once a file here matches
+config/zsh/lib/alias.zsh	s|^alias mkdir='mkdir -p'|:|	test/integration/startup.bats	everyday commands	mkdir a/b/c fails where it used to make all three
+config/zsh/lib/alias.zsh	s|^(( $+commands\[open\] )) \&\& ||	test/unit/guards.bats	o opens things	o names a command that is not there
+config/zsh/lib/editor.zsh	s|^bindkey -e$|:|	test/integration/editor.bats	still edits with the emacs keys	a tmux pane edits with the vi keys, because EDITOR is nvim
+config/zsh/lib/editor.zsh	s|^bindkey -d$|:|	test/integration/startup.bats	keys a base layer bound	a key means one thing over a base layer and another without
+config/zsh/lib/editor.zsh	s|^WORDCHARS=.*|:|	test/integration/editor.bats	stops at each part of a path	deleting a word takes the whole path with it
+config/zsh/lib/editor.zsh	s|^zle -N self-insert url-quote-magic|:|	test/integration/editor.bats	URL typed at the prompt	a typed URL is globbed and split at its ampersand
+config/zsh/lib/editor.zsh	s|LBUFFER+='/..'|LBUFFER+='.'|	test/integration/editor.bats	third dot	four dots stay four dots
+config/zsh/lib/editor.zsh	s|^  bindkey -M isearch . self-insert.*|:|	test/integration/editor.bats	history search is a dot	a dot ends a history search instead of narrowing it
+config/zsh/lib/editor.zsh	s|BUFFER="${BUFFER:1}"|:|	test/integration/editor.bats	comments a line out and back in	a commented line cannot be uncommented
+config/zsh/lib/editor.zsh	s|BUFFER="sudo $BUFFER"|:|	test/integration/editor.bats	puts sudo in front	Control-X Control-S moves the cursor and adds nothing
+config/zsh/lib/editor.zsh	s|^  zle _expand_alias|  :|	test/integration/editor.bats	spells out the aliases	Control-space adds a space and expands nothing
+config/zsh/lib/editor.zsh	s|stty -ixon|true|	test/integration/editor.bats	instead of freezing	Control-S freezes the terminal until Control-Q
+config/zsh/lib/editor.zsh	s|^  add-zle-hook-widget line-init .*|  :|	test/integration/editor.bats	application mode	the arrow keys send sequences nothing is bound to
+config/zsh/lib/editor.zsh	s|^  _dotfiles_bind redo .*|  :|	test/integration/editor.bats	every key the editor binds	a binding is lost from the table
+config/zsh/lib/editor.zsh	s|beginning-of-line     $sends\[home\]|beginning-of-line "$sends[home]"|	test/unit/guards.bats	does not describe a key	a key the terminal does not describe is an error in every shell
+config/zsh/lib/terminal.zsh	s|^\[\[ -n $TMUX .*|:|	test/unit/terminal.bats	inside tmux	every prompt in a tmux pane renames the window tmux had named
+config/zsh/lib/terminal.zsh	s|MATCH\[-12,-1\]|MATCH|	test/unit/terminal.bats	shortened for a tab	a tab is named with the whole of a long path
+config/zsh/lib/terminal.zsh	s/|sudo|ssh|/|/	test/unit/terminal.bats	not what is in front of it	every command run with sudo is titled sudo
+config/zsh/lib/terminal.zsh	s|${PWD// /%20}|$PWD|	test/unit/terminal.bats	told the folder	Terminal.app is given a folder with a space in it as two words
+config/zsh/lib/terminal.zsh	s|^  add-zsh-hook preexec _dotfiles_terminal_app_folder_clear|  :|	test/unit/terminal.bats	forgets the folder	a new Terminal.app tab opens in the folder an ssh session was started from
 script/bootstrap	s|printf '%s\\n' "$2" > "$1.secret"|eval "echo \\"$2\\"" > "$1.secret"|	test/unit/install-scripts.bats	exactly as it was typed	bootstrap's askpass helper expands the password as shell
 script/remove	s|printf '%s\\n' "$2" > "$1.secret"|eval "echo \\"$2\\"" > "$1.secret"|	test/unit/install-scripts.bats	exactly as it was typed	remove's askpass helper expands the password as shell
 script/bootstrap	s|( umask 077; printf|( printf|	test/unit/install-scripts.bats	readable only by its owner	the sudo password is left readable by other users

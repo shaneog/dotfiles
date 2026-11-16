@@ -93,7 +93,6 @@ else
     # never updates itself, so an archived plugin here would sit untouched
     # indefinitely -- the zinit list above had this covered and these did not.
     [ -d config/nvim ] && grep -rhoE '"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"' config/nvim | tr -d '"'
-    grep -rqE "PZTM::|PZT::" config/zsh && echo "sorin-ionescu/prezto"
     # tmux's plugins. tpm installs whatever is newest on their default branch,
     # so these are the ones no pin stands in front of.
     grep -hoE "@plugin '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+'" config/tmux/tmux.conf 2>/dev/null \

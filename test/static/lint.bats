@@ -66,7 +66,7 @@ load '../helpers/common'
 
   # The other direction: a pin nothing loads is a line Renovate keeps bumping.
   while read -r repo _; do
-    case "$repo" in zdharma-continuum/zinit|sorin-ionescu/prezto) continue ;; esac
+    [ "$repo" = zdharma-continuum/zinit ] && continue
     case " $loaded " in
       *" $repo "*) ;;
       *) problems="$problems

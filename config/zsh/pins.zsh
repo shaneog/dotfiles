@@ -12,7 +12,6 @@
 # the autoloaded sync_pins moves an existing one on its next shell.
 typeset -gA DOTFILES_PINS=(
   zdharma-continuum/zinit                 d7b10fcab51ea034aa7df5d241604b3e6bf46449  # main
-  sorin-ionescu/prezto                    cff2d01871425b1b80710f8ec6a475c5a53145b4  # master
   MichaelAquilina/zsh-you-should-use      5f3d129864ee4505043d88c3486224f1d75b692e  # master
   zsh-users/zsh-autosuggestions           85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5  # master
   zsh-users/zsh-completions               989b23277ab33e8d5e82df6aed936e846db9d8b8  # master

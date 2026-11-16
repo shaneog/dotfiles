@@ -1,8 +1,7 @@
 # Move whatever is installed to the commit pins.zsh names for it.
 #
-# zinit applies `ver` only when it first clones a plugin, and downloads a
-# snippet only when it has no copy. Left to itself, a changed pin would reach
-# new machines and no others.
+# zinit applies `ver` only when it first clones a plugin. Left to itself, a
+# changed pin would reach new machines and no others.
 #
 # A shell with nothing to move pays one small file read per pin and starts no
 # process: a checkout made at a commit records that commit in .git/HEAD.
@@ -14,8 +13,6 @@ local home=${ZINIT[ZINIT_HOME]:h} repo want dir
 for repo want in "${(@kv)DOTFILES_PINS}"; do
   case $repo in
     zdharma-continuum/zinit) dir=$ZINIT[ZINIT_HOME] ;;
-    # Not a checkout: see below.
-    sorin-ionescu/prezto)    continue ;;
     *)                       dir=$home/plugins/${repo//\//---} ;;
   esac
   # Not installed yet, so zinit is about to clone it, at the pin.
@@ -30,18 +27,3 @@ for repo want in "${(@kv)DOTFILES_PINS}"; do
     && git -C $dir checkout -q --detach $want \
     || print -ru2 -- "Could not move $repo to ${want[1,7]}: still running the commit that was installed."
 done
-
-# Prezto's modules are single files, which zinit names after the module and not
-# after where they came from. The commit they were downloaded at is recorded
-# beside them, and when the pin moves on they are deleted to be fetched again.
-# zinit links any completions a snippet came with into completions/, and
-# compinit complains about each link whose file has gone, so those go too.
-local stamp=$home/snippets/.prezto-commit have=
-want=$DOTFILES_PINS[sorin-ionescu/prezto]
-[[ -r $stamp ]] && have="$(<$stamp)"
-if [[ -n $want && $have != $want ]]; then
-  mkdir -p $home/snippets
-  rm -rf $home/snippets/PZT*(N)
-  rm -f $home/completions/*(-@N)
-  print -r -- $want > $stamp
-fi
