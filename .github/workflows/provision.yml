@@ -147,10 +147,13 @@ jobs:
               cask) flag=--cask ;;
               *) continue ;;
             esac
-            if brew info "$flag" "$name" >/dev/null 2>&1; then
+            # What brew said is kept for a failure: "no such cask" and "the
+            # API did not answer" are different problems with the same exit.
+            if said="$(brew info "$flag" "$name" 2>&1)"; then
               echo "ok    $kind $name"
             else
               echo "FAIL  $kind $name does not resolve"
+              printf '%s\n' "$said" | sed 's/^/        /'
               missing=$((missing + 1))
             fi
           done < <(grep -E "^(brew|cask) '" Brewfile | tr -d "'")
