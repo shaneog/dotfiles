@@ -394,12 +394,17 @@ The image is tens of gigabytes on first use, but it is cached after that.
 | --- | --: |
 | Pulling the image (once) | 394s |
 | Boot, ssh, copy the tree in | 20s |
-| Everything inside the VM: `script/bootstrap`, the first shells, the assertions | 174s |
+| `script/bootstrap`, of which | 159s |
+| &nbsp;&nbsp;Homebrew from scratch, command line tools included | 96s |
+| &nbsp;&nbsp;`script/setup` and `script/macos` | 1s |
+| &nbsp;&nbsp;Brewfile, formulae only | 55s |
+| &nbsp;&nbsp;`after-setup` | 7s |
+| First login shell, installing every plugin | 12s |
 | **Whole run, image cached** | **195s** |
 
 So a bare machine reaches a working shell inside three minutes, plus whatever
-the casks cost. That includes the command line tools, which Homebrew installs
-first on a machine that has never had them.
+the casks cost. Over half of that is Homebrew, which installs the command line
+tools first on a machine that has never had them.
 
 This test has earned its keep twice. `script/macos` used to take 121s of a run,
 all of it an AppleScript waiting on an AppleEvent that a headless machine can

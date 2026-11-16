@@ -96,7 +96,7 @@
           <li class="seq you">
             <div>
               <h3>Open a new terminal window <span class="who">you</span></h3>
-              <p>The first shell fetches its own plugins, which takes around twenty seconds, once. Every shell after that starts in a fraction of a second.</p>
+              <p>The first shell fetches its own plugins, which takes around twelve seconds, once. Every shell after that starts in a fraction of a second.</p>
             </div>
           </li>
         </ol>
@@ -130,20 +130,20 @@
 	signingkey = ssh-ed25519 AAAA...   <span class="dim"># the public key, not a path</span></code></pre>
 
     <h2 id="timing">How long it takes</h2>
-    <p>These numbers come from the virtual machine test, which installs onto a completely fresh copy of macOS. Apps are left out because their download time depends on your connection.</p>
+    <p>These numbers come from the virtual machine test, which installs onto a completely fresh copy of macOS. The first bar includes Apple's Command Line Tools, which Homebrew installs before anything else. Apps are left out because their download time depends on your connection.</p>
 
     <figure class="fig" data-animate>
       <div class="fig-body">
-        <ul class="bars" style="--max: 30">
-          <li><span class="label">Homebrew from scratch</span><span class="track"><span class="fill" style="--v: 10"></span></span><span class="value">10 s</span></li>
-          <li><span class="label"><code>script/macos</code></span><span class="track"><span class="fill tone-violet" style="--v: 1"></span></span><span class="value">1 s</span></li>
-          <li><span class="label">Brewfile, command-line tools</span><span class="track"><span class="fill tone-yellow" style="--v: 29"></span></span><span class="value">29 s</span></li>
-          <li><span class="label"><code>script/after-setup</code></span><span class="track"><span class="fill tone-orange" style="--v: 30"></span></span><span class="value">30 s</span></li>
-          <li><span class="label">First shell, installing plugins</span><span class="track"><span class="fill tone-cyan" style="--v: 24"></span></span><span class="value">24 s</span></li>
+        <ul class="bars" style="--max: 96">
+          <li><span class="label">Homebrew from scratch</span><span class="track"><span class="fill" style="--v: 96"></span></span><span class="value">96 s</span></li>
+          <li><span class="label"><code>script/macos</code></span><span class="track"><span class="fill tone-violet" style="--v: 0.5"></span></span><span class="value">&lt;1 s</span></li>
+          <li><span class="label">Brewfile, command-line tools</span><span class="track"><span class="fill tone-yellow" style="--v: 55"></span></span><span class="value">55 s</span></li>
+          <li><span class="label"><code>script/after-setup</code></span><span class="track"><span class="fill tone-orange" style="--v: 7"></span></span><span class="value">7 s</span></li>
+          <li><span class="label">First shell, installing plugins</span><span class="track"><span class="fill tone-cyan" style="--v: 12"></span></span><span class="value">12 s</span></li>
         </ul>
       </div>
       <figcaption>
-        <span>Measured on macOS 26 in a Tart virtual machine. The whole run, image already downloaded: 95 seconds.</span>
+        <span>Measured on macOS 27 in a Tart virtual machine. The whole run, image already downloaded: 195 seconds.</span>
         <button class="btn" type="button" data-replay>Replay</button>
       </figcaption>
     </figure>
