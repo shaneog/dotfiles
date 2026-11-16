@@ -6,13 +6,13 @@ load '../helpers/common'
 # Override the ceilings with DOTFILES_STARTUP_BUDGET_MS and
 # DOTFILES_NONINTERACTIVE_BUDGET_MS; skip with SKIP_PERF=1.
 #
-# The defaults sit near what this configuration costs on the slowest Mac it is
-# used on -- 137-146ms and 17-19ms there -- because a ceiling several times the
-# real number only catches a catastrophe, and the drift that happens in practice
-# is one more file sourced or one more program run at startup. The fastest one
-# measures 72ms and 5ms, so on a machine that fast the defaults are loose, and
-# a lower DOTFILES_STARTUP_BUDGET_MS is what would notice the same drift.
-# Runners are slower and set their own values.
+# The defaults were set near what this configuration cost on the slowest Mac
+# it is used on -- 137-146ms and 17-19ms when it was measured there -- because
+# a ceiling several times the real number only catches a catastrophe, and the
+# drift that happens in practice is one more file sourced or one more program
+# run at startup. The fastest one measures 60ms and 5ms, so on a machine that
+# fast the defaults are loose, and a lower DOTFILES_STARTUP_BUDGET_MS is what
+# would notice the same drift. Runners are slower and set their own values.
 BUDGET_MS="${DOTFILES_STARTUP_BUDGET_MS:-200}"
 NONINTERACTIVE_BUDGET_MS="${DOTFILES_NONINTERACTIVE_BUDGET_MS:-50}"
 

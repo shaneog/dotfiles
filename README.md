@@ -39,8 +39,8 @@ script takes it out again.
 - **Plugins come from Homebrew.** The four zsh plugins are formulae in the
   [`Brewfile`](Brewfile). There is no plugin manager, and a shell never
   downloads anything.
-- **Startup time is tested.** An interactive login shell starts in 70 to 145ms,
-  depending on the Mac, and a test fails when it goes over budget.
+- **Startup time is tested.** An interactive login shell starts in about 60ms
+  on the fastest Mac this is used on, and a test fails when it goes over budget.
 
 ## Guides
 
@@ -451,9 +451,10 @@ stdin.
 
 ## ZSH performance
 
-Currently **~72ms** for an interactive login shell in isolation on the fastest
-Mac this repo is used on, ~143ms on the slowest, and between 130 and 185ms on a
-shared CI runner. A machine that also has a managed shell setup layered
+Currently **~60ms** for an interactive login shell in isolation on the fastest
+Mac this repo is used on, and between 120 and 185ms on a shared CI runner. The
+slowest Mac measured ~143ms while a plugin manager still loaded the plugins, and
+has not been timed since. A machine that also has a managed shell setup layered
 underneath came to ~330ms when last measured, against ~146ms there for this
 repo alone. That setup costs more than this repo does, and none of it is this
 repo's to reclaim.
@@ -466,8 +467,8 @@ measured on every run:
 hyperfine --warmup 3 'zsh -lic exit'
 ```
 
-About a third of what remains is the three plugins read at startup. Two things
-dominated it historically and are worth remembering: a completion dump that was
+About 10ms of that is the three plugins read at startup. Two things dominated
+it historically and are worth remembering: a completion dump that was
 never cached cost ~340ms per shell, and compiling the zsh sources to `.zwc`
 saved nothing measurable.
 

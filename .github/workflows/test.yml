@@ -100,8 +100,8 @@ jobs:
       # what gating it on 'schedule' alone amounted to while no schedule had yet
       # fired.
       #
-      # A runner's mean lands between about 130 and 185ms, on either zsh and
-      # varying from run to run, against 72 to 146ms on the Macs this repo is
+      # A runner's mean lands between about 120 and 185ms, on either zsh and
+      # varying from run to run, against 60ms on the fastest Mac this repo is
       # used on: slower, but not the several-times-slower a loose ceiling here
       # assumed. 400ms leaves room for a shared runner's noise without waving
       # through a real regression. The non-interactive ceiling needs no override

@@ -42,12 +42,12 @@ loads afterwards and wins where it should.
   tier fails when the second has no first.
 - **Runtimes are mise's**, and no tools are declared globally: a base layer's
   wrappers are shell functions, found before anything mise adds to `PATH`.
-- **Startup cost is a feature**: 70 to 145ms for this repo alone, depending on
-  the Mac, which is the number the perf tier measures and gates. A machine with
-  a managed base layer beneath it was ~330ms where this repo alone was ~146ms —
-  the base layer costs more than this repo does, and that half is not ours to
-  fix, so quote the isolated number when talking about this repo. Cache tool
-  init with `cached_init`, and measure before claiming a win.
+- **Startup cost is a feature**: about 60ms for this repo alone on the fastest
+  Mac it is used on, which is the number the perf tier measures and gates. A
+  machine with a managed base layer beneath it was ~330ms where this repo alone
+  was ~146ms — the base layer costs more than this repo does, and that half is
+  not ours to fix, so quote the isolated number when talking about this repo.
+  Cache tool init with `cached_init`, and measure before claiming a win.
 
 ## Tests must be able to fail
 
