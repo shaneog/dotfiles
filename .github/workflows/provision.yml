@@ -129,10 +129,28 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      # Casks are gigabytes and several need a GUI, so validate everything but
-      # only install the formulae.
+      # Casks are gigabytes and several need a GUI, so every entry is looked up
+      # and only the formulae are installed. Asked of `brew info` one entry at a
+      # time: `brew bundle check` reports what is not installed, which on a
+      # runner is every cask, so it could only ever be run with its failure
+      # thrown away.
       - name: Every entry resolves
-        run: brew bundle check --file Brewfile --verbose || true
+        run: |
+          missing=0
+          while read -r kind name; do
+            case "$kind" in
+              brew) flag=--formula ;;
+              cask) flag=--cask ;;
+              *) continue ;;
+            esac
+            if brew info "$flag" "$name" >/dev/null 2>&1; then
+              echo "ok    $kind $name"
+            else
+              echo "FAIL  $kind $name does not resolve"
+              missing=$((missing + 1))
+            fi
+          done < <(grep -E "^(brew|cask) '" Brewfile | tr -d "'")
+          [ "$missing" -eq 0 ] || { echo "$missing Brewfile entries do not resolve"; exit 1; }
       - name: Formulae install
         run: |
           grep -E "^(tap|brew) " Brewfile > Brewfile.formulae
