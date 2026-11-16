@@ -76,6 +76,20 @@ setup() {
   [ -z "$noise" ] || { echo "startup was not quiet: $noise"; return 1; }
 }
 
+@test "nvim: a tab stays a tab where the file is indented with them" {
+  # Neovim reads .editorconfig itself, and the repo's default is two spaces.
+  # Regression: that default reached the Makefile, so a tab typed into a recipe
+  # went in as spaces and make refused the file.
+  local file
+  for file in Makefile script/macos script/sweep; do
+    run probe "$REPO/$file" -c 'lua io.stdout:write("expandtab=" .. tostring(vim.bo.expandtab))' -c qa
+    assert_contains "$output" "expandtab=false" "the setting for $file"
+  done
+  # The default still applies everywhere else.
+  run probe "$REPO/script/setup" -c 'lua io.stdout:write("expandtab=" .. tostring(vim.bo.expandtab))' -c qa
+  assert_contains "$output" "expandtab=true" "the setting for script/setup"
+}
+
 @test "nvim: gotham is the colorscheme and space is the leader" {
   run probe -c 'lua io.stdout:write(("colors=%s leader=%q"):format(vim.g.colors_name, vim.g.mapleader))' -c qa
   echo "$output" | grep -q "colors=gotham" || { echo "$output"; return 1; }
