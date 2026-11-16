@@ -348,7 +348,8 @@ script/sweep config/tmux/tmux.conf      # one file
 Both need a clean working tree, because they edit tracked files in place.
 
 Results accumulate in `$XDG_STATE_HOME/dotfiles/sweep.tsv` so successive runs
-build on each other. `--out` points it elsewhere.
+build on each other, and a result is dropped once its line is edited or moves.
+`--out` points it elsewhere.
 
 The tests it runs per file are declared in the script rather than derived from
 the filename: a `grep` for `plugins.lua` finds nothing, while `nvim.bats` clearly
