@@ -89,7 +89,7 @@
       <li class="card tone-red">
         <span class="card-num">make mutate</span>
         <h3>Does this test still work?</h3>
-        <p>Reads a list of deliberate breakages from <code>test/mutations.tsv</code>. Each row names a file, how to break it, and the test that must notice. Every row is a bug that really shipped, or the failure a test was written to catch.</p>
+        <p>Reads a list of deliberate breakages from <code>test/mutations.tsv</code>. Each row names a file, how to break it, and the test that must notice. Every row is a bug that really shipped, or the failure a test was written to catch. The rows run a few at a time, each in its own copy of the repo, so one row never sees what another broke.</p>
       </li>
       <li class="card tone-yellow">
         <span class="card-num">make sweep</span>

@@ -13,6 +13,10 @@ load '../helpers/common'
 # run at startup. The fastest one measures 60ms and 5ms, so on a machine that
 # fast the defaults are loose, and a lower DOTFILES_STARTUP_BUDGET_MS is what
 # would notice the same drift. Runners are slower and set their own values.
+#
+# Every test here times something, so script/mutate runs their rows with
+# nothing beside them.
+# bats file_tags=timing
 BUDGET_MS="${DOTFILES_STARTUP_BUDGET_MS:-200}"
 NONINTERACTIVE_BUDGET_MS="${DOTFILES_NONINTERACTIVE_BUDGET_MS:-50}"
 

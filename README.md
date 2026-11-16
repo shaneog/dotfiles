@@ -399,7 +399,9 @@ runners provide, and which parses some things differently to a modern bash:
 `make mutate` breaks each thing listed in
 [`test/mutations.tsv`](test/mutations.tsv) on purpose and checks that the
 assertion named beside it notices. A row that stops failing means an assertion
-has gone blind.
+has gone blind. The rows run a few at a time, each worker in its own copy of
+the last commit; `MUTATE_JOBS` says how many, and the default is one a
+processor, up to four.
 
 `script/sweep` asks the opposite question. Instead of "does this assertion still
 work", it comments out each line of config in turn and reports the ones no test
@@ -412,8 +414,9 @@ make sweep                              # everything, 15 minutes' worth
 script/sweep config/tmux/tmux.conf      # one file
 ```
 
-Both need a clean working tree, because they edit tracked files in place. Both
-run on Linux as well. There, a row whose test needs a Mac is listed as
+Both need a clean working tree: `sweep` edits tracked files in place, and
+`mutate` runs against the last commit, so what is not committed would not be
+tested. Both run on Linux as well. There, a row whose test needs a Mac is listed as
 `NOT CHECKED` and not as caught, and `sweep` says that it left those tests out.
 
 Results accumulate in `$XDG_STATE_HOME/dotfiles/sweep.tsv` so successive runs

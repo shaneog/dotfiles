@@ -33,14 +33,14 @@ setup_file() {
   # the config it loaded, and a provision into an empty data dir clones lazy.nvim
   # from its stable branch -- so pointing at the repo let a test run rewrite a
   # tracked file with whichever lazy commit was stable that day.
-  export NVIM_CONFIG="$NVIM_DATA/config"
-
-  # The config is re-copied every run even when the data directory is reused:
-  # the copy is what nvim reads, so a cached one is a stale one, and a change to
-  # an option would be tested against the previous version of itself.
-  mkdir -p "$NVIM_HOME" "$NVIM_CONFIG"
-  rm -rf "$NVIM_CONFIG/nvim"
-  cp -R "$REPO/config/nvim" "$NVIM_CONFIG/nvim"
+  #
+  # The copy is this run's own and is made every run, where the data directory
+  # is shared and reused. The copy is what nvim reads: a cached one would test a
+  # changed option against the previous version of itself, and a shared one
+  # against whatever the run that started last was given.
+  export NVIM_CONFIG="$BATS_FILE_TMPDIR/config"
+  mkdir -p "$NVIM_HOME" "$NVIM_CONFIG/nvim"
+  cp -R "$REPO/config/nvim/." "$NVIM_CONFIG/nvim/"
 
   # A file, not the directory. macOS prunes $TMPDIR every few days and removes
   # files while leaving the directory tree standing, so `[ -d ... ]` is a cache
@@ -86,6 +86,22 @@ needs_parsers() {
   local noise
   noise="$(echo "$output" | grep -v '^loaded$' | grep '[[:alpha:]]' || true)"
   [ -z "$noise" ] || { echo "startup was not quiet: $noise"; return 1; }
+}
+
+@test "nvim: a second run starting up leaves the config this one reads alone" {
+  # Regression: the copy of the config lived in the shared data directory, so
+  # of two runs at once the later replaced what the earlier was reading.
+  # script/mutate runs rows side by side, and reported an option it had broken
+  # as one no test noticed: the test had read another row's intact copy.
+  local other="$BATS_TEST_TMPDIR/another-run"
+  mkdir -p "$other/repo/config" "$other/tmp"
+  cp -R "$REPO/config/nvim" "$other/repo/config/nvim"
+  # Not one of the files the data directory is keyed on, so the two runs share it.
+  mkdir -p "$other/repo/config/nvim/plugin"
+  echo 'vim.g.from_another_run = true' > "$other/repo/config/nvim/plugin/another-run.lua"
+  ( REPO="$other/repo" BATS_FILE_TMPDIR="$other/tmp" setup_file )
+  run probe -c 'lua io.stdout:write("another=" .. tostring(vim.g.from_another_run))' -c qa
+  assert_contains "$output" "another=nil"
 }
 
 @test "nvim: a tab stays a tab where the file is indented with them" {
