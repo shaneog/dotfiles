@@ -4,54 +4,151 @@
 # assertion notices. An assertion nobody has watched fail is not evidence, and
 # this is the difference between believing that and checking it.
 #
-# Refuses to run against a dirty tree: it edits tracked files in place, and a
-# restore that lost your work would be a poor trade for a green tick.
+# The rows are run a few at a time, each worker in a copy of the last commit, so
+# two rows never see each other's breakage and this tree is never edited.
+# MUTATE_JOBS says how many workers; the default is one a processor, up to four.
+#
+# Refuses to run against a dirty tree: what is not committed is not in the
+# copies, so the answer would be about some other code than the code in front
+# of you.
 
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-	echo "The working tree is dirty. Commit or stash first: this edits tracked files."
+	echo "The working tree is dirty. Commit or stash first: the rows run against the last commit."
 	exit 1
 fi
 
 # A test tagged macos needs a Mac, and anywhere else bats is told to leave it
 # out. Its rows are then reported as not checked: such a test fails here with or
-# without the mutation, and a failure is what the loop below counts as caught.
+# without the mutation, and a failure is what a row counts as caught.
 ON_A_MAC=""
 [ "$(uname -s)" = "Darwin" ] && ON_A_MAC=1
 run_bats() {
 	if [ -n "$ON_A_MAC" ]; then bats "$@"; else bats --filter-tags '!macos' "$@"; fi
 }
 
-caught=0
-missed=0
-unchecked=0
-FILTER="${1:-}"
+# A test that measures time is tagged timing, and its rows are run after the
+# others with nothing beside them. Next to busy workers it is slow whatever the
+# row did: that reads as broken before the mutation, and as caught after it.
+timed_tests() {  # a test file: its tests that measure time, a line each
+	awk '
+		/^# bats file_tags=/ && /[=, ]timing([, ]|$)/ { all = 1 }
+		/^# bats test_tags=/ && /[=, ]timing([, ]|$)/ { tagged = 1; next }
+		/^@test / { if (all || tagged) print; tagged = 0 }
+	' "$1"
+}
 
-while IFS="$(printf '\t')" read -r file expr test_file filter note; do
+# How long a test that types into a shell waits for it once the row has been
+# broken, in tenths of a second. The wait is expected to run out, which is the
+# row being caught, and the test's own half minute says nothing ten seconds
+# does not. Only the mutated run is hurried: the run before it is the test as
+# it is written.
+PATIENCE=100
+
+FILTER="${1:-}"
+TAB="$(printf '\t')"
+
+WORK="$(mktemp -d)"
+cleanup() {
+	rm -rf "$WORK"
+	git worktree prune 2>/dev/null
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+mkdir "$WORK/timed" "$WORK/results"
+
+# test/integration/startup.bats, as a name for one file.
+key() { printf '%s' "$1" | tr '/' '_'; }
+
+# The rows asked for, in two lists: those that can share the machine and those
+# that cannot. Beside each list, for each test file, the filters its rows name.
+: > "$WORK/rows" ; : > "$WORK/rows.alone"
+while IFS="$TAB" read -r file expr test_file filter note; do
 	case "${file:-#}" in ''|'#'*) continue ;; esac
 	if [ -n "$FILTER" ] && [ "${file#*"$FILTER"}" = "$file" ]; then continue; fi
+	timed="$WORK/timed/$(key "$test_file")"
+	[ -e "$timed" ] || timed_tests "$test_file" > "$timed" 2>/dev/null
+	list="$WORK/rows"
+	if grep -Eq -e "$filter" "$timed"; then list="$WORK/rows.alone"; fi
+	printf '%s\t%s\t%s\t%s\t%s\n' "$file" "$expr" "$test_file" "$filter" "$note" >> "$list"
+	mkdir -p "$list.filters"
+	printf '%s\n' "$filter" >> "$list.filters/$(key "$test_file")"
+done < test/mutations.tsv
 
-	backup="$(mktemp)"
-	cp "$file" "$backup"
-	# shellcheck disable=SC2064  # the paths are wanted as they are now
-	trap "cp '$backup' '$file'; rm -f '$backup'" EXIT
+# Runs a function once for each line of a list, on so many workers. A worker
+# takes a line by making a directory named for it, which only one of them can.
+# The list is read on a descriptor of its own and the function is given no
+# input, so that nothing a test starts can read the lines meant for the worker.
+turn=0
+share() {  # the function, the list, how many workers, the rows it is for
+	local fn="$1" list="$2" workers="$3" rows="${4:-$2}" w=1 n item
+	turn=$((turn + 1))
+	local claims="$WORK/claims.$turn"
+	mkdir "$claims"
+	while [ "$w" -le "$workers" ]; do
+		(
+			cd "$WORK/tree.$w" || exit 1
+			n=0
+			while IFS= read -r item <&9; do
+				n=$((n + 1))
+				mkdir "$claims/$n" 2>/dev/null || continue
+				"$fn" "$turn.$n" "$item" "$rows" 9<&- < /dev/null
+			done 9< "$list"
+		) &
+		w=$((w + 1))
+	done
+	wait
+}
+
+# Each test a list of rows names, run once with nothing broken: one bats run a
+# test file, for every filter its rows give. A row then reads its own tests out
+# of that, where running them again for each row cost a file's setup each time.
+unmutated_file() {  # a name for the result, the test file, the rows it is for
+	local filters
+	filters="$(sort -u "$3.filters/$(key "$2")" | paste -sd '|' -)"
+	mkdir -p "$3.unmutated"
+	run_bats "$2" --filter "$filters" > "$3.unmutated/$(key "$2")" 2>&1 || true
+}
+
+# What bats would have printed for one row's filter alone: the plan, then each
+# test the filter matches, with what it said if it failed. The match is the one
+# bats makes.
+unmutated() {  # the test file, the filter, the rows it is for
+	local line name tests=0 matched="" ours=""
+	while IFS= read -r line; do
+		case "$line" in
+			'ok '*|'not ok '*)
+				name="${line#*ok }"
+				name="${name#* }"
+				name="${name%% # skip*}"
+				ours=""
+				[[ "$name" =~ $2 ]] && ours=1 && tests=$((tests + 1))
+				;;
+			'#'*) ;;
+			*) ours="" ;;
+		esac
+		[ -z "$ours" ] || matched="$matched$line
+"
+	done < "$3.unmutated/$(key "$1")"
+	printf '1..%s\n%s' "$tests" "$matched"
+}
+
+row() {  # a name for the result, the row, the rows it is one of
+	local file expr test_file filter note plan verdict="" why="" backup
+	IFS="$TAB" read -r file expr test_file filter note <<< "$2"
 
 	# The filter has to match a test before anything is broken. bats exits
 	# non-zero when it matches nothing, and the branch below reads any non-zero
 	# as "the assertion caught it" -- so a typo in this manifest would certify a
 	# test that never ran, which is the exact failure this script exists to find.
-	# Captured, not piped: `grep -q` closes the pipe on its first match, bats
-	# takes SIGPIPE, and `set -o pipefail` then reports the whole pipeline as
-	# failed -- which reads as "no test matched" for every row.
 	#
 	# The same run says whether the test passes with nothing broken. One that
 	# fails already, or is skipped, would give the same answer after the
 	# mutation, and that answer would be about the machine and not the assertion.
-	plan="$(run_bats "$test_file" --filter "$filter" 2>&1 || true)"
-	verdict=""
+	plan="$(unmutated "$test_file" "$filter" "$3")"
 	if ! printf '%s\n' "$plan" | grep -q '^1\.\.[1-9]'; then
 		if [ -z "$ON_A_MAC" ] && [ "$(bats --count "$test_file" --filter "$filter" 2>/dev/null || echo 0)" -gt 0 ]; then
 			verdict="n/a"; why="its test needs a Mac"
@@ -60,43 +157,74 @@ while IFS="$(printf '\t')" read -r file expr test_file filter note; do
 		fi
 	elif printf '%s\n' "$plan" | grep -q '^not ok '; then
 		verdict="BROKEN"; why="\"$filter\" fails before anything is broken"
+		# With what the test said, or a red run gives nothing to go on.
+		why="$why
+$(printf '%s\n' "$plan" | grep '^#' | head -n 12 | sed 's/^/        /')"
 	elif ! printf '%s\n' "$plan" | grep '^ok ' | grep -qv ' # skip'; then
 		verdict="n/a"; why="its test is skipped on this machine"
 	fi
-	if [ -n "$verdict" ]; then
-		if [ "$verdict" = "n/a" ]; then
-			printf '  n/a   %-28s NOT CHECKED, %s: %s\n' "$file" "$why" "$note"
-			unchecked=$((unchecked + 1))
-		else
-			printf '  BROKEN %-27s %s\n' "$file" "$why"
-			missed=$((missed + 1))
-		fi
-		cp "$backup" "$file"
-		rm -f "$backup"
-		trap - EXIT
-		continue
+	if [ "$verdict" = "n/a" ]; then
+		printf '  n/a   %-28s NOT CHECKED, %s: %s\n' "$file" "$why" "$note" | tee "$WORK/results/$1.unchecked"
+		return
+	elif [ -n "$verdict" ]; then
+		printf '  BROKEN %-27s %s\n' "$file" "$why" | tee "$WORK/results/$1.missed"
+		return
 	fi
 
 	# Read from the copy and written over the file, so there is no in-place
 	# flag to spell: BSD sed wants `-i ''` and GNU sed reads that as a script
 	# and a filename, after which nothing is mutated and every row is caught.
+	backup="$(mktemp)"
+	cp "$file" "$backup"
 	sed "$expr" "$backup" > "$file"
 	if git diff --quiet -- "$file"; then
-		printf '  ????  %-28s the mutation changed nothing (%s)\n' "$file" "$note"
-		missed=$((missed + 1))
-	elif run_bats "$test_file" --filter "$filter" >/dev/null 2>&1; then
-		printf '  MISS  %-28s %s\n' "$file" "$note"
-		printf '        nothing failed when: %s\n' "$expr"
-		missed=$((missed + 1))
+		printf '  ????  %-28s the mutation changed nothing (%s)\n' "$file" "$note" | tee "$WORK/results/$1.missed"
+	elif (export DOTFILES_TEST_PATIENCE="$PATIENCE"; run_bats "$test_file" --filter "$filter") >/dev/null 2>&1; then
+		printf '  MISS  %-28s %s\n        nothing failed when: %s\n' "$file" "$note" "$expr" | tee "$WORK/results/$1.missed"
 	else
-		printf '  ok    %-28s %s\n' "$file" "$note"
-		caught=$((caught + 1))
+		printf '  ok    %-28s %s\n' "$file" "$note" | tee "$WORK/results/$1.caught"
 	fi
-
+	# The next row this worker takes may be for the same file.
 	cp "$backup" "$file"
 	rm -f "$backup"
-	trap - EXIT
-done < test/mutations.tsv
+}
+
+each_test_file() { awk -F "$TAB" '{ print $3 }' "$1" | sort -u; }
+
+JOBS="${MUTATE_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)}"
+[ -n "${MUTATE_JOBS:-}" ] || [ "$JOBS" -le 4 ] || JOBS=4
+rows="$(grep -c . "$WORK/rows")"
+[ "$JOBS" -le "$rows" ] || JOBS="$rows"
+[ "$JOBS" -ge 1 ] || JOBS=1
+
+w=1
+while [ "$w" -le "$JOBS" ]; do
+	git worktree add --quiet --detach "$WORK/tree.$w" HEAD || exit 1
+	w=$((w + 1))
+done
+
+if [ -s "$WORK/rows" ]; then
+	each_test_file "$WORK/rows" > "$WORK/files"
+	share unmutated_file "$WORK/files" "$JOBS" "$WORK/rows"
+	share row "$WORK/rows" "$JOBS"
+fi
+if [ -s "$WORK/rows.alone" ]; then
+	each_test_file "$WORK/rows.alone" > "$WORK/files.alone"
+	share unmutated_file "$WORK/files.alone" 1 "$WORK/rows.alone"
+	share row "$WORK/rows.alone" 1
+fi
+
+count() { find "$WORK/results" -name "*.$1" | grep -c . ; }
+caught="$(count caught)"
+missed="$(count missed)"
+unchecked="$(count unchecked)"
+
+# Again, together: among a few hundred lines printed as they finished, the one
+# that matters is easy to scroll past.
+if [ "$missed" -gt 0 ]; then
+	printf '\n'
+	cat "$WORK/results"/*.missed
+fi
 
 printf '\n  %s caught, %s missed\n' "$caught" "$missed"
 [ "$unchecked" -eq 0 ] \

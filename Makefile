@@ -60,6 +60,7 @@ sweep:
 	./script/sweep --all
 
 # Breaks each thing in test/mutations.tsv and checks that the assertion named
-# beside it notices. Needs a clean tree: it edits tracked files in place.
+# beside it notices. Needs a clean tree: the rows run in copies of the last
+# commit, a few at a time, so what is not committed would not be tested.
 mutate:
 	./script/mutate

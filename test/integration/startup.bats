@@ -168,6 +168,8 @@ PROBE
   [ -z "$leaked" ] || { echo "written to the history file anyway:"; echo "$leaked"; return 1; }
 }
 
+# It times the read, so script/mutate runs its rows with nothing beside them.
+# bats test_tags=timing
 @test "a history file longer than the shell's list loads at once, and all of it can be recalled" {
   # Regression: HIST_EXPIRE_DUPS_FIRST was on beside HIST_IGNORE_ALL_DUPS, so
   # each line past HISTSIZE searched the whole list for a duplicate that could
@@ -177,17 +179,21 @@ PROBE
   mkdir -p "${histfile%/*}"
   awk 'BEGIN { for (i = 0; i < 200000; i++) printf ": %d:0;echo unique-%d\n", 1700000000 + i, i }' \
     > "$histfile"
-  # -c shells do not read the history file by themselves, hence fc -R.
+  # -c shells do not read the history file by themselves, hence fc -R. The
+  # shell is stopped at twenty seconds, which is already a failure below: left
+  # to finish, the slow read is a minute and a half in which nothing is learnt.
   SECONDS=0
   run run_login_shell "$HOME_WITHOUT" \
-    'fc -R; print "RECALLABLE=$(fc -l 1 | wc -l | tr -d " ") KEPT=$SAVEHIST EXPIRE=$options[histexpiredupsfirst]"'
+    '{ sleep 20; kill -9 $$ } >/dev/null 2>&1 3>&- &
+     fc -R; kill $! 2>/dev/null
+     print "RECALLABLE=$(fc -l 1 | wc -l | tr -d " ") KEPT=$SAVEHIST EXPIRE=$options[histexpiredupsfirst]"'
   local took="$SECONDS"
   echo "$output"; echo "took ${took}s"
   local recallable kept
   recallable="$(printf '%s\n' "$output" | sed -n 's/.*RECALLABLE=\([0-9]*\).*/\1/p')"
   kept="$(printf '%s\n' "$output" | sed -n 's/.*KEPT=\([0-9]*\).*/\1/p')"
+  [ "$took" -lt 8 ] || { echo "reading the history file took ${took}s or more"; return 1; }
   [ -n "$recallable" ] && [ -n "$kept" ] || { echo "the probe printed nothing"; return 1; }
-  [ "$took" -lt 8 ] || { echo "reading the history file took ${took}s"; return 1; }
   [ "$recallable" -ge $(( kept - 1 )) ] \
     || { echo "the file keeps $kept lines and only $recallable can be recalled"; return 1; }
 }
@@ -428,15 +434,7 @@ zmodload zsh/zpty
 home=$1 target=$2 zsh=$3
 zpty -b shell env -i HOME=$home PATH=$PATH TERM=xterm-256color SHLVL=1 \
   USER=${USER:-tester} ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 $zsh -li
-# Left unread, the shell's output fills the terminal and stops it.
-wait_for() {  # a file the shell writes, tenths of a second to allow
-  local junk tries=0
-  until [[ -e $1 ]]; do
-    zpty -r shell junk 2>/dev/null
-    (( ++tries > $2 )) && return 1
-    sleep 0.1
-  done
-}
+source $REPO/test/helpers/typing.zsh   # wait_for
 zpty -w shell "chpwd() { print -r -- \$PWD > ${(q)home}/went-to }"
 zpty -w shell "FZF_ALT_C_COMMAND=${(qq):-echo ${(qq)target}} FZF_ALT_C_OPTS=--select-1"
 zpty -w shell "print ready > ${(q)home}/ready"

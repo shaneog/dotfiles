@@ -34,16 +34,7 @@ home=$1 zsh=$2 expect=$3
 TERM=xterm-256color
 zpty -b shell env -i HOME=$home PATH=$PATH TERM=$TERM SHLVL=1 \
   USER=${USER:-tester} ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 $zsh -li
-# Left unread, the shell's output fills the terminal and stops it.
-seen=
-wait_for() {  # a file the shell writes, tenths of a second to allow
-  local more tries=0
-  until [[ -e $1 ]]; do
-    zpty -r shell more 2>/dev/null && seen+=$more
-    (( ++tries > $2 )) && return 1
-    sleep 0.1
-  done
-}
+source $REPO/test/helpers/typing.zsh   # wait_for, and $seen
 keys() { zpty -w -n shell "$1" }
 # Between two prompts the terminal reads the keys, not the line editor, and it
 # keeps Control-R and Control-W for itself. So the shell says when it is

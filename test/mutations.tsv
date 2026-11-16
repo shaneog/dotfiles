@@ -32,6 +32,12 @@ script/mutate	s|grep -q '^not ok '|grep -q '^never '|	test/unit/mutate.bats	fail
 script/mutate	s|grep -qv ' # skip'|grep -q .|	test/unit/mutate.bats	this machine skips	a skipped test is reported as an assertion that missed
 script/mutate	s|bats --filter-tags '!macos' "$@"; fi|bats "$@"; fi|	test/unit/mutate.bats	not checked anywhere else	off a Mac, the tests that need one are run and their failures counted as caught
 script/mutate	s|^\[ "$(uname -s)" = "Darwin" \] && ON_A_MAC=1|:|	test/unit/mutate.bats	on a Mac the same test is run	a Mac leaves out the tests only it can run
+script/mutate	s|\[\[ "$name" =~ $2 \]\] && ours=1|ours=1|	test/unit/mutate.bats	judged by its own test	a row answers for every test its file ran, not only its own
+script/mutate	s|share row "$WORK/rows" "$JOBS"|share row "$WORK/rows" 1|	test/unit/mutate.bats	side by side	the rows go back to one at a time
+script/mutate	s|cd "$WORK/tree.$w"|cd "$WORK/tree.1"|	test/unit/mutate.bats	the row beside it broke	every worker breaks things in the same copy of the tree
+script/mutate	s|export DOTFILES_TEST_PATIENCE="$PATIENCE"; ||	test/unit/mutate.bats	told to hurry	a broken row waits out the whole of every wait in its test
+script/mutate	s|then list="$WORK/rows.alone"; fi|then list="$WORK/rows"; fi|	test/unit/mutate.bats	measures time	a test that measures time is run among busy workers, and fails whatever the row did
+script/mutate	s|grep '^#'|grep '^never'|	test/unit/mutate.bats	fails before anything is broken	a test that fails with nothing broken is named and not explained
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
 script/macos	s|^if \[ -z "\$CHECK_ONLY" \]; then$|if true; then|	test/unit/macos.bats	leaves System Settings open	--check closes System Settings on whoever has it open
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
@@ -98,6 +104,7 @@ config/tmux/tmux.conf	s|^bind h select-pane -L|# gone|	test/integration/tmux.bat
 config/nvim/lua/options.lua	s|^opt.undofile = true|-- gone|	test/integration/nvim.bats	undo history	undo history stops surviving a reopen
 config/nvim/lua/options.lua	s|^opt.termguicolors|-- opt.termguicolors|	test/integration/nvim.bats	24-bit	nvim sends 24-bit escapes regardless of the terminal
 config/nvim/lua/options.lua	s|opt.grepprg = "rg --vimgrep"|-- gone|	test/integration/nvim.bats	ignore files	:grep searches ignored files again
+test/integration/nvim.bats	s|NVIM_CONFIG="$BATS_FILE_TMPDIR/config"|NVIM_CONFIG="$NVIM_DATA/config"|	test/integration/nvim.bats	second run starting	two runs at once read one copy of the config, whichever was written last
 config/zsh/.zprofile	s|^  export LANG='en_US.UTF-8'|  : |	test/integration/startup.bats	locale is en_US	the locale falls back to whatever the system picks
 config/zsh/.zprofile	s|^LC_TIME=$LANG|# gone|	test/integration/startup.bats	locale is en_US	one LC category stops following LANG
 config/zsh/.zprofile	s|^  (( ${path\[(Ie)$__dotfiles_dir\]} )).*|  :|	test/integration/startup.bats	added when absent	/usr/local stops being put back on PATH
@@ -109,6 +116,7 @@ config/zsh/.zshenv	s|^typeset -gU cdpath fpath path|# gone|	test/integration/sta
 config/zsh/.zshrc	s|^if (( $+commands\[launchctl\] && SHLVL <= 1 + $+TMUX )); then|if (( $+commands[launchctl] )); then|	test/integration/startup.bats	hands its PATH to GUI apps	a nested shell's PATH becomes the one every GUI app gets
 config/zsh/.zshrc	s|SHLVL <= 1 + $+TMUX|SHLVL <= 1|	test/integration/startup.bats	hands its PATH to GUI apps	tmux panes never refresh the PATH GUI apps get
 test/helpers/common.bash	s|TERM=xterm-256color SHLVL=1 |TERM=xterm-256color |	test/integration/startup.bats	suite's own shells	running the tests on a Mac leaves GUI apps with a PATH in a deleted temp home
+test/helpers/typing.zsh	s|allow=\$DOTFILES_TEST_PATIENCE|:|	test/unit/harness.bats	patience does	a wait ignores the patience a mutated run is given
 config/zsh/.zprofile	s|^export LESSCHARSET=utf-8|LESSCHARSET=utf-8|	test/integration/startup.bats	reach child processes	less never sees the charset it was given
 config/zsh/.zprofile	s|^  export LANG=|  LANG=|	test/integration/startup.bats	reach child processes	a shell started without LANG keeps the locale to itself
 config/zsh/lib/history.zsh	s|^HISTORY_IGNORE=|HISTIGNORE=|	test/integration/startup.bats	never reach the history file	the ignore list goes back to a variable zsh does not read

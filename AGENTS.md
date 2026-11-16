@@ -104,6 +104,13 @@ section says what each is for.
   that causes the failure and the test that must notice. Put it beside the rows
   for the same file. At the end of the file, every open branch collides on the
   same line.
+- **A test writes only inside its own temporary directory.** `make mutate`
+  runs rows side by side, so two runs of one test file overlap, and a file both
+  can reach hands one row the other's breakage, or hides its own. A cache that
+  outlives a run holds only what is the same for every run. A test that waits
+  on a shell it types into uses `wait_for` in `test/helpers/typing.zsh`, which
+  gives up sooner once a row has been broken. A test that measures time carries
+  `# bats test_tags=timing`, and its rows are run alone.
 - **A new top-level file or directory stays out of `$HOME`.** `script/setup`
   links the three it names: `Brewfile`, `config` and `ssh`. A fourth needs a
   line there, and the two lists of what a home holds afterwards need it too:
