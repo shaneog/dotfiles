@@ -11,9 +11,10 @@ updates:
   # runs on the pull request, which is the actual point.
   - package-ecosystem: "github-actions"
     directory: "/"
+    # Monthly, on the first: a major bump is never urgent, and one bot pull
+    # request a month is the most this repo should ask anyone to read.
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
     # One pull request for all of them rather than one per action.
     groups:
       actions:

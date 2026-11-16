@@ -123,7 +123,9 @@ it is pulled on whatever branch it has checked out.
 
 `script/setup` links `~/.Brewfile` and `~/.zshenv` into the clone, and then one
 entry at a time inside two directories that stay real: `~/.config/<name>` for
-each entry git tracks under `config/`, and `~/.ssh/config`.
+each entry git tracks under `config/`, and `~/.ssh/config`. The script names
+`Brewfile`, `config` and `ssh`, so nothing else at the top of the clone is ever
+linked.
 
 ```text
 ~/.zshenv              ->  ~/.dotfiles/config/zsh/.zshenv

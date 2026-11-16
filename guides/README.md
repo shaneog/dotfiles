@@ -47,7 +47,8 @@ Colors are tokens defined once at the top of `assets/guide.css` with
 stay in step. Animations are skipped when the system asks for reduced motion,
 and with JavaScript off every diagram is drawn in its finished state.
 
-`script/setup` skips this directory, so it is never linked into `$HOME`.
+`script/setup` links only what it names, so this directory is never linked
+into `$HOME`.
 
 ## Publishing
 
