@@ -419,13 +419,14 @@ The image is tens of gigabytes on first use, but it is cached after that.
 | | |
 | --- | --: |
 | Pulling the image (once) | 394s |
-| Boot, ssh, copy the tree in | 20s |
-| `script/bootstrap`, of which | 159s |
-| &nbsp;&nbsp;Homebrew from scratch, command line tools included | 96s |
+| Boot, ssh, copy the tree in | 18s |
+| `script/bootstrap`, of which | 161s |
+| &nbsp;&nbsp;Homebrew from scratch, command line tools included | 95s |
 | &nbsp;&nbsp;`script/setup` and `script/macos` | 1s |
 | &nbsp;&nbsp;Brewfile, formulae only | 55s |
-| &nbsp;&nbsp;`after-setup` | 7s |
-| **Whole run, image cached** | **195s** |
+| &nbsp;&nbsp;`after-setup` | 8s |
+| First login shell, then tmux's plugins | 7s |
+| **Whole run, image cached** | **187s** |
 
 So a bare machine reaches a working shell inside three minutes, plus whatever
 the casks cost. Over half of that is Homebrew, which installs the command line
