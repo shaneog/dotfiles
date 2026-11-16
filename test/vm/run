@@ -7,8 +7,8 @@
 # survives every check we have. This boots real macOS with none of it, which is
 # the one thing the provision workflow cannot do.
 #
-# Expensive: the base image is tens of gigabytes on first use, and a full run
-# takes the better part of an hour.
+# Expensive the first time: the base image is tens of gigabytes, and pulling it
+# is most of a ten-minute run. With the image cached a run takes about three.
 #
 #   test/vm/run                   provision, install, assert, destroy
 #   test/vm/run --keep            leave the VM up afterwards to poke at

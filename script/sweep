@@ -3,10 +3,11 @@
 # Which lines of config is no test protecting?
 #
 # test/mutations.tsv answers the opposite question -- does this assertion still
-# work -- one hand-written row at a time, and 39 rows against 175 assertions is a
-# sample. This walks the config instead: comment out one line, run the tests that
-# could notice, and record whether any of them did. A line nothing notices is a
-# setting that could be deleted tomorrow without a single test complaining.
+# work -- one hand-written row at a time, and with far fewer rows than there are
+# assertions it is a sample. This walks the config instead: comment out one
+# line, run the tests that could notice, and record whether any of them did. A
+# line nothing notices is a setting that could be deleted tomorrow without a
+# single test complaining.
 #
 # usage: script/sweep [--budget SECONDS] [--out FILE] [FILE...]
 #        script/sweep --all
