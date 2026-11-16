@@ -19,7 +19,10 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 VM_NAME="${VM_NAME:-dotfiles-e2e}"
-VM_IMAGE="${VM_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-base:latest}"   # macOS 26
+# -vanilla, not -base: upstream's -base images come with Homebrew, the command
+# line tools, mise and node already installed, which is a CI runner by another
+# name. The freshness check below refuses one.
+VM_IMAGE="${VM_IMAGE:-ghcr.io/cirruslabs/macos-golden-gate-vanilla:latest}"   # macOS 27
 VM_USER="${VM_USER:-admin}"
 VM_PASS="${VM_PASS:-admin}"
 KEEP=""
@@ -51,7 +54,7 @@ third-party taps, so this needs two steps:
   brew install openai/tools/tart"
 
 free_gb="$(df -g / | awk 'NR==2 {print $4}')"
-[ "$free_gb" -ge 60 ] || die "need roughly 60GB free for the base image, have ${free_gb}GB"
+[ "$free_gb" -ge 60 ] || die "need roughly 60GB free for the image, have ${free_gb}GB"
 
 WORK="$(mktemp -d)"
 KEY="$WORK/id_ed25519"
@@ -117,11 +120,17 @@ vm true || die "cannot ssh in; see $WORK/tart.log"
 
 # --- the machine must actually be fresh -------------------------------------
 
+# Asked by path, never through PATH. A command sent over ssh runs in a shell
+# that reads no profile, so `command -v brew` answers no on an image whose
+# profile is the only thing that puts Homebrew on PATH -- and bootstrap then
+# "installs" over the top of it in ten seconds.
 say "confirming this really is a fresh machine"
-if vm 'command -v brew >/dev/null 2>&1'; then
-  die "the image already has Homebrew, so this proves nothing that CI does not"
-fi
-if vm 'test -e ~/.dotfiles'; then die "the image already has ~/.dotfiles"; fi
+already="$(vm 'for p in /opt/homebrew /Library/Developer/CommandLineTools ~/.dotfiles; do
+               [ -e "$p" ] && echo "$p"
+             done; true')" || die "could not ask the VM what it already has"
+[ -z "$already" ] || die "the image is not a fresh machine, so this proves nothing
+that CI does not. It already has:
+$already"
 
 # --- install and assert -----------------------------------------------------
 

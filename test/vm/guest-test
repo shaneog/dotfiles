@@ -46,8 +46,9 @@ printf '#!/bin/sh\necho "%s"\n' "${VM_PASS:-admin}" > "$ASKPASS"
 chmod 700 "$ASKPASS"
 export SUDO_ASKPASS="$ASKPASS"
 
+# By path: this shell came from ssh and read no profile, so PATH cannot say.
 say "no Homebrew here yet, as on any new machine"
-if command -v brew >/dev/null 2>&1; then die "Homebrew is already installed"; fi
+[ ! -e /opt/homebrew ] || die "Homebrew is already installed"
 
 say "running script/bootstrap"
 # Installs from the copied tree instead of the default branch, so this exercises

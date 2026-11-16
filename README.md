@@ -360,8 +360,16 @@ A fresh-machine test runs locally only, since CI runners are not fresh Macs:
 Homebrew, the command line tools, pyenv and nvm are all preinstalled there.
 
 ```sh
-make test-vm            # boot macOS 26 in Tart, install end to end, destroy
+make test-vm            # boot macOS 27 in Tart, install end to end, destroy
 test/vm/run --keep      # leave the VM up to poke at
+```
+
+It boots the `-vanilla` image, which is macOS and nothing else. The `-base`
+images already have Homebrew and the command line tools, and the run refuses
+them. `VM_IMAGE` picks another release, such as the one before:
+
+```sh
+VM_IMAGE=ghcr.io/cirruslabs/macos-tahoe-vanilla:latest make test-vm   # macOS 26
 ```
 
 It needs Apple Silicon, about 60GB of free disk, and [Tart](https://tart.run),
@@ -376,28 +384,29 @@ brew install openai/tools/tart
 so it installs the current branch rather than whatever is on the default one.
 
 <details>
-<summary>How long a run takes, measured on macOS 26 in August 2026</summary>
+<summary>How long a run takes, measured on macOS 27 in November 2026</summary>
 
 <br>
 
-The base image is tens of gigabytes on first use, but it is cached after that.
+The image is tens of gigabytes on first use, but it is cached after that.
 
 | | |
 | --- | --: |
-| Pulling the base image (once) | 546s |
-| Boot, ssh, copy the tree in | ~20s |
-| `script/bootstrap`, of which | 44s |
-| &nbsp;&nbsp;Homebrew from scratch | 10s |
-| &nbsp;&nbsp;`script/macos` | 1s |
-| &nbsp;&nbsp;Brewfile, formulae only | 29s |
-| &nbsp;&nbsp;`after-setup` | 30s |
-| First login shell, installing every plugin | 24s |
-| **Whole run, image cached** | **95s** |
+| Pulling the image (once) | 394s |
+| Boot, ssh, copy the tree in | 20s |
+| `script/bootstrap`, of which | 159s |
+| &nbsp;&nbsp;Homebrew from scratch, command line tools included | 96s |
+| &nbsp;&nbsp;`script/setup` and `script/macos` | 1s |
+| &nbsp;&nbsp;Brewfile, formulae only | 55s |
+| &nbsp;&nbsp;`after-setup` | 7s |
+| First login shell, installing every plugin | 12s |
+| **Whole run, image cached** | **195s** |
 
-So a bare machine reaches a working shell inside two minutes, plus whatever the
-casks cost.
+So a bare machine reaches a working shell inside three minutes, plus whatever
+the casks cost. Over half of that is Homebrew, which installs the command line
+tools first on a machine that has never had them.
 
-This test has earned its keep twice. `script/macos` used to take 121s of that,
+This test has earned its keep twice. `script/macos` used to take 121s of a run,
 all of it an AppleScript waiting on an AppleEvent that a headless machine can
 never deliver. And `after-setup` could hang indefinitely on a "Press ENTER"
 prompt. It did so intermittently, which is why it needed a real machine to
