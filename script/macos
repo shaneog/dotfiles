@@ -22,10 +22,8 @@
 # resilience above is unaffected, while a typo'd variable stops being silent.
 set -uo pipefail
 #
-# Two things worth knowing before re-running on a machine you have since set up
-# by hand:
-#
-#   - the Dock's icons are wiped, but only with --reset-dock
+# Worth knowing before re-running on a machine you have since set up by hand:
+# the Dock's icons are wiped, but only with --reset-dock.
 #
 # Settings marked (relaunch) need the owning app restarted, which the killall at
 # the bottom handles. Settings marked (logout) need a full logout or restart.
@@ -113,9 +111,9 @@ pam_path_is_root_owned() {
 }
 
 # The reattach line only when there is a module to load. script/bootstrap runs
-# this before the Brewfile, so a new machine gets working Touch ID immediately
-# and the tmux half on the next run, rather than a file naming a module that is
-# not there yet.
+# this before the Brewfile, so a new machine gets working Touch ID immediately,
+# rather than a file naming a module that is not there yet, and the tmux half
+# when bootstrap runs this again once the Brewfile is in.
 # PAM_TRUST_DEST exists for the tests, which cannot create a root-owned
 # directory under $TMPDIR. It changes what this script decides, not what sudo
 # accepts, and anyone able to set it for a run could edit this file instead. The
@@ -349,6 +347,7 @@ applied=0
 changed=0
 failed=0
 drifted=0
+relaunch=""
 
 for setting in "${SETTINGS[@]}"; do
 	IFS="|" read -r domain key type value when what <<< "$setting"
@@ -372,6 +371,7 @@ for setting in "${SETTINGS[@]}"; do
 
 	if write_setting "$domain" "$key" "$type" "$value" 2>/dev/null; then
 		changed=$((changed + 1))
+		[ "$when" = "relaunch" ] && relaunch="1"
 		printf '  %s (%s)\n' "$what" "$when"
 	else
 		failed=$((failed + 1))
@@ -397,6 +397,7 @@ echo "$changed changed, $applied already applied, $failed failed"
 if [ -n "$RESET_DOCK" ]; then
 	echo "Clearing the Dock's pinned icons"
 	defaults write com.apple.dock persistent-apps -array
+	relaunch="1"
 fi
 
 # Use the Gotham profile in Terminal.app.
@@ -438,13 +439,18 @@ else
 fi
 
 # Restart the apps that own the settings above, so the (relaunch) ones take
-# effect now. SystemUIServer still exists, though most of the menu bar it used
-# to own now belongs to ControlCenter.
-for app in \
-	"Dock" \
-	"Finder" \
-	"SystemUIServer" \
-  ; do
-	killall "${app}" &> /dev/null
-done
+# effect now -- and only when one of them changed. A run that finds everything
+# applied has nothing to show for restarting the Dock and Finder, and
+# script/bootstrap makes exactly that run after the Brewfile. SystemUIServer
+# still exists, though most of the menu bar it used to own now belongs to
+# ControlCenter.
+if [ -n "$relaunch" ]; then
+	for app in \
+		"Dock" \
+		"Finder" \
+		"SystemUIServer" \
+	  ; do
+		killall "${app}" &> /dev/null
+	done
+fi
 echo "Done. Note that some of these changes require a logout/restart to take effect."

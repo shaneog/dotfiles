@@ -104,6 +104,76 @@ PASSWORDS
   [ ! -e "$IHOME/.dotfiles" ]
 }
 
+# A repository bootstrap can clone, whose script/macos records that it ran. It
+# reports something left to apply for as long as $HOME/settings-left exists,
+# which stands for a new machine before the Brewfile is in.
+#
+# No Brewfile is linked, so bootstrap never runs `brew bundle`: on a Mac it
+# puts the real Homebrew ahead of the stubs on PATH as soon as it finds one.
+# The login shell step comes straight after the Brewfile, and dscl is what it
+# asks first, so dscl marks the place instead.
+make_dotfiles_fixture() {
+  FIXTURE="$BATS_TEST_TMPDIR/dotfiles-fixture"
+  mkdir -p "$FIXTURE/script"
+  printf '#!/bin/sh\nexit 0\n' > "$FIXTURE/script/setup"
+  cat > "$FIXTURE/script/macos" <<'MACOS'
+#!/bin/sh
+printf 'macos %s\n' "$*" >> "$CALL_LOG"
+if [ "$1" = "--check" ] && [ -e "$HOME/settings-left" ]; then exit 1; fi
+exit 0
+MACOS
+  chmod +x "$FIXTURE/script/setup" "$FIXTURE/script/macos"
+  local git=(env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+    git -C "$FIXTURE" -c user.name=t -c user.email=t@example.invalid
+    -c commit.gpgsign=false -c init.defaultBranch=main)
+  "${git[@]}" init -q && "${git[@]}" add -A && "${git[@]}" commit -qm fixture
+  printf '#!/bin/sh\necho "login shell step" >> "$CALL_LOG"\necho "UserShell: /bin/zsh"\n' > "$STUBS/dscl"
+  chmod +x "$STUBS/dscl"
+}
+
+@test "bootstrap applies the macOS settings again once the Brewfile is in" {
+  # Regression: script/macos ran once, before the Brewfile, so on a new machine
+  # Touch ID for sudo did not work inside tmux until someone ran it by hand.
+  make_dotfiles_fixture
+  : > "$IHOME/settings-left"
+  DOTFILES_URL="$FIXTURE" run run_script bootstrap
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_equal "$(grep -E "^(macos|login shell)" "$LOG" | tr '\n' ',')" \
+    "macos ,login shell step,macos --check,macos ," "what ran, in order"
+}
+
+@test "bootstrap leaves the macOS settings alone when its check is clean" {
+  make_dotfiles_fixture
+  DOTFILES_URL="$FIXTURE" run run_script bootstrap
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_equal "$(grep -c "^macos $" "$LOG")" "1" "how many times the settings were applied"
+  grep -q "^macos --check$" "$LOG" || { echo "the check never ran: $(cat "$LOG")"; return 1; }
+}
+
+@test "bootstrap ends by naming what is still missing, and only that" {
+  # ~/.gitconfig-user and 1Password's agent are the two things no script here
+  # can supply. Git says nothing at all when the first is absent.
+  make_dotfiles_fixture
+  DOTFILES_URL="$FIXTURE" run run_script bootstrap
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "create ~/.gitconfig-user"
+  assert_contains "$output" "1Password's SSH agent"
+
+  # A socket's path has a short limit, and the test directory is already long,
+  # so the home moves somewhere short for the half where both are present.
+  local short; short="$(mktemp -d /tmp/dotfiles-b.XXXX)"
+  guard_home "$short"
+  local agent="$short/Library/Group Containers/2BUA8C4S2C.com.1password/t"
+  mkdir -p "$agent"
+  python3 -c "import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1])" "$agent/agent.sock"
+  : > "$short/.gitconfig-user"
+  IHOME="$short" DOTFILES_URL="$FIXTURE" run run_script bootstrap
+  rm -rf "$short"
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "now bootstrapped"
+  refute_contains "$output" "Still to do"
+}
+
 @test "remove takes the links into the clone and leaves other dangling links alone" {
   mkdir -p "$IHOME/.dotfiles/config/zsh" "$IHOME/.dotfiles/ssh" "$IHOME/elsewhere"
   mkdir -p "$IHOME/.config/some-other-tool" "$IHOME/.ssh"
