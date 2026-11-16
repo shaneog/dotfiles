@@ -155,7 +155,7 @@
     </figure>
 
     <h2 id="again">Running it again is safe</h2>
-    <p>Bootstrap is written so a second run only does what is still missing. That makes it the way to update a Mac as well as the way to set one up.</p>
+    <p>Bootstrap is written so a second run only does what is still missing. It still asks for your password, though, so for a Mac that is already set up there is a <a href="#update">lighter command</a>.</p>
 
     <div class="table-wrap">
       <table>
@@ -179,6 +179,42 @@
 
     <pre><code>DOTFILES_REF=some-branch ./script/bootstrap
 DOTFILES_URL=/Volumes/stick/dotfiles ./script/bootstrap</code></pre>
+
+    <h2 id="update">Keeping a Mac up to date</h2>
+    <p>Once a Mac is set up, two commands look after it. Run them from <code>~/.dotfiles</code>.</p>
+
+    <pre data-copy><code>make update
+make doctor</code></pre>
+
+    <ul class="cards">
+      <li class="card tone-green">
+        <span class="card-num">make update</span>
+        <h3>Catch up with the repository</h3>
+        <ul>
+          <li>Pulls the latest dotfiles. Local edits are stashed and put back.</li>
+          <li>Runs <code>script/setup</code>, so a config that is new gets its signpost.</li>
+          <li>Installs anything the Brewfile lists that is missing.</li>
+          <li>Puts Neovim's plugins at the versions in the lockfile.</li>
+        </ul>
+        <p>It never asks for a password. Homebrew itself, the login shell and the macOS settings stay bootstrap's job.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">make doctor</span>
+        <h3>Ask whether this Mac is healthy</h3>
+        <ul>
+          <li>Is every signpost still in place?</li>
+          <li>Is this copy behind the one on GitHub?</li>
+          <li>Are <code>~/.gitconfig-user</code> and the 1Password agent there?</li>
+          <li>Has a macOS setting drifted, or is something in the Brewfile not installed?</li>
+        </ul>
+        <p>It only reports, and changes nothing. A missing signpost, file or agent is a failure. Everything else is a warning.</p>
+      </li>
+    </ul>
+
+    <div class="callout note">
+      <p class="callout-title">Skipping is not passing</p>
+      <p>When the doctor cannot run one of its checks, for example because the Mac is offline, it prints <code>NOT CHECKED</code> and says which. It never reports a check it skipped as a check that passed.</p>
+    </div>
 
     <h2 id="remove">Taking it all out again</h2>
     <p><code>script/remove</code> is the undo. It asks “Are you sure?” first, and by default it only removes what this repository put there.</p>

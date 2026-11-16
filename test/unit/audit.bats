@@ -32,10 +32,6 @@ alias f='fzf'
 EOF
   : > "$FIX/config/git/config"
 
-  # A fresh VM stamp by default, so only the tests that care about staleness see
-  # a warning about it.
-  date +%Y-%m-%d > "$FIX/vm-last-run"
-
   stub_brew_ok
   stub_gh_ok
 }
@@ -81,21 +77,29 @@ given_scheduled_workflow() {
   printf 'on:\n  schedule:\n    - cron: %s0 7 * * 1%s\n' "'" "'" > "$FIX/.github/workflows/weekly.yml"
 }
 
-# Same environment as audit(), so a section that keys on CI or reads a local
-# stamp behaves the same whichever helper a test reaches for. Keeping only one of
-# them current is how the drift tests first went red on a runner.
 audit_gh() {
-  ( cd "$FIX" && PATH="$STUBS:$PATH" CI="${CI_OVERRIDE:-}" \
-      VM_STAMP="${VM_STAMP:-$FIX/vm-last-run}" \
-      STUB_RECENT="$1" STUB_EVER="$2" ./script/audit )
+  ( cd "$FIX" && PATH="$STUBS:$PATH" STUB_RECENT="$1" STUB_EVER="$2" ./script/audit )
 }
 
-# CI is unset unless a test sets it: the machine-drift section skips itself when
-# it sees CI, so inheriting the runner's would make those tests assert against a
-# section that never ran -- which is exactly how they first failed.
 audit() {
-  ( cd "$FIX" && PATH="$STUBS:$PATH" CI="${CI_OVERRIDE:-}" \
-      VM_STAMP="${VM_STAMP:-$FIX/vm-last-run}" ./script/audit )
+  ( cd "${AUDIT_DIR:-$FIX}" && PATH="$STUBS:$PATH" ./script/audit )
+}
+
+# git for the fixture, with nothing of the machine's own config: a signing key
+# or a hook there is not the fixture's to trigger.
+fix_git() {
+  env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+    git -C "$FIX" -c user.name=t -c user.email=t@example.invalid \
+    -c commit.gpgsign=false -c init.defaultBranch=main "$@"
+}
+
+# The fixture as a repository whose Neovim lockfile was last committed on $1.
+given_lockfile_committed() {  # date
+  mkdir -p "$FIX/config/nvim"
+  echo '{}' > "$FIX/config/nvim/lazy-lock.json"
+  fix_git init -q
+  fix_git add -A
+  GIT_AUTHOR_DATE="$1T12:00:00" GIT_COMMITTER_DATE="$1T12:00:00" fix_git commit -qm "lockfile"
 }
 
 @test "audit: a healthy repo passes" {
@@ -238,7 +242,9 @@ EOF
   # No brew and no gh on PATH at all.
   run env -i HOME="$HOME" PATH="/usr/bin:/bin" bash -c "cd '$FIX' && ./script/audit"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  echo "$output" | grep -q "NOT CHECKED" \
+  # Named, both of them: the fixture has no Neovim lockfile, so that section is
+  # in this line whatever brew and gh are doing.
+  echo "$output" | grep -q "NOT CHECKED: brew github" \
     || { echo "a skipped section must be announced: $output"; return 1; }
 }
 
@@ -316,76 +322,51 @@ EOF
   echo "$output" | grep -q "someone/dead-tmux-plugin is archived upstream" || { echo "$output"; return 1; }
 }
 
-@test "audit: a machine that has drifted is reported, and counted" {
-  # The gap this closes: script/macos --check knows about a setting the OS reset
-  # or a PAM module copy left behind by an upgrade, and nothing ran it. The
-  # counting half matters too -- `warn` inside a piped while-loop increments in a
-  # subshell, so the summary would have said 0 warnings beneath two of them.
-  cat > "$FIX/script/macos" <<'EOF'
-#!/bin/sh
-echo "  not applied: com.apple.dock tilesize is 48, wanted 32 (icon size)"
-echo "  not applied: pam sudo_local is unset, wanted authsufficientpam_tid.so (Touch ID)"
-echo "31 of 33 settings applied, 2 not"
-exit 1
-EOF
-  chmod +x "$FIX/script/macos"
+@test "audit: a lockfile nobody has moved in six months warns" {
+  # lazy.nvim never moves its own lockfile and no bot proposes to, so the pins
+  # in it only get older. Homebrew's Neovim does not wait for them.
+  given_lockfile_committed 2020-01-01
   run audit
-  [ "$status" -eq 0 ] || { echo "drift is a warning, not a failure: $output"; return 1; }
-  echo "$output" | grep -q "com.apple.dock tilesize" || { echo "$output"; return 1; }
-  echo "$output" | grep -q "pam sudo_local is unset" || { echo "$output"; return 1; }
-  echo "$output" | grep -q "0 failures, 3 warnings" \
-    || { echo "the warnings never reached the summary: $output"; return 1; }
+  [ "$status" -eq 0 ] || { echo "an old lockfile is a warning, not a failure: $output"; return 1; }
+  assert_contains "$output" "lazy-lock.json last changed 2020-01-01, over 6 months ago"
+  assert_contains "$output" "0 failures, 1 warnings"
 }
 
-@test "audit: a machine with no drift is one ok line" {
-  cat > "$FIX/script/macos" <<'EOF'
-#!/bin/sh
-echo "33 of 33 settings applied, 0 not"
-EOF
-  chmod +x "$FIX/script/macos"
+@test "audit: a lockfile that moved recently is one ok line" {
+  given_lockfile_committed "$(date +%Y-%m-%d)"
   run audit
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  echo "$output" | grep -q "33 of 33 settings applied" || { echo "$output"; return 1; }
-  echo "$output" | grep -q "0 failures, 0 warnings" || { echo "$output"; return 1; }
+  assert_contains "$output" "ok    config/nvim/lazy-lock.json last changed"
+  assert_contains "$output" "0 failures, 0 warnings"
+  refute_contains "$output" "nvim-lock" "the report"
 }
 
-@test "audit: the machine-drift section skips itself on a runner, out loud" {
-  # A runner has had none of these settings applied, so every one would read as
-  # drift and say nothing about the machine this repo is for. Skipped, and named
-  # in NOT CHECKED rather than quietly passing.
-  cat > "$FIX/script/macos" <<'EOF'
-#!/bin/sh
-echo "  not applied: com.apple.dock tilesize is 48, wanted 32 (icon size)"
-exit 1
-EOF
-  chmod +x "$FIX/script/macos"
-  CI_OVERRIDE=true run audit
+@test "audit: a shallow clone does not vouch for the lockfile's age" {
+  # A checkout of depth one has a single commit, which appears to have added
+  # every file, so the lockfile would read as changed today for ever. That is
+  # the clone a workflow gets unless it asks for the history.
+  given_lockfile_committed 2020-01-01
+  echo "later" > "$FIX/unrelated"
+  fix_git add -A
+  fix_git commit -qm "something else, today"
+  local shallow="$BATS_TEST_TMPDIR/shallow"
+  fix_git clone -q --depth 1 "file://$FIX" "$shallow"
+  AUDIT_DIR="$shallow" run audit
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  echo "$output" | grep -q "not checked: a CI runner" || { echo "$output"; return 1; }
-  echo "$output" | grep -q "NOT CHECKED:.*machine-drift" || { echo "$output"; return 1; }
-  refute_contains "$output" "com.apple.dock tilesize" "the report"
+  assert_contains "$output" "not checked: this is not a clone with its full history"
+  echo "$output" | grep -q "NOT CHECKED:.*nvim-lock" || { echo "$output"; return 1; }
+  refute_contains "$output" "lazy-lock.json last changed" "the report"
 }
 
-@test "audit: a VM tier that has not run in a month warns" {
-  # It cannot be moved to CI -- GitHub's macOS runners are VMs and cannot host
-  # one -- so a stamp and this check are the only things that notice. It went six
-  # weeks unnoticed before they existed.
-  echo "2020-01-01" > "$FIX/vm-last-run"
-  run audit
-  [ "$status" -eq 0 ] || { echo "staleness is a warning, not a failure: $output"; return 1; }
-  echo "$output" | grep -q "last passed 2020-01-01, over 30 days ago" \
-    || { echo "$output"; return 1; }
-}
-
-@test "audit: a VM tier that has never run warns" {
-  VM_STAMP="$FIX/absent-stamp" run audit
-  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  echo "$output" | grep -q "no recorded run" || { echo "$output"; return 1; }
-}
-
-@test "audit: a VM tier that ran recently is one ok line" {
+@test "audit: a lockfile git has never seen is not given an age" {
+  echo "tracked" > "$FIX/unrelated"
+  fix_git init -q
+  fix_git add unrelated
+  fix_git commit -qm "everything but the lockfile"
+  mkdir -p "$FIX/config/nvim"
+  echo '{}' > "$FIX/config/nvim/lazy-lock.json"
   run audit
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  echo "$output" | grep -q "the VM tier passed" || { echo "$output"; return 1; }
-  refute_contains "$output" "no recorded run" "the report"
+  assert_contains "$output" "not checked: config/nvim/lazy-lock.json has never been committed"
+  refute_contains "$output" "last changed" "the report"
 }

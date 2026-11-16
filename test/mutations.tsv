@@ -111,12 +111,32 @@ script/macos	s|8#${perms:-777} & 8#22|0"${perms:-777}" \& 022|	test/unit/macos.b
 script/macos	s|if grep -q "^brew .pam-reattach." "$PAM_BREWFILE" 2>/dev/null; then|if false; then|	test/unit/macos.bats	declared but uninstalled pam-reattach	a half-applied Touch ID setup reports itself as complete
 script/audit	s@.*\[ -d config/nvim \] && grep.*@true@	test/unit/audit.bats	archived neovim plugin	neovim plugin upstreams stop being checked
 script/audit	s|grep -hoE "@plugin .*tmux.conf 2>/dev/null \\|true \\|	test/unit/audit.bats	archived tmux plugin	tmux plugin upstreams stop being checked
-script/audit	s@warn "${line#  not applied: }"@:@	test/unit/audit.bats	machine that has drifted is reported	machine drift is read but never reported
-script/audit	s@.*done <<< .*@done < /dev/null@	test/unit/audit.bats	machine that has drifted is reported	the drift lines stop being read at all
+script/audit	s@elif \[ "$lock_changed" .< "$lock_cutoff" \]; then@elif false; then@	test/unit/audit.bats	moved in six months	a lockfile of any age reports as recent
+script/audit	s@^elif \[ "$(git rev-parse --is-shallow-repository 2>/dev/null)" != false \]; then@elif false; then@	test/unit/audit.bats	shallow clone	a shallow clone dates the lockfile by its only commit
+script/audit	s@^  if \[ -z "$lock_changed" \]; then@  if false; then@	test/unit/audit.bats	never seen	an uncommitted lockfile is given an empty date and called old
+script/doctor	s@warn "${line#  not applied: }"@:@	test/unit/doctor.bats	drifted are reported	macOS drift is read but never reported
+script/doctor	s@.*done <<< .*grep 'not applied:'.*@done < /dev/null@	test/unit/doctor.bats	drifted are reported	the drift lines stop being read at all
 config/starship.toml	s|^error_symbol = "\[➜\](red)".*|error_symbol = "[➜](green)"|	test/integration/prompt.bats	character module reflects the last exit status	a failed command still shows the success colour
 config/starship.toml	s|^style = "242"|style = "bright-black"|	test/integration/prompt.bats	rebase in progress	the rebase marker goes back to a colour Gotham draws as background
-script/audit	s@.*if \[ "$vm_last" .< "$vm_cutoff" \]; then@if false; then@	test/unit/audit.bats	VM tier that has not run in a month	a VM tier gone stale reports as current
-script/audit	s@warn "the VM tier has no recorded run: make test-vm"@:@	test/unit/audit.bats	VM tier that has never run	a VM tier that never ran says nothing
+script/doctor	s@.*if \[ "$vm_last" .< "$vm_cutoff" \]; then@if false; then@	test/unit/doctor.bats	VM tier that has not run in a month	a VM tier gone stale reports as current
+script/doctor	s@warn "the VM tier has no recorded run: make test-vm"@:@	test/unit/doctor.bats	VM tier that has never run	a VM tier that never ran says nothing
+script/doctor	s@^elif ! command -v tart >/dev/null 2>&1; then@elif false; then@	test/unit/doctor.bats	cannot run says so	a machine without tart is nagged to run the VM tier
+script/doctor	s@^elif ! command -v defaults >/dev/null 2>&1; then@elif false; then@	test/unit/doctor.bats	cannot run says so	the macOS check runs where there is no macOS
+script/doctor	s|^    fail "$(tilde "$2") is not a link to|    : "|	test/unit/doctor.bats	pulled and never linked	a missing link is found and not reported
+script/doctor	s|^  if \[ -L "$2" \] && \[ "$2" -ef "$1" \]; then|  if [ -e "$2" ]; then|	test/unit/doctor.bats	gone, or points somewhere else	anything at a link path counts as the link
+script/doctor	s|^  if \[ -L "$target" \] && \[ "$target" -ef "$source" \]; then|  if false; then|	test/unit/doctor.bats	whole directory is one failure	a whole-directory link is reported as every entry missing
+script/doctor	s|^  if \[ "$1" = "ssh" \] && ls "$target"/id_\* >/dev/null 2>&1; then|  if false; then|	test/unit/doctor.bats	holds a private key	an ssh directory setup leaves alone is called broken
+script/doctor	s@^remote="$(GIT_TERMINAL_PROMPT=0 git ls-remote origin refs/heads/main 2>/dev/null | cut -f1)"@git fetch -q origin 2>/dev/null; remote="$(git rev-parse origin/main 2>/dev/null)"@	test/unit/doctor.bats	changes nothing	doctor fetches, so it writes to the clone
+script/doctor	s@^  warn "behind origin/main, which has moved to.*@  ok "level"@	test/unit/doctor.bats	warns, without fetching	a clone behind origin reports as level
+script/doctor	s|^if \[ -f "$HOME/.gitconfig-user" \]; then|if true; then|	test/unit/doctor.bats	no ~/.gitconfig-user	a machine git cannot sign on reports as healthy
+script/doctor	s|^if \[ -S "$HOME/Library|if [ -e "$HOME/Library|	test/unit/doctor.bats	agent socket	any file at the socket path counts as an agent
+script/doctor	s@^      warn "$line is in the Brewfile and not installed: make update"@      :@	test/unit/doctor.bats	this machine lacks	a declared package that is absent goes unreported
+script/doctor	s@^      || note "@      || warn "@	test/unit/doctor.bats	counted, not warned	every package a managed machine has is a warning
+script/doctor	s@^  if \[ -z "$undeclared" \]; then@  if false; then@	test/unit/doctor.bats	could not finish	a brew-drift that printed no report reads as no drift
+script/update	s|^    DOTFILES_UPDATE_FROM="$before" exec .*|    :|	test/unit/update.bats	pulled is the one	the old script finishes a run that pulled a new one
+script/update	s@^      || abort "The pull failed.*@      || true@	test/unit/update.bats	stops when the pull fails	a failed pull is followed by linking and installing
+script/update	s|^set -euo pipefail|set -uo pipefail|	test/unit/update.bats	link step that fails	a failed link step is followed by an install
+script/update	s|^    not_done="$not_done brewfile"|    :|	test/unit/update.bats	without brew	a skipped Brewfile is not named at the end
 config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
 config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integration/startup.bats	twice is a no-op	the double-source guard goes
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell

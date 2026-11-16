@@ -167,7 +167,7 @@ kill "$WATCHDOG" 2>/dev/null || true
 # kern.hv_support=0 and kern.hv_vmm_present=1, so they are themselves VMs and
 # cannot host one -- which means nothing but this file can tell you how long it
 # has been since the highest-fidelity test in the repo last ran. It went six
-# weeks unnoticed once. script/audit reads it.
+# weeks unnoticed once. script/doctor reads it.
 VM_STAMP="${VM_STAMP:-${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vm-last-run}"
 mkdir -p "$(dirname "$VM_STAMP")"
 date +%Y-%m-%d > "$VM_STAMP"

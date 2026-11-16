@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 #
-# Checks the things that rot quietly: packages that upstream has deprecated or
-# renamed, plugin repositories that have been archived, and tools the shell
-# config invokes but no Brewfile installs.
+# Checks the things that rot quietly, upstream of this repo: packages that have
+# been deprecated or renamed, plugin repositories that have been archived, tools
+# the shell config invokes but no Brewfile installs, a Neovim lockfile nobody
+# has moved in months, and scheduled workflows that have stopped firing.
+#
+# Everything here is about the repo, so it means the same on a CI runner and on
+# a laptop. What is true of one machine is script/doctor's.
 #
 # Exits non-zero when something needs attention. Sections that cannot run say so
 # rather than passing silently.
@@ -183,60 +187,35 @@ for lib in config/zsh/lib/*.zsh; do
 done
 [ "$orphans" -gt 0 ] || ok "every tool-specific lib has a package behind it"
 
-# ------------------------------------------------------------- machine drift
+# ---------------------------------------------------------- the neovim lockfile
 
-head2 "Settings this machine has drifted from"
-# The repo being right does not make the machine right. script/macos --check
-# reads the same table the apply pass writes, so this notices a setting the OS
-# reset, an upgrade that left a PAM module copy behind, or a tool declared in
-# the Brewfile and never installed.
-#
-# Skipped under CI, loudly: a runner has had none of this applied, so every
-# setting would read as drift and say nothing about the machine this is for.
-if [ -n "${CI:-}" ]; then
-  SKIPPED="$SKIPPED machine-drift"
-  printf '  ----  not checked: a CI runner has none of these settings applied\n'
-elif [ ! -x script/macos ]; then
-  SKIPPED="$SKIPPED machine-drift"
-  printf '  ----  not checked: script/macos is not here\n'
+head2 "Neovim's lockfile"
+# config/nvim/lazy-lock.json pins every Neovim plugin, and it is the one pinned
+# set here that nothing proposes updates for: lazy.nvim never moves it by
+# itself, while Homebrew's Neovim moves underneath it. Its age is read from
+# history, which a shallow clone does not have: there the newest commit appears
+# to have added every file, so the lockfile would always look new.
+LOCKFILE="config/nvim/lazy-lock.json"
+LOCK_STALE_AFTER_MONTHS=6
+if [ ! -f "$LOCKFILE" ]; then
+  SKIPPED="$SKIPPED nvim-lock"
+  printf '  ----  not checked: there is no %s\n' "$LOCKFILE"
+elif [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" != false ]; then
+  SKIPPED="$SKIPPED nvim-lock"
+  printf '  ----  not checked: this is not a clone with its full history\n'
 else
-  drift_output="$(script/macos --check 2>&1)"
-  if [ $? -eq 0 ]; then
-    ok "$(printf '%s' "$drift_output" | tail -1)"
+  lock_changed="$(git log -1 --format=%cs -- "$LOCKFILE" 2>/dev/null)"
+  # /bin/date first: -v is BSD's, and a GNU date earlier on PATH would read it
+  # as a file name. The second form is GNU's, for where /bin/date is GNU's too.
+  lock_cutoff="$(/bin/date -v-"${LOCK_STALE_AFTER_MONTHS}"m +%Y-%m-%d 2>/dev/null \
+    || date -d "-${LOCK_STALE_AFTER_MONTHS} months" +%Y-%m-%d)"
+  if [ -z "$lock_changed" ]; then
+    SKIPPED="$SKIPPED nvim-lock"
+    printf '  ----  not checked: %s has never been committed\n' "$LOCKFILE"
+  elif [ "$lock_changed" \< "$lock_cutoff" ]; then
+    warn "$LOCKFILE last changed $lock_changed, over $LOCK_STALE_AFTER_MONTHS months ago: run :Lazy update and commit it"
   else
-    # A here-string, not a pipe: `warn` in a piped while-loop increments the
-    # counter in a subshell, and the summary would report none of them.
-    while IFS= read -r line; do
-      [ -n "$line" ] || continue
-      warn "${line#  not applied: }"
-    done <<< "$(printf '%s\n' "$drift_output" | grep 'not applied:')"
-    warn "$(printf '%s' "$drift_output" | tail -1)"
-  fi
-fi
-
-# --------------------------------------------------------------- the vm tier
-
-head2 "The VM tier, which only runs locally"
-# A Tart VM on real macOS is the only test here that installs onto a genuinely
-# fresh machine, and it cannot be moved to CI: GitHub's macOS runners answer
-# kern.hv_support=0 and kern.hv_vmm_present=1, being VMs themselves. So it runs
-# when someone remembers, and it once went six weeks without anyone noticing.
-# `make test-vm` stamps a date on success; this is the part that notices.
-VM_STAMP="${VM_STAMP:-${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vm-last-run}"
-VM_STALE_AFTER_DAYS="${VM_STALE_AFTER_DAYS:-30}"
-if [ -n "${CI:-}" ]; then
-  SKIPPED="$SKIPPED vm-tier"
-  printf '  ----  not checked: the stamp is local, and a runner cannot run this tier\n'
-elif [ ! -f "$VM_STAMP" ]; then
-  warn "the VM tier has no recorded run: make test-vm"
-else
-  # /bin/date: -v is BSD-only, and GNU date earlier on PATH reads it as a file.
-  vm_cutoff="$(/bin/date -v-"${VM_STALE_AFTER_DAYS}"d +%Y-%m-%d)"
-  vm_last="$(cat "$VM_STAMP")"
-  if [ "$vm_last" \< "$vm_cutoff" ]; then
-    warn "the VM tier last passed $vm_last, over $VM_STALE_AFTER_DAYS days ago: make test-vm"
-  else
-    ok "the VM tier passed $vm_last"
+    ok "$LOCKFILE last changed $lock_changed"
   fi
 fi
 
