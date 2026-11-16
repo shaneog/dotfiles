@@ -5,6 +5,7 @@
 # test was written for. A row that stops failing means the assertion has gone
 # blind, which is worse than not having it.
 config/zsh/lib/fzf.zsh	s|'rg --files|'rgx --files|	test/integration/startup.bats	fzf's file command	fzf's backend is a tool nothing installs
+config/zsh/lib/fzf.zsh	s|^  bindkey -M emacs \$'.xc3.xa7' fzf-cd-widget|  :|	test/integration/startup.bats	Option-C	Option-C goes back to typing a letter at the prompt
 config/nvim/lua/plugins.lua	s|pcall(vim.treesitter.start)|-- pcall(vim.treesitter.start)|	test/integration/nvim.bats	treesitter highlights	nothing starts treesitter highlighting
 config/nvim/ftplugin/gitcommit.lua	s|"en_us"|"en_gb"|	test/integration/nvim.bats	commit message buffer	the spelling region drifts back to a guess
 .editorconfig	s|^\[Makefile\]$|[Makefile.off]|	test/integration/nvim.bats	tab stays a tab	Neovim puts spaces where a Makefile recipe needs a tab
