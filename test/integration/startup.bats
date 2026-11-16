@@ -428,7 +428,7 @@ STUB
   # Typed into a real line editor, because a binding that exists is not a key
   # that works: the shell has to end up somewhere else. fzf is given one
   # candidate and told to take it, so it never draws anything to drive.
-  command -v fzf >/dev/null || skip "fzf is not installed"
+  command -v fzf >/dev/null || skip_unless_ci "fzf is not installed"
   local home target; home="$(make_home)"
   target="$BATS_TEST_TMPDIR/jump here"; mkdir -p "$target"
   cat > "$BATS_TEST_TMPDIR/type-option-c" <<'DRIVER'
