@@ -12,7 +12,7 @@ open guides/index.html
 | ------------- | ------------- |
 | `index.html` | What dotfiles are, the five ideas behind this repo, a map of it, a glossary |
 | `install.html` | `script/bootstrap` step by step, re-running it, `script/remove` |
-| `layout.html` | The symlinks `script/setup` creates, the inverted `.gitignore`, per-machine files |
+| `layout.html` | The symlinks `script/setup` creates, what `.gitignore` covers, per-machine files |
 | `shell.html` | zsh startup order, layering on a managed shell, `lib/`, tmux autostart, startup time |
 | `keys.html` | SSH auth and commit signing through 1Password, Touch ID for `sudo` |
 | `tools.html` | Cheat sheet: git aliases, tmux and Neovim keys, fzf, the Brewfile |

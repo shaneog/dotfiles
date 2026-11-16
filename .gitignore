@@ -1,65 +1,35 @@
-# ssh
+# script/setup links only what git tracks under config/ and ssh/, one entry at a
+# time, so a tool that writes beside those links writes outside the clone. What
+# is listed here is what a tool writes inside a directory that is linked whole.
+#
+# Anything else that turns up under config/ shows as untracked, and the static
+# tier fails on it until it is tracked, ignored here, or named in
+# .git/info/exclude if its name should not be published.
+
+# ssh: one file is ours. Everything else is turned away, so that `git add`
+# passes over a key copied here by mistake.
 ssh/*
 !ssh/config
 
-# config
-config/*
-config/*/
-
-# Tool state and generated config, ignored deliberately. Each entry needs a rule
-# of its own rather than relying on the blanket lines above, so that a directory
-# which is merely forgotten can be told apart from one that is meant to be
-# absent -- see the classification test in test/static/lint.bats. Anything that
-# should not be published goes in .git/info/exclude instead.
-config/fish/
-config/op/
-config/pip/
-config/toolhive/
-config/uv/
-
-# Starship
-!config/starship.toml
-
-# neovim
-# lazy.nvim keeps plugins under stdpath("data"), so nothing it writes lands here
-!config/nvim/
-
-# tmux
-!config/tmux/
+# tmux: tpm clones the plugins here
 config/tmux/plugins
 
-# git
-!config/git
-
 # github
-!config/gh
 # gh records the logged-in account here. The token lives in the keyring, but
 # this file is where gh puts one when the keyring is unavailable, and removing
 # it logs gh out -- so it stays on disk, untracked.
 config/gh/hosts.yml
 
 # homebrew
-!config/homebrew
 # runtime state: brew writes into $XDG_CONFIG_HOME/homebrew
 config/homebrew/trust.json*
 
-# ghostty
-!config/ghostty
-
 # karabiner
-!config/karabiner
 # Karabiner snapshots karabiner.json here by itself; git history does that job
 config/karabiner/automatic_backups/
 
-# mise
-!config/mise
-
 # zsh
-!config/zsh/
 config/zsh/.zcompdump
 config/zsh/**/*.zwc*
 # completion dump some setups write into ${ZDOTDIR}
 config/zsh/.zcmpdump*
-
-# Cursor writes its CLI state here, and ~/.config is this repo.
-config/cursor/
