@@ -5,14 +5,27 @@
 # origin/main, whether the two things only a person can supply are in place,
 # and what script/macos --check and script/brew-drift have to say.
 #
+#   script/doctor [--accept]
+#
 # Changes nothing, in the home directory or in the clone: the remote is asked
-# where it is with ls-remote, not fetched.
+# where it is with ls-remote, not fetched. The one thing it writes is its own
+# note of the shell files another tool manages, a hash of each under
+# $XDG_STATE_HOME/dotfiles, so that it can say when one has changed. --accept
+# takes them as they are now.
 #
 # Exits non-zero only for what is broken: a link that is missing, no identity
 # for git to sign with, no agent to sign through. Drift is a warning. Sections
 # that cannot run say so rather than passing silently.
 
 set -uo pipefail
+
+ACCEPT=""
+for arg in "$@"; do
+  case "$arg" in
+    --accept) ACCEPT=1 ;;
+    *)        echo "usage: script/doctor [--accept]" >&2; exit 2 ;;
+  esac
+done
 
 cd "$(dirname "$0")/.." || exit 1
 DOTFILESDIR="$(pwd -P)"
@@ -116,12 +129,103 @@ head2 "What only you can supply"
 if [ -f "$HOME/.gitconfig-user" ]; then
   ok "$(tilde "$HOME/.gitconfig-user") is there"
 else
-  fail "$(tilde "$HOME/.gitconfig-user") is missing: git cannot sign a commit without it, and says nothing"
+  fail "$(tilde "$HOME/.gitconfig-user") is missing: git cannot sign a commit without it, and says nothing: make identity"
 fi
 if [ -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]; then
   ok "1Password's SSH agent has its socket"
 else
   fail "1Password's SSH agent has no socket: switch it on under Settings > Developer"
+fi
+
+# ------------------------------------------------------------------ shell files
+
+# Where another tool owns ~/.profile, ~/.bashrc, ~/.zprofile and ~/.zshrc, the
+# shell reads them as a base layer beneath this repo, and that tool rewrites
+# them when it likes. The tests stand a fixture in for the layer, so a real
+# change shows only as a shell that behaves differently one morning. A hash of
+# each is kept on this machine, and a file that no longer matches is named on
+# every run until --accept takes the new one: a report seen once and then gone
+# would be missed by running this twice.
+#
+# Hashes and the four names, and nothing else: what the files say belongs to
+# whoever manages them, and is neither copied nor printed. A machine with none
+# of the four has no section at all.
+SHELL_RECORD="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/shell-files"
+
+# Where a path leads once every link on the way has been followed.
+resolved() {  # path
+  local path="$1" target
+  while [ -L "$path" ]; do
+    target="$(readlink "$path")"
+    case "$target" in
+      /*) path="$target" ;;
+      *)  path="$(dirname "$path")/$target" ;;
+    esac
+  done
+  printf '%s/%s' "$(cd "$(dirname "$path")" 2>/dev/null && pwd -P)" "${path##*/}"
+}
+
+# Empty for a file that is not there, and for one that leads into the clone:
+# that one is this repo's own, and git already says when it changes.
+shell_file_hash() {  # name
+  [ -f "$HOME/$1" ] || return 0
+  case "$(resolved "$HOME/$1")" in
+    "$DOTFILESDIR"/*) return 0 ;;
+  esac
+  git hash-object --no-filters "$HOME/$1" 2>/dev/null
+}
+
+recorded_hash() {  # name
+  [ -f "$SHELL_RECORD" ] || return 0
+  awk -v name="$1" '$2 == name { print $1 }' "$SHELL_RECORD"
+}
+
+shell_section=""
+shell_same=0
+shell_record=""
+for name in .profile .bashrc .zprofile .zshrc; do
+  now="$(shell_file_hash "$name")"
+  was="$(recorded_hash "$name")"
+  [ -n "$now$was" ] || continue
+  if [ -z "$shell_section" ]; then
+    head2 "Shell files this repo reads and does not own"
+    shell_section=1
+  fi
+  keep="$was"
+  shown="$(tilde "$HOME/$name")"
+  if [ -z "$was" ]; then
+    note "$shown noted as it is now, and a change to it will be reported here"
+    keep="$now"
+  elif [ "$now" = "$was" ]; then
+    shell_same=$((shell_same + 1))
+  elif [ -n "$ACCEPT" ]; then
+    if [ -n "$now" ]; then
+      ok "$shown accepted as it is now"
+    else
+      ok "$shown is gone, and that is accepted"
+    fi
+    keep="$now"
+  elif [ -z "$now" ]; then
+    warn "$shown is gone since it was last accepted: script/doctor --accept"
+  else
+    warn "$shown has changed since it was last accepted: script/doctor --accept"
+  fi
+  [ -z "$keep" ] || shell_record="$shell_record$keep $name
+"
+done
+[ "$shell_same" -eq 0 ] || ok "$shell_same unchanged since last accepted"
+
+# Written only when it differs, and through a file beside it, so a run that
+# is interrupted leaves the last record and not half of one.
+if [ -n "$shell_section" ] \
+  && [ "$(printf '%s' "$shell_record")" != "$(cat "$SHELL_RECORD" 2>/dev/null)" ]; then
+  if [ -z "$shell_record" ]; then
+    rm -f "$SHELL_RECORD"
+  elif ! { mkdir -p "$(dirname "$SHELL_RECORD")" \
+      && printf '%s' "$shell_record" > "$SHELL_RECORD.new" \
+      && mv -f "$SHELL_RECORD.new" "$SHELL_RECORD"; } 2>/dev/null; then
+    not_checked "shell-files" "the note of them could not be written, so a change will not be noticed"
+  fi
 fi
 
 # ---------------------------------------------------------------- macOS settings

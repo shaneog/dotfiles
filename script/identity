@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+#
+# Writes ~/.gitconfig-user, the one file a new machine otherwise has to be given
+# by hand, from an item in 1Password: a name, an email address and the public
+# half of the signing key.
+#
+#   script/identity [--replace] [item]
+#
+# A step for after script/bootstrap, not part of it: on a new machine the
+# 1Password app has to be opened and signed in to before its command line tool
+# can read anything, and that takes a person.
+#
+# The item is named by the argument, or by DOTFILES_IDENTITY_ITEM, and is
+# "Git identity" when neither is given. A name, an id or a share link all work,
+# and so does OP_ACCOUNT where there is more than one account. It needs three
+# fields:
+#
+#   name          as it should appear on a commit
+#   email
+#   signingkey    the public key, as 1Password shows it on an SSH Key item
+#
+# Optional throughout. Without op, signed out, or with no such item, it says
+# what to do by hand and writes nothing. A file that is already there is left
+# alone unless --replace is given, which replaces those three values and keeps
+# whatever else the file holds. Either way the new file is put together beside
+# the old one and moved into place, so a read that fails halfway leaves the old
+# one whole.
+#
+# Exits 0 when the file is in place, 1 when it could not be written.
+
+set -uo pipefail
+
+TARGET="$HOME/.gitconfig-user"
+ITEM="${DOTFILES_IDENTITY_ITEM:-Git identity}"
+REPLACE=""
+
+usage() { echo "usage: script/identity [--replace] [item]" >&2; exit 2; }
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --replace) REPLACE=1 ;;
+    -*)        usage ;;
+    *)         ITEM="$1" ;;
+  esac
+  shift
+done
+
+by_hand() {  # why 1Password could not supply it
+  cat <<TEXT
+!!! $1
+    Nothing was written. Either put that right and run this again, or create
+    ~/.gitconfig-user by hand:
+
+    [user]
+    	name = Your Name
+    	email = you@example.com
+    	signingkey = ssh-ed25519 AAAA...        # the public key, not a path
+TEXT
+  exit 1
+}
+
+if [ -e "$TARGET" ] && [ -z "$REPLACE" ]; then
+  echo "Left ~/.gitconfig-user as it is: it is already there."
+  echo "To write it again from 1Password: script/identity --replace"
+  exit 0
+fi
+
+command -v op >/dev/null 2>&1 \
+  || by_hand "1Password's command line tool, op, is not installed. The Brewfile installs it."
+command -v jq >/dev/null 2>&1 \
+  || by_hand "jq is not installed, and op's answer is read with it. The Brewfile installs it."
+
+# One field of the item, as op holds it. JSON, because the plain form quotes a
+# value that has a comma in it and masks one of a concealed type. When op
+# refuses, what comes back is what it said, and the status says so.
+field() {  # label
+  local answer value
+  answer="$(op item get "$ITEM" --fields "label=$1" --format json 2>&1)" \
+    || { printf '%s' "$answer"; return 1; }
+  value="$(printf '%s' "$answer" \
+    | jq -r 'if type == "array" then .[0] else . end | .value // empty' 2>/dev/null)"
+  [ -n "$value" ] || { printf 'no field called %s' "$1"; return 1; }
+  printf '%s' "$value"
+}
+
+# The first read is the one that finds out whether op can answer at all, so
+# what it says then is about the app, the account or the item.
+name="$(field name)" || by_hand "1Password did not hand over the name field of \"$ITEM\". It said:
+      $name
+    On a new machine, open the 1Password app, sign in, and switch on
+    Settings > Developer > Integrate with 1Password CLI."
+email="$(field email)" || by_hand "1Password did not hand over the email field of \"$ITEM\". It said:
+      $email"
+key="$(field signingkey)" || by_hand "1Password did not hand over the signingkey field of \"$ITEM\". It said:
+      $key"
+
+# What goes in the file ends up in every commit, so it is checked for being
+# what it claims. A private key most of all: none is ever written to disk here,
+# and an SSH Key item shows one a line below the public half.
+one_line() { [ "$(printf '%s\n' "$1" | wc -l)" -eq 1 ]; }
+one_line "$name"  || by_hand "The name field of \"$ITEM\" is more than one line."
+one_line "$email" || by_hand "The email field of \"$ITEM\" is more than one line."
+case "$key" in
+  *"PRIVATE KEY"*) by_hand "The signingkey field of \"$ITEM\" holds a private key. It wants the public one." ;;
+esac
+public_key='^(ssh|ecdsa|sk)-[a-z0-9@.-]+ AAAA[A-Za-z0-9+/=]+( [^[:cntrl:]]*)?$'
+{ one_line "$key" && [[ "$key" =~ $public_key ]]; } \
+  || by_hand "The signingkey field of \"$ITEM\" is not a public key, which starts ssh-ed25519 or ssh-rsa."
+
+# Beside the target, so the move is a rename and never a copy across volumes.
+# git writes the values, which quotes whatever its own format needs quoted.
+scratch="$(mktemp "$TARGET.XXXXXX")" || by_hand "Could not create a file beside ~/.gitconfig-user."
+trap 'rm -f "$scratch"' EXIT
+[ ! -f "$TARGET" ] || cat "$TARGET" > "$scratch" || by_hand "Could not read ~/.gitconfig-user."
+git config --file "$scratch" user.name "$name" \
+  && git config --file "$scratch" user.email "$email" \
+  && git config --file "$scratch" user.signingkey "$key" \
+  && mv -f "$scratch" "$TARGET" \
+  || by_hand "Could not write ~/.gitconfig-user."
+
+blob="${key#* }"
+blob="${blob%% *}"
+echo "Wrote ~/.gitconfig-user from \"$ITEM\": $name <$email>, signing with ${key%% *} ...${blob: -8}"

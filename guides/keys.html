@@ -114,7 +114,7 @@
 
     <h2 id="signing">Signing: proof a commit is yours</h2>
     <p>Anyone can type any name into a commit. A signature is what proves a commit really came from you, and it is what puts the “Verified” badge on GitHub.</p>
-    <p>Signing is switched on for every commit in <code>config/git/config</code>. The one piece that differs per Mac is <em>which</em> key to sign with, and that lives in <code>~/.gitconfig-user</code>, the file you create by hand.</p>
+    <p>Signing is switched on for every commit in <code>config/git/config</code>. The one piece that differs per Mac is <em>which</em> key to sign with, and that lives in <code>~/.gitconfig-user</code>, the file you create by hand or with <a href="install.html#identity"><code>make identity</code></a>.</p>
 
     <pre><code><span class="dim"># config/git/config, shared by every Mac</span>
 [gpg]
@@ -131,7 +131,7 @@
 
     <div class="callout warn">
       <p class="callout-title">The one thing to remember</p>
-      <p>If <code>~/.gitconfig-user</code> is missing, git has no key to sign with and commits cannot be signed. It is the only file a new Mac has to be given by hand.</p>
+      <p>If <code>~/.gitconfig-user</code> is missing, git has no key to sign with and commits cannot be signed. It is the only file a new Mac has to be given, and <a href="install.html#identity"><code>make identity</code></a> can write it from 1Password.</p>
     </div>
 
     <p>Checking works the other way round. <code>config/git/allowed_signers</code> lists the public keys this repository trusts, so <code>git log --show-signature</code> can say whether each commit was signed by one of them. Public keys are safe to publish, which is why that file is tracked.</p>

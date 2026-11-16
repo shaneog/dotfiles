@@ -113,7 +113,15 @@ given_origin_moved() {
 
 doctor() {
   ( cd / && HOME="$DHOME" PATH="$STUBS:$PATH" BREW_STATE="$BREW_STATE" \
-      XDG_STATE_HOME="" VM_STAMP="" "$FIX/script/doctor" )
+      XDG_STATE_HOME="" VM_STAMP="" "$FIX/script/doctor" "$@" )
+}
+
+# A machine where something else owns the shell's files. What they say stands
+# in for what must never be printed.
+given_managed_shell_files() {
+  echo "export MANAGED_SECRET_ZPROFILE=1" > "$DHOME/.zprofile"
+  echo "export MANAGED_SECRET_ZSHRC=1" > "$DHOME/.zshrc"
+  RECORD="$DHOME/.local/state/dotfiles/shell-files"
 }
 
 # The stubs and the base tools doctor calls, and nothing else: for the test
@@ -146,6 +154,9 @@ snapshot() {
   assert_contains "$output" "the VM tier passed"
   assert_contains "$output" "0 failures, 0 warnings"
   refute_contains "$output" "NOT CHECKED"
+  # None of the four shell files is here, so there is nothing to say of them.
+  refute_contains "$output" "Shell files"
+  [ ! -e "$DHOME/.local/state/dotfiles/shell-files" ] || { echo "a note was written about no files"; return 1; }
 }
 
 @test "doctor: changes nothing, even with something to report" {
@@ -237,6 +248,7 @@ snapshot() {
   run doctor
   [ "$status" -eq 1 ] || { echo "$output"; return 1; }
   assert_contains "$output" "FAIL  ~/.gitconfig-user is missing"
+  assert_contains "$output" "make identity"
 }
 
 @test "doctor: a machine without 1Password's agent socket fails" {
@@ -324,4 +336,134 @@ MACOS
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   echo "$output" | grep -q "NOT CHECKED:.*homebrew" || { echo "$output"; return 1; }
   refute_contains "$output" "everything the Brewfile declares"
+}
+
+# ------------------------------------------------- shell files something else owns
+
+@test "doctor: the first sight of a managed shell file is noted, not warned about" {
+  given_managed_shell_files
+  local before; before="$(snapshot)"
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "note  ~/.zprofile noted as it is now"
+  assert_contains "$output" "note  ~/.zshrc noted as it is now"
+  assert_contains "$output" "0 failures, 0 warnings"
+  # Its own note is the one thing doctor writes.
+  assert_equal "$(snapshot)" "$(printf '%s\n%s\n' "$before" "$RECORD" | sort)" "the home afterwards"
+}
+
+@test "doctor: what it keeps of a managed shell file is a hash and a name" {
+  given_managed_shell_files
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  refute_contains "$output" "MANAGED_SECRET"
+  refute_contains "$(cat "$RECORD")" "MANAGED_SECRET" "the note"
+  refute_contains "$(cat "$RECORD")" "$DHOME" "the note"
+  assert_equal "$(cut -d' ' -f2 "$RECORD" | tr '\n' ' ')" ".zprofile .zshrc " "the files noted"
+  if grep -qvE '^[0-9a-f]{40,64} \.[a-z]+$' "$RECORD"; then
+    echo "a line that is not a hash and a name: $(cat "$RECORD")"; return 1
+  fi
+}
+
+@test "doctor: a managed shell file that has not changed is said to be unchanged" {
+  given_managed_shell_files
+  doctor >/dev/null
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "ok    2 unchanged since last accepted"
+  assert_contains "$output" "0 failures, 0 warnings"
+  refute_contains "$output" "noted as it is now"
+}
+
+@test "doctor: a managed shell file that changed warns on every run until accepted" {
+  given_managed_shell_files
+  doctor >/dev/null
+  echo "export MANAGED_SECRET_NEW=1" >> "$DHOME/.zshrc"
+  run doctor
+  [ "$status" -eq 0 ] || { echo "a changed file is a warning, not a failure: $output"; return 1; }
+  assert_contains "$output" "warn  ~/.zshrc has changed since it was last accepted: script/doctor --accept"
+  assert_contains "$output" "ok    1 unchanged since last accepted"
+  assert_contains "$output" "0 failures, 1 warnings"
+  refute_contains "$output" "MANAGED_SECRET"
+  # Regression in the making: a report that updated the note as it went would
+  # be gone the second time anyone looked.
+  run doctor
+  assert_contains "$output" "warn  ~/.zshrc has changed since it was last accepted"
+}
+
+@test "doctor: --accept takes a changed shell file as it is, and the warning stops" {
+  given_managed_shell_files
+  doctor >/dev/null
+  echo "export MANAGED_SECRET_NEW=1" >> "$DHOME/.zshrc"
+  run doctor --accept
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "ok    ~/.zshrc accepted as it is now"
+  assert_contains "$output" "0 failures, 0 warnings"
+  run doctor
+  assert_contains "$output" "ok    2 unchanged since last accepted"
+  assert_contains "$output" "0 failures, 0 warnings"
+}
+
+@test "doctor: a managed shell file that is removed warns until that is accepted" {
+  given_managed_shell_files
+  doctor >/dev/null
+  rm "$DHOME/.zshrc"
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "warn  ~/.zshrc is gone since it was last accepted: script/doctor --accept"
+  run doctor
+  assert_contains "$output" "warn  ~/.zshrc is gone since it was last accepted"
+  run doctor --accept
+  assert_contains "$output" "ok    ~/.zshrc is gone, and that is accepted"
+  run doctor
+  assert_contains "$output" "ok    1 unchanged since last accepted"
+  refute_contains "$output" ".zshrc"
+}
+
+@test "doctor: when the last managed shell file goes, so does the note of them" {
+  given_managed_shell_files
+  doctor >/dev/null
+  rm "$DHOME/.zshrc" "$DHOME/.zprofile"
+  doctor --accept >/dev/null
+  [ ! -e "$RECORD" ] || { echo "the note outlived the files: $(cat "$RECORD")"; return 1; }
+  run doctor
+  refute_contains "$output" "Shell files"
+}
+
+@test "doctor: a shell file that appears later is noted beside the ones already watched" {
+  given_managed_shell_files
+  doctor >/dev/null
+  echo "export MANAGED_SECRET_BASHRC=1" > "$DHOME/.bashrc"
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "note  ~/.bashrc noted as it is now"
+  assert_contains "$output" "ok    2 unchanged since last accepted"
+  assert_contains "$output" "0 failures, 0 warnings"
+}
+
+@test "doctor: a shell file that is this repo's own is not watched" {
+  # A home with no ZDOTDIR pivot links ~/.zshrc into the clone. Git already
+  # says when that changes, and it is nobody else's to rewrite.
+  echo "# ours" > "$FIX/config/zsh/.zshrc"
+  ln -s "$FIX/config/zsh/.zshrc" "$DHOME/.zshrc"
+  ln -s .zshrc "$DHOME/.zprofile"
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  refute_contains "$output" "Shell files"
+  [ ! -e "$DHOME/.local/state/dotfiles/shell-files" ] || { echo "our own file was noted"; return 1; }
+}
+
+@test "doctor: a note that cannot be written is said, not skipped over" {
+  # Otherwise every run is a first run, and a change is never reported.
+  given_managed_shell_files
+  mkdir "$RECORD.new"
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  echo "$output" | grep -q "NOT CHECKED:.*shell-files" || { echo "$output"; return 1; }
+}
+
+@test "doctor: an option it does not know is refused" {
+  run doctor --fix
+  [ "$status" -eq 2 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "usage: script/doctor [--accept]"
 }

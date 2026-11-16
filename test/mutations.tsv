@@ -146,6 +146,24 @@ script/doctor	s|^if \[ -S "$HOME/Library|if [ -e "$HOME/Library|	test/unit/docto
 script/doctor	s@^      warn "$line is in the Brewfile and not installed: make update"@      :@	test/unit/doctor.bats	this machine lacks	a declared package that is absent goes unreported
 script/doctor	s@^      || note "@      || warn "@	test/unit/doctor.bats	counted, not warned	every package a managed machine has is a warning
 script/doctor	s@^  if \[ -z "$undeclared" \]; then@  if false; then@	test/unit/doctor.bats	could not finish	a brew-drift that printed no report reads as no drift
+script/doctor	s|^  keep="$was"$|  keep="$now"|	test/unit/doctor.bats	warns on every run until accepted	a changed shell file is reported once and then taken as accepted
+script/doctor	s|^    warn "$shown has changed since it was last accepted.*|    :|	test/unit/doctor.bats	warns on every run until accepted	a shell file something else rewrote goes unreported
+script/doctor	s|^    warn "$shown is gone since it was last accepted.*|    :|	test/unit/doctor.bats	removed warns until	a shell file that vanished goes unreported
+script/doctor	s|^  elif \[ -n "$ACCEPT" \]; then|  elif false; then|	test/unit/doctor.bats	--accept takes a changed shell file	a change can never be accepted, so the warning never stops
+script/doctor	s|^    note "$shown noted as it is now.*|    warn "$shown is new"|	test/unit/doctor.bats	first sight of a managed shell file	the first run on a managed machine warns about every file
+script/doctor	s|^    "$DOTFILESDIR"/\*) return 0 ;;|    /nowhere/*) return 0 ;;|	test/unit/doctor.bats	this repo's own is not watched	the repo's own shell files are watched as if something else owned them
+script/doctor	s|^  git hash-object --no-filters "$HOME/$1" 2>/dev/null|  tr -d " \\n" < "$HOME/$1"; echo|	test/unit/doctor.bats	a hash and a name	what a managed shell file says is copied into the note
+script/doctor	s|^    not_checked "shell-files".*|    :|	test/unit/doctor.bats	note that cannot be written	a note that cannot be written makes every run a first run, silently
+script/identity	s|^if \[ -e "$TARGET" \] && \[ -z "$REPLACE" \]; then|if false; then|	test/unit/identity.bats	already there is left alone	an existing ~/.gitconfig-user is written over without being asked
+script/identity	s|^\[ ! -f "$TARGET" \] \|\| cat "$TARGET" > "$scratch".*|:|	test/unit/identity.bats	keeps the rest of the file	--replace drops whatever else the file held
+script/identity	s|^scratch="$(mktemp "$TARGET.XXXXXX")".*|scratch="$TARGET"|	test/unit/identity.bats	write that fails partway	the file is written in place, so a failure leaves half of one
+script/identity	s|^trap 'rm -f "$scratch"' EXIT|:|	test/unit/identity.bats	write that fails partway	a failed write leaves its scratch file in the home directory
+script/identity	s|^    \|\| { printf '%s' "$answer"; return 1; }|    \|\| true|	test/unit/identity.bats	signed out of 1Password	what op said when it refused is thrown away
+script/identity	s|^  \*"PRIVATE KEY"\*) by_hand.*|  *"NEVER"*) : ;;|	test/unit/identity.bats	private key is refused	a private key is turned away without being called one
+script/identity	s|^{ one_line "$key" && \[\[ "$key" =~ $public_key \]\]; } \\|true \\|	test/unit/identity.bats	not a public key is refused	whatever the signingkey field holds is written as the key
+script/identity	s|^one_line "$name"  \|\| by_hand.*|:|	test/unit/identity.bats	more than one line is refused	a name of several lines is written into the file
+script/identity	s|^git config --file "$scratch" user.name "$name" \\|printf "[user]\\n\\tname = %s\\n" "$name" >> "$scratch" \\|	test/unit/identity.bats	git's format would misread	the name is written as text, and git reads back part of it
+script/identity	s|^    -\*)        usage ;;|    -*)        : ;;|	test/unit/identity.bats	does not know is refused	a mistyped option is ignored and the run goes ahead
 script/update	s|^    DOTFILES_UPDATE_FROM="$before" exec .*|    :|	test/unit/update.bats	pulled is the one	the old script finishes a run that pulled a new one
 script/update	s@^      || abort "The pull failed.*@      || true@	test/unit/update.bats	stops when the pull fails	a failed pull is followed by linking and installing
 script/update	s|^set -euo pipefail|set -uo pipefail|	test/unit/update.bats	link step that fails	a failed link step is followed by an install
