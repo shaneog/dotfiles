@@ -86,6 +86,35 @@ tmux installs its own plugins the first time it starts.
 
 Running the same command again later is safe. So is `~/.dotfiles/script/bootstrap`.
 
+### Keeping a machine current
+
+On a machine that is already set up, from `~/.dotfiles`:
+
+```sh
+make update    # pull, link, install from the Brewfile, restore Neovim's plugins
+make doctor    # report on this machine, and change nothing
+```
+
+`make update` is the part of bootstrap that needs no password. It does not
+install Homebrew, set the login shell or apply the macOS settings. It pulls
+with `git pull --rebase --autostash`, and then starts again as the script it
+just pulled, so a step added upstream runs straight away.
+
+`make doctor` says whether a machine is healthy:
+
+| It checks | And reports |
+| --- | --- |
+| The links `script/setup` makes | A failure for each one that is missing or points somewhere else. |
+| The clone against `origin/main` | A warning when it is behind, or holds commits that were never pushed. It asks the remote and does not fetch. |
+| `~/.gitconfig-user` and 1Password's agent socket | A failure when either is missing. |
+| [`script/macos --check`](script/macos) | A warning for each setting that is not applied. |
+| [`script/brew-drift`](script/brew-drift) | A warning for each Brewfile entry that is not installed, and a count of what is installed beyond it. |
+| The last `make test-vm` | A warning when it passed more than 30 days ago, or never has on a machine with Tart. |
+
+It exits non-zero only for failures. A check that cannot run, such as the
+remote when offline, is listed under `NOT CHECKED` and is never counted as a
+pass.
+
 ### Installing from somewhere else
 
 To install from somewhere other than the default branch (a branch you are still
@@ -274,9 +303,11 @@ Dependabot looks after one other thing, the action versions in the workflows.
 | [`script/setup`](script/setup) | Creates the links. Run it again after adding a config. |
 | [`script/macos`](script/macos) | Applies the macOS settings. `--check` only reports, and `--reset-dock` also clears the Dock's pinned icons. The first run records the previous values under `~/.local/share/dotfiles/macos-defaults`. |
 | [`script/after-setup`](script/after-setup) | Installs Neovim's plugins and treesitter parsers, headless. |
+| [`script/update`](script/update) | Brings a machine that is already set up level with the repo, without a password. `make update`. See [keeping a machine current](#keeping-a-machine-current). |
+| [`script/doctor`](script/doctor) | Reports on this machine: links, how far behind it is, what is missing, what has drifted. Changes nothing. `make doctor`. |
 | [`script/remove`](script/remove) | Takes the dotfiles out again. See [Uninstall](#uninstall). |
-| [`script/audit`](script/audit) | Finds upstream rot: renamed, deprecated or archived packages and plugins, and tools the config calls that no Brewfile installs. `make audit`. |
-| [`script/brew-drift`](script/brew-drift) | Compares what this machine has installed with the Brewfile, in both directions. Advisory. `make brew-drift`. |
+| [`script/audit`](script/audit) | Finds upstream rot: renamed, deprecated or archived packages and plugins, tools the config calls that no Brewfile installs, and a Neovim lockfile that has not changed in six months. It is about the repo, so it says the same on a CI runner and on a laptop. `make audit`. |
+| [`script/brew-drift`](script/brew-drift) | Compares what this machine has installed with the Brewfile, in both directions. Advisory. `make brew-drift`. `make doctor` reads it too. |
 | [`script/mutate`](script/mutate), [`script/sweep`](script/sweep) | Test the tests. See [Tests](#tests). |
 
 ## Uninstall

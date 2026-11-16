@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+#
+# Brings a machine that is already set up level with the repo: pull, link,
+# install what the Brewfile declares, and put Neovim's plugins where the
+# lockfile says.
+#
+# script/bootstrap does these too, and is still how a new machine starts. This
+# is the part of it that never needs a password: it installs no Homebrew, sets
+# no login shell and applies no macOS settings. script/doctor reports when one
+# of those wants attention.
+set -euo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+DOTFILESDIR="$(pwd -P)"
+
+abort() { echo "!!! $*" >&2; exit 1; }
+step()  { printf '\n--> %s\n' "$*"; }
+
+# Everything runs from inside main, which bash reads to its closing brace before
+# running any of it. The pull can replace this file, and bash otherwise reads a
+# script as it goes, from the same offset in whatever is there now.
+main() {
+  local before now not_done=""
+
+  if [ -z "${DOTFILES_UPDATE_FROM:-}" ]; then
+    before="$(git rev-parse --short HEAD)"
+    step "Pulling $DOTFILESDIR:"
+    git pull --rebase --autostash \
+      || abort "The pull failed, so nothing was linked or installed."
+    # Start again as the script that was just pulled, so a step added upstream
+    # runs on this run and not on the next one.
+    DOTFILES_UPDATE_FROM="$before" exec "$DOTFILESDIR/script/update"
+  fi
+  before="$DOTFILES_UPDATE_FROM"
+
+  step "Linking:"
+  script/setup
+
+  if command -v brew >/dev/null 2>&1; then
+    step "Installing from the Brewfile:"
+    brew bundle check --file="$DOTFILESDIR/Brewfile" \
+      || brew bundle --file="$DOTFILESDIR/Brewfile"
+  else
+    step "Not installing from the Brewfile: brew is not installed"
+    not_done="$not_done brewfile"
+  fi
+
+  step "Restoring Neovim's plugins:"
+  script/after-setup
+
+  now="$(git rev-parse --short HEAD)"
+  if [ "$before" = "$now" ]; then
+    step "Nothing new upstream: still at $now"
+  else
+    step "Moved from $before to $now"
+  fi
+  [ -z "$not_done" ] || printf '    NOT DONE:%s\n' "$not_done"
+}
+
+main

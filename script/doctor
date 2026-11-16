@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+#
+# Reports on this machine, where script/audit reports on the repo: whether the
+# links script/setup makes are intact, whether the clone is level with
+# origin/main, whether the two things only a person can supply are in place,
+# and what script/macos --check and script/brew-drift have to say.
+#
+# Changes nothing, in the home directory or in the clone: the remote is asked
+# where it is with ls-remote, not fetched.
+#
+# Exits non-zero only for what is broken: a link that is missing, no identity
+# for git to sign with, no agent to sign through. Drift is a warning. Sections
+# that cannot run say so rather than passing silently.
+
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+DOTFILESDIR="$(pwd -P)"
+
+FAILURES=0
+WARNINGS=0
+SKIPPED=""
+
+fail() { printf '  FAIL  %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
+warn() { printf '  warn  %s\n' "$1"; WARNINGS=$((WARNINGS + 1)); }
+ok()   { printf '  ok    %s\n' "$1"; }
+note() { printf '  note  %s\n' "$1"; }
+head2() { printf '\n== %s\n' "$1"; }
+not_checked() {  # name for the summary, reason
+  SKIPPED="$SKIPPED $1"
+  printf '  ----  not checked: %s\n' "$2"
+}
+
+# A path under $HOME as it would be typed.
+tilde() { printf '~%s' "${1#"$HOME"}"; }
+
+# /bin/date first: -v is BSD's, and a GNU date earlier on PATH would read it as
+# a file name. The second form is GNU's, for where /bin/date is GNU's too.
+days_ago() {  # days
+  /bin/date -v-"$1"d +%Y-%m-%d 2>/dev/null || date -d "-$1 days" +%Y-%m-%d
+}
+
+# ------------------------------------------------------------------------ links
+
+head2 "Links into the clone"
+# The same three things script/setup links, by the same rule: the Brewfile, and
+# each entry git tracks directly under config/ and ssh/. A link is intact when
+# it is a link and resolves to the clone's copy, which is the test setup uses to
+# call one unchanged.
+LINKED=0
+BROKEN=0
+check_link() {  # target in the clone, link path
+  if [ -L "$2" ] && [ "$2" -ef "$1" ]; then
+    LINKED=$((LINKED + 1))
+  else
+    fail "$(tilde "$2") is not a link to ${1#"$DOTFILESDIR"/}: script/setup"
+    BROKEN=$((BROKEN + 1))
+  fi
+}
+
+check_directory() {  # top-level directory name
+  local source="$DOTFILESDIR/$1" target="$HOME/.$1" entry
+  if [ -L "$target" ] && [ "$target" -ef "$source" ]; then
+    fail "$(tilde "$target") is a link to the whole of $1/, so other tools write into the clone: script/setup"
+    BROKEN=$((BROKEN + 1))
+    return
+  fi
+  # script/setup hands an ~/.ssh that holds a private key to whatever manages
+  # it, and links nothing there. That is a decision, not a missing link.
+  if [ "$1" = "ssh" ] && ls "$target"/id_* >/dev/null 2>&1; then
+    ok "$(tilde "$target") holds a private key and is managed elsewhere, so nothing is linked there"
+    return
+  fi
+  while IFS= read -r entry; do
+    [ -n "$entry" ] || continue
+    check_link "$source/$entry" "$target/$entry"
+  done <<EOF
+$(git ls-files -- "$1" 2>/dev/null | cut -d/ -f2 | sort -u)
+EOF
+}
+
+check_link "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"
+check_link "$DOTFILESDIR/config/zsh/.zshenv" "$HOME/.zshenv"
+check_directory config
+check_directory ssh
+[ "$BROKEN" -gt 0 ] || ok "all $LINKED links point into the clone"
+
+# ------------------------------------------------------------------------ clone
+
+head2 "The clone against origin/main"
+# Nothing else says a machine is behind: the shell starts the same either way.
+# Asked with ls-remote, which answers with one commit id and writes nothing. A
+# commit this clone has never seen cannot be counted, only named.
+here="$(git rev-parse HEAD 2>/dev/null)"
+remote="$(GIT_TERMINAL_PROMPT=0 git ls-remote origin refs/heads/main 2>/dev/null | cut -f1)"
+if [ -z "$here" ]; then
+  not_checked "clone" "$DOTFILESDIR is not a git clone"
+elif [ -z "$remote" ]; then
+  not_checked "clone" "origin did not answer, so where main is cannot be known"
+elif [ "$remote" = "$here" ]; then
+  ok "level with origin/main at $(git rev-parse --short HEAD)"
+elif ! git cat-file -e "$remote^{commit}" 2>/dev/null; then
+  warn "behind origin/main, which has moved to $(printf '%s' "$remote" | cut -c1-7): make update"
+else
+  behind="$(git rev-list --count "HEAD..$remote")"
+  ahead="$(git rev-list --count "$remote..HEAD")"
+  [ "$behind" -eq 0 ] || warn "behind origin/main by $behind: make update"
+  [ "$ahead" -eq 0 ] || warn "ahead of origin/main by $ahead, which nothing else has until it is pushed"
+fi
+
+# --------------------------------------------------------------------- identity
+
+head2 "What only you can supply"
+# The two things no script here can create, because they are about who you are.
+# script/bootstrap names them as it finishes; this is what notices afterwards.
+if [ -f "$HOME/.gitconfig-user" ]; then
+  ok "$(tilde "$HOME/.gitconfig-user") is there"
+else
+  fail "$(tilde "$HOME/.gitconfig-user") is missing: git cannot sign a commit without it, and says nothing"
+fi
+if [ -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]; then
+  ok "1Password's SSH agent has its socket"
+else
+  fail "1Password's SSH agent has no socket: switch it on under Settings > Developer"
+fi
+
+# ---------------------------------------------------------------- macOS settings
+
+head2 "macOS settings"
+# The repo being right does not make the machine right. script/macos --check
+# reads the same table the apply pass writes, so this notices a setting the OS
+# reset, or an upgrade that left a PAM module copy behind.
+if [ ! -x script/macos ]; then
+  not_checked "macos" "script/macos is not here"
+elif ! command -v defaults >/dev/null 2>&1; then
+  not_checked "macos" "there is no defaults command, so this is not macOS"
+else
+  drift_output="$(script/macos --check 2>&1)"
+  if [ $? -eq 0 ]; then
+    ok "$(printf '%s' "$drift_output" | tail -1)"
+  else
+    # A here-string, not a pipe: `warn` in a piped while-loop increments the
+    # counter in a subshell, and the summary would report none of them.
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      warn "${line#  not applied: }"
+    done <<< "$(printf '%s\n' "$drift_output" | grep 'not applied:')"
+    warn "$(printf '%s' "$drift_output" | tail -1): script/macos"
+  fi
+fi
+
+# ------------------------------------------------------------------- Homebrew
+
+head2 "Homebrew against the Brewfile"
+# script/brew-drift compares in both directions, and the two mean different
+# things here. Something declared and not installed is this machine behind the
+# repo, which `make update` fixes. Something installed and not declared may
+# belong to whatever else provisions the machine, so it is counted and left for
+# `make brew-drift` to list.
+if ! command -v brew >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+  not_checked "homebrew" "brew or jq is not installed"
+elif [ ! -x script/brew-drift ]; then
+  not_checked "homebrew" "script/brew-drift is not here"
+else
+  brew_report="$(script/brew-drift 2>&1)"
+  undeclared="$(printf '%s\n' "$brew_report" | sed -n 's/^  \([0-9][0-9]*\) undeclared, .*/\1/p')"
+  if [ -z "$undeclared" ]; then
+    not_checked "homebrew" "script/brew-drift ended without a summary"
+  else
+    absent=0
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      warn "$line is in the Brewfile and not installed: make update"
+      absent=$((absent + 1))
+    done <<< "$(printf '%s\n' "$brew_report" | awk '
+      /^== Declared in the Brewfile/ { on = 1; next }
+      /^==/ { on = 0 }
+      on && NF && $1 != "nothing" { print ($2 == "(cask)" ? "cask " : "") $1 }')"
+    [ "$absent" -gt 0 ] || ok "everything the Brewfile declares is installed"
+    [ "$undeclared" -eq 0 ] \
+      || note "$undeclared installed on request that the Brewfile does not declare: make brew-drift"
+  fi
+fi
+
+# ------------------------------------------------------------------ the vm tier
+
+head2 "The VM tier, which only runs locally"
+# A Tart VM on real macOS is the only test here that installs onto a genuinely
+# fresh machine, and it cannot be moved to CI: GitHub's macOS runners answer
+# kern.hv_support=0 and kern.hv_vmm_present=1, being VMs themselves. So it runs
+# when someone remembers, and it once went six weeks without anyone noticing.
+# `make test-vm` stamps a date on success; this is the part that notices.
+VM_STAMP="${VM_STAMP:-${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vm-last-run}"
+VM_STALE_AFTER_DAYS="${VM_STALE_AFTER_DAYS:-30}"
+if [ -f "$VM_STAMP" ]; then
+  vm_cutoff="$(days_ago "$VM_STALE_AFTER_DAYS")"
+  vm_last="$(cat "$VM_STAMP")"
+  if [ "$vm_last" \< "$vm_cutoff" ]; then
+    warn "the VM tier last passed $vm_last, over $VM_STALE_AFTER_DAYS days ago: make test-vm"
+  else
+    ok "the VM tier passed $vm_last"
+  fi
+elif ! command -v tart >/dev/null 2>&1; then
+  # A machine that cannot run the tier is not one that forgot to.
+  not_checked "vm-tier" "tart is not installed, so this machine cannot run it"
+else
+  warn "the VM tier has no recorded run: make test-vm"
+fi
+
+# ------------------------------------------------------------------------ result
+
+printf '\n== Summary\n'
+printf '  %s failures, %s warnings\n' "$FAILURES" "$WARNINGS"
+[ -z "$SKIPPED" ] || printf '  NOT CHECKED:%s\n' "$SKIPPED"
+[ "$FAILURES" -eq 0 ] || exit 1
+exit 0

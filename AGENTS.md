@@ -119,8 +119,9 @@ there. The rest has not been tested until CI or a Mac has run it. Name it in
 the pull request as not checked; do not report it as passing.
 
 - Anything that calls Homebrew, `launchctl` or `defaults` for real: the
-  Brewfile check, `make audit`, `make brew-drift`, and `script/macos` and
-  `script/bootstrap` outside their stubbed unit tests.
+  Brewfile check, `make audit`, `make brew-drift`, `make update`,
+  `make doctor`, and `script/macos` and `script/bootstrap` outside their
+  stubbed unit tests.
 - The ssh effective-config tests, Ghostty's config check, the treesitter tests
   without `tree-sitter-cli`, and a few tests that lean on BSD `date` or a macOS
   path. These fail or skip on `main` too, so compare with `main` before blaming

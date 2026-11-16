@@ -23,6 +23,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The audit dates files by their last commit, and the default clone
+          # has one commit, in which every file looks new.
+          fetch-depth: 0
 
       - name: Audit
         env:

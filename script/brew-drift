@@ -6,7 +6,8 @@
 # Advisory, and deliberately not part of script/audit or its weekly cron: on a
 # machine whose shell is provisioned by something else, most of the first list
 # belongs to that something else, and a check that cries wolf every Monday gets
-# ignored. Run it when reconciling, and decide each entry.
+# ignored. Run it when reconciling, and decide each entry. script/doctor reads
+# this report: it warns about the second list and only counts the first.
 
 set -uo pipefail
 

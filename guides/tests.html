@@ -95,13 +95,14 @@
     </ul>
 
     <h2 id="outside">Watching the outside world</h2>
-    <p>Dotfiles depend on things other people maintain: Homebrew packages, shell plugins, macOS itself. Those change without warning, so two scripts keep an eye on them.</p>
+    <p>Dotfiles depend on things other people maintain: Homebrew packages, shell plugins, macOS itself. Those change without warning, so one script keeps an eye on them, and two more look at the Mac in front of you.</p>
 
     <div class="table-wrap">
       <table>
         <thead><tr><th>Command</th><th>What it looks for</th></tr></thead>
         <tbody>
-          <tr><td><code>make audit</code></td><td>Packages that were renamed or deprecated, plugin projects that were archived, tools the config uses but the Brewfile does not install, and config left behind for tools that are gone.</td></tr>
+          <tr><td><code>make audit</code></td><td>Packages that were renamed or deprecated, plugin projects that were archived, tools the config uses but the Brewfile does not install, config left behind for tools that are gone, and a Neovim lockfile nobody has updated in six months. It is about the repository, so it gives the same answer on GitHub and on any Mac.</td></tr>
+          <tr><td><code>make doctor</code></td><td>This Mac: its signposts, whether it is behind GitHub, the two things only you can supply, macOS settings that have drifted, and how long ago the virtual machine test last passed. <a href="install.html#update">Keeping a Mac up to date</a> has the details.</td></tr>
           <tr><td><code>make brew-drift</code></td><td>What this Mac has installed that the Brewfile does not list, and the reverse. Advice only: you decide each one.</td></tr>
         </tbody>
       </table>
@@ -109,7 +110,7 @@
 
     <div class="callout note">
       <p class="callout-title">Skipping is not passing</p>
-      <p>When the audit cannot run one of its checks, it prints <code>NOT CHECKED</code> and says which. It never reports a check it skipped as a check that passed.</p>
+      <p>When the audit or the doctor cannot run one of its checks, it prints <code>NOT CHECKED</code> and says which. Neither reports a check it skipped as a check that passed.</p>
     </div>
 
     <h2 id="ci">Robots on GitHub</h2>

@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift mutate sweep
+.PHONY: test test-static test-unit test-integration test-cold test-vm lint audit brew-drift mutate sweep update doctor
 
 test: test-static test-unit test-integration
 
@@ -26,8 +26,20 @@ test-vm:
 
 lint: test-static
 
-# Upstream rot: renamed, deprecated or archived packages, plus tools the config
-# invokes that no Brewfile installs. Runs weekly in CI; this is the same check.
+# Brings a machine that is already set up level with the repo: pull, link,
+# install from the Brewfile, restore Neovim's plugins. Asks for no password.
+update:
+	./script/update
+
+# Whether this machine is healthy: its links, how far it is behind, the two
+# things only a person can supply, and what macos --check and brew-drift say.
+# Changes nothing.
+doctor:
+	./script/doctor
+
+# Upstream rot: renamed, deprecated or archived packages, tools the config
+# invokes that no Brewfile installs, and a Neovim lockfile nobody has moved in
+# six months. Runs weekly in CI; this is the same check, with the same answer.
 audit:
 	./script/audit
 

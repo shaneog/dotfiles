@@ -11,12 +11,12 @@ open guides/index.html
 | Page | Explains |
 | ------------- | ------------- |
 | `index.html` | What dotfiles are, the five ideas behind this repo, a map of it, a glossary |
-| `install.html` | `script/bootstrap` step by step, re-running it, `script/remove` |
+| `install.html` | `script/bootstrap` step by step, re-running it, `make update` and `make doctor`, `script/remove` |
 | `layout.html` | The symlinks `script/setup` creates, what `.gitignore` covers, per-machine files |
 | `shell.html` | zsh startup order, layering on a managed shell, `lib/`, tmux autostart, startup time |
 | `keys.html` | SSH auth and commit signing through 1Password, Touch ID for `sudo` |
 | `tools.html` | Cheat sheet: git aliases, tmux and Neovim keys, fzf, the Brewfile |
-| `tests.html` | The test tiers, `mutate` and `sweep`, `audit`, the CI workflows |
+| `tests.html` | The test tiers, `mutate` and `sweep`, `audit` and `doctor`, the CI workflows |
 
 ## Keeping them true
 
