@@ -322,6 +322,23 @@ STUB
   echo "$output" | grep -q "history_binding=1" || { echo "history bindings never arrived: $output"; return 1; }
 }
 
+@test "a suggestion is drawn in a colour the terminal profile can show" {
+  # Gotham gives slots 0, 8, 10 and 12 to shades of the background, and 8 is
+  # what the plugin draws a suggestion in unless told otherwise: it is offered,
+  # and cannot be read. Asked of both homes, because a base layer that loaded
+  # the plugin itself still draws on this repo's palette.
+  local home style
+  for home in "$HOME_WITHOUT" "$HOME_WITH"; do
+    run run_login_shell "$home" '@zinit-scheduler burst >/dev/null 2>&1
+      print "style=$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE"'
+    style="$(echo "$output" | sed -n 's/^style=//p')"
+    case "$style" in
+      fg=0|fg=8|fg=10|fg=12|"")
+        echo "suggestions are drawn in '$style' in $home: $output"; return 1 ;;
+    esac
+  done
+}
+
 @test "what a shell runs is what pins.zsh names" {
   run_login_shell "$HOME_WITHOUT" 'true' >/dev/null 2>&1
   # HEAD holds the commit when one is checked out, and a branch's name otherwise.
