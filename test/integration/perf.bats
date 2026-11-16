@@ -57,7 +57,7 @@ teardown() {
   local json="$BATS_TEST_TMPDIR/bench.json"
   run hyperfine --warmup 2 --runs 10 --export-json "$json" --shell=none \
     -- "env -i HOME=$FAKE_HOME PATH=$PATH TERM=xterm-256color USER=${USER:-tester} \
-        ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 $ZSH_BIN -lic exit"
+        SHLVL=1 ZSH_NO_TMUX_AUTOSTART=1 ZSH_NO_ZCOMPILE=1 $ZSH_BIN -lic exit"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   # The budget is checked against the fastest run, not the mean. Every run on a
   # busy machine is inflated, and this failed twice during long sessions for no

@@ -76,6 +76,8 @@ config/zsh/.zprofile	s|^if \[ -z "${HOMEBREW_PREFIX}" \] && \[ -d "/opt/homebrew
 config/zsh/.zshenv	s|^typeset -gU cdpath fpath path|# gone|	test/integration/startup.bats	nested non-login shell	every tmux pane gets the system directories on PATH twice
 config/zsh/.zshrc	s|^if (( $+commands\[launchctl\] && SHLVL <= 1 + $+TMUX )); then|if (( $+commands[launchctl] )); then|	test/integration/startup.bats	hands its PATH to GUI apps	a nested shell's PATH becomes the one every GUI app gets
 config/zsh/.zshrc	s|SHLVL <= 1 + $+TMUX|SHLVL <= 1|	test/integration/startup.bats	hands its PATH to GUI apps	tmux panes never refresh the PATH GUI apps get
+test/helpers/common.bash	s|TERM=xterm-256color SHLVL=1 |TERM=xterm-256color |	test/integration/startup.bats	suite's own shells	running the tests on a Mac leaves GUI apps with a PATH in a deleted temp home
+test/integration/cold-cache.bats	s|TERM=xterm-256color SHLVL=1 |TERM=xterm-256color |	test/static/lint.bats	started one level down	a test that builds its own shell hands a throwaway PATH to launchd
 config/zsh/.zprofile	s|^export LESSCHARSET=utf-8|LESSCHARSET=utf-8|	test/integration/startup.bats	reach child processes	less never sees the charset it was given
 config/zsh/.zprofile	s|^  export LANG=|  LANG=|	test/integration/startup.bats	reach child processes	a shell started without LANG keeps the locale to itself
 config/zsh/lib/history.zsh	s|^HISTORY_IGNORE=|HISTIGNORE=|	test/integration/startup.bats	never reach the history file	the ignore list goes back to a variable zsh does not read
