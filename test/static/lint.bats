@@ -311,6 +311,29 @@ load '../helpers/common'
     || { echo "the shared step no longer installs from the Brewfile"; return 1; }
 }
 
+@test "installing from the Brewfile shows Homebrew's own output" {
+  # Regression: `brew bundle` names every entry it is about to install, then
+  # installs them all with one `brew install` and prints nothing of it until
+  # the last is in. On a new machine, with the apps to download, that was many
+  # minutes of a still terminal after a list ending at the fonts. It was taken
+  # for a hang and cancelled. --verbose is what passes the output through.
+  #
+  # Read from the scripts: running the install needs Homebrew, and bootstrap
+  # finds the real one ahead of any stand-in. test/unit/update.bats checks what
+  # script/update asks of brew.
+  local script installs
+  for script in bootstrap update; do
+    installs="$(grep -E '^[^#]*brew bundle' "$REPO/script/$script" \
+      | grep -oE 'brew bundle[^|&;]*' | grep -v '^brew bundle check' || true)"
+    [ -n "$installs" ] || { echo "found no brew bundle install in script/$script"; return 1; }
+    if printf '%s\n' "$installs" | grep -qv -e '--verbose'; then
+      echo "script/$script installs from the Brewfile without --verbose:"
+      printf '%s\n' "$installs" | grep -v -e '--verbose'
+      return 1
+    fi
+  done
+}
+
 @test "no stray runtime state is lurking under config/" {
   # The directories here are linked into ~/.config, so the tools they configure
   # write their state here. Anything new must be a deliberate decision: track

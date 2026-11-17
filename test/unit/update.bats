@@ -130,8 +130,10 @@ NEWER
   # The clone as the script names it: with links resolved, which on a Mac puts
   # /private in front of a temporary directory.
   local brewfile; brewfile="$(cd "$CLONE" && pwd -P)/Brewfile"
+  # --verbose: bundle otherwise keeps the install's output to itself until
+  # everything is in, and a long install is then a terminal showing nothing.
   assert_equal "$(grep '^brew' "$LOG" | tr '\n' ',')" \
-    "brew bundle check --file=$brewfile,brew bundle --file=$brewfile," \
+    "brew bundle check --file=$brewfile,brew bundle --file=$brewfile --verbose," \
     "what brew was asked, in order"
 }
 

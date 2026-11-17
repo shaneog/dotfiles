@@ -38,8 +38,11 @@ main() {
 
   if command -v brew >/dev/null 2>&1; then
     step "Installing from the Brewfile:"
+    # --verbose shows each download and install as it happens. Without it
+    # Homebrew lists what it will install and then prints nothing until all of
+    # it is in, which with an app or two in the list looks like a hang.
     brew bundle check --file="$DOTFILESDIR/Brewfile" \
-      || brew bundle --file="$DOTFILESDIR/Brewfile"
+      || brew bundle --file="$DOTFILESDIR/Brewfile" --verbose
   else
     step "Not installing from the Brewfile: brew is not installed"
     not_done="$not_done brewfile"
