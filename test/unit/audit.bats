@@ -85,6 +85,9 @@ audit() {
   ( cd "${AUDIT_DIR:-$FIX}" && PATH="$STUBS:$PATH" ./script/audit )
 }
 
+# The audit asks zsh which words are the shell's own.
+whence_works() { zsh -fc 'whence -w dirs' >/dev/null 2>&1; }
+
 # git for the fixture, with nothing of the machine's own config: a signing key
 # or a hook there is not the fixture's to trigger.
 fix_git() {
@@ -225,6 +228,36 @@ EOF
   echo "$output" | grep -q "'nosuchtool' is invoked by config" || { echo "$output"; return 1; }
 }
 
+@test "audit: an alias for a shell builtin needs no package" {
+  whence_works || skip_unless_ci "zsh is not installed"
+  echo "alias d='dirs -v'" >> "$FIX/config/zsh/lib/alias.zsh"
+  run audit
+  [ "$status" -eq 0 ] || { echo "a builtin was read as a missing tool: $output"; return 1; }
+}
+
+@test "audit: an alias is checked for its command, not the modifier before it" {
+  # ripgrep is in the fixture's Brewfile, and noglob is in nobody's.
+  echo "alias search='noglob rg'" >> "$FIX/config/zsh/lib/alias.zsh"
+  run audit
+  [ "$status" -eq 0 ] || { echo "a modifier was read as a missing tool: $output"; return 1; }
+}
+
+@test "audit: a modifier does not hide a command nothing installs" {
+  echo "alias search='noglob nosuchtool'" >> "$FIX/config/zsh/lib/alias.zsh"
+  run audit
+  [ "$status" -eq 1 ]
+  assert_contains "$output" "'nosuchtool' is invoked by config"
+}
+
+# The base system this check accepts is macOS's: an alias for a tool only macOS
+# ships, such as pbcopy, is a missing tool on Linux.
+# bats test_tags=macos
+@test "audit: every tool this repo's config invokes is installed by something" {
+  AUDIT_DIR="$REPO" run audit
+  assert_contains "$output" "every tool the config names is installed by something"
+  refute_contains "$output" "is invoked by config/"
+}
+
 @test "audit: prose mentioning a command is not an invocation" {
   # The bug this pins: a comment reading "cached_init is deliberately not used"
   # was parsed as a dependency on a tool called "deliberately".
@@ -257,8 +290,19 @@ EOF
 @test "audit: a lib that is not about one tool is not treated as an orphan" {
   echo "# general settings" > "$FIX/config/zsh/lib/common.zsh"
   echo "# history settings" > "$FIX/config/zsh/lib/history.zsh"
+  echo "# key bindings" > "$FIX/config/zsh/lib/editor.zsh"
+  echo "# window titles" > "$FIX/config/zsh/lib/terminal.zsh"
   run audit
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+}
+
+# The fixtures above are miniatures, and a miniature cannot say what the repo's
+# own libs are called. Regression: two libs arrived named for what they do, the
+# audit took each name for a tool, and the weekly run was the first to notice.
+@test "audit: every lib in this repo is a tool's or is named as not one" {
+  AUDIT_DIR="$REPO" run audit
+  assert_contains "$output" "every tool-specific lib has a package behind it"
+  refute_contains "$output" "which no Brewfile entry installs"
 }
 
 @test "audit: a section that cannot run says so rather than passing quietly" {

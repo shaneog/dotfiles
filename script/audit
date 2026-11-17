@@ -131,6 +131,15 @@ head2 "Tools the config invokes but the Brewfile does not install"
 # Comment lines are dropped first: prose mentioning cached_init or a command
 # name is not an invocation, and reading it as one produces false positives.
 strip_comments() { grep -vE "^[[:space:]]*#"; }
+# A word the shell answers for itself, such as the builtin dirs: no package
+# installs it and none has to. zsh is asked, since the config is zsh's. Without
+# zsh the word is reported like any other missing tool, which is loud, not wrong.
+shell_word() {  # word
+  case "$(zsh -fc 'whence -w -- "$1"' zsh "$1" 2>/dev/null)" in
+    *": builtin"|*": reserved") return 0 ;;
+  esac
+  return 1
+}
 {
   grep -rh "FZF_" config/zsh | strip_comments \
     | grep -oE "FZF_[A-Z_]*COMMAND='[a-z0-9_-]+" | sed "s/.*='//"
@@ -138,10 +147,14 @@ strip_comments() { grep -vE "^[[:space:]]*#"; }
     | grep -oE "cached_(init|completion) [a-z0-9_-]+ [a-z0-9_-]+" | awk '{print $3}'
   grep -h "pager = " config/git/config | strip_comments \
     | grep -oE "pager = [a-z0-9_-]+" | awk '{print $3}'
+  # noglob and nocorrect only change how the shell reads the command after
+  # them, so the command is the word that follows.
   grep -h -E "^[[:space:]]*alias " config/zsh/lib/alias.zsh | strip_comments \
-    | grep -oE "alias [a-zA-Z0-9_-]+='?[a-z0-9_-]+" | sed -E "s/.*='?//"
+    | grep -oE "alias [a-zA-Z0-9_-]+='?((noglob|nocorrect) )*[a-z0-9_-]+" \
+    | sed -E -e "s/.*='?//" -e "s/^((noglob|nocorrect) )+//"
 } 2>/dev/null | sort -u | while read -r tool; do
   [ -n "$tool" ] || continue
+  shell_word "$tool" && continue
   grep -qE "^(brew|cask) '$tool'" Brewfile && continue
   # formula name and binary name differ often enough to check the obvious cases
   case "$tool" in
@@ -171,7 +184,7 @@ head2 "Config left behind after its tool was dropped"
 # other way -- a lib whose tool nothing installs any more. Libs that are not
 # about a single tool are named here, so adding one is a decision rather than an
 # omission.
-NOT_A_TOOL="alias common completion history homebrew node prompt"
+NOT_A_TOOL="alias common completion editor history homebrew node prompt terminal"
 orphans=0
 for lib in config/zsh/lib/*.zsh; do
   tool="$(basename "$lib" .zsh)"
