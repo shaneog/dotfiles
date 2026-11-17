@@ -41,8 +41,32 @@ setup() {
 |@test "second of a pair" {
 |  grep -q green "$BATS_TEST_DIRNAME/../settings" || { meet second first; false; }
 |}
-|@test "the size, after a moment" { sleep 1; grep -q small "$BATS_TEST_DIRNAME/../settings"; }
-|@test "the colour, after a moment" { sleep 1; grep -q green "$BATS_TEST_DIRNAME/../settings"; }
+|# Each of these two, in a row's run, looks only once the other is running, and
+|# ends only once the other has looked: both rows are then broken while either
+|# looks, however late one worker was to start.
+|beside() {  # this test, the other, what the settings must say
+|  local tries=0 said=0
+|  if [ -z "${DOTFILES_TEST_PATIENCE:-}" ]; then
+|    grep -q "$3" "$BATS_TEST_DIRNAME/../settings"
+|    return
+|  fi
+|  touch "$MEET/$1.here"
+|  until [ -e "$MEET/$2.here" ] || [ "$((tries += 1))" -gt 100 ]; do sleep 0.1; done
+|  grep -q "$3" "$BATS_TEST_DIRNAME/../settings" || said=1
+|  touch "$MEET/$1.looked"
+|  tries=0
+|  until [ -e "$MEET/$2.looked" ] || [ "$((tries += 1))" -gt 100 ]; do sleep 0.1; done
+|  return "$said"
+|}
+|@test "the size, beside the colour" { beside size colour small; }
+|@test "the colour, beside the size" { beside colour size green; }
+|# The second prints, before its own result, more than a pipe will hold.
+|@test "green, and nothing more" { grep -q green "$BATS_TEST_DIRNAME/../settings"; }
+|@test "green, and a great deal more" {
+|  local line=0
+|  while [ "$((line += 1))" -le 4000 ]; do echo "# line $line of a great many" >&3; done
+|  grep -q green "$BATS_TEST_DIRNAME/../settings"
+|}
 BATS
   git -C "$WORK" init -q
   export MEET="$BATS_TEST_TMPDIR/meet"
@@ -142,6 +166,17 @@ mutate() {  # what uname reports
   assert_contains "$output" "no test matches"
 }
 
+@test "mutate: a row is judged by its tests, however much the tests of its file print" {
+  # Regression: what the unmutated run printed was piped to `grep -q`, which
+  # leaves at its first match with the rest still being written. pipefail
+  # called that no match, so on a busy machine a row now and then "named no
+  # test". Here the rest is more than a pipe holds, and it is every time.
+  row "green, and"
+  run mutate Darwin
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "1 caught, 0 missed"
+}
+
 @test "mutate: a row is judged by its own test, not by another row's in the same file" {
   # The tests of one file are run together with nothing broken, once, and each
   # row then reads its own out of that.
@@ -170,8 +205,8 @@ mutate() {  # what uname reports
   # Two rows for one file, each checked by a test that only the other row's
   # breakage would fail. Run in one tree at once, at least one is "caught".
   printf 'colour = green\nsize = small\n' > "$WORK/settings"
-  manifest 's|green|blue|' test/sample.bats "the size, after a moment" \
-           's|small|big|'  test/sample.bats "the colour, after a moment"
+  manifest 's|green|blue|' test/sample.bats "the size, beside the colour" \
+           's|small|big|'  test/sample.bats "the colour, beside the size"
   export MUTATE_JOBS=2
   run mutate Darwin
   refute_contains "$output" "BROKEN"

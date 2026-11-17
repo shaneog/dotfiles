@@ -136,6 +136,12 @@ unmutated() {  # the test file, the filter, the rows it is for
 	printf '1..%s\n%s' "$tests" "$matched"
 }
 
+# Whether some lines have one like this. grep is handed them whole and not down
+# a pipe: grep -q leaves at its first match, a writer with more to say is then
+# refused, and pipefail reports the refusal as no match. With two lines to write
+# that is a race, lost now and then on a busy machine.
+has() { grep -q "$1" <<< "$2"; }  # a pattern, the lines
+
 row() {  # a name for the result, the row, the rows it is one of
 	local file expr test_file filter note plan verdict="" why="" backup
 	IFS="$TAB" read -r file expr test_file filter note <<< "$2"
@@ -149,18 +155,18 @@ row() {  # a name for the result, the row, the rows it is one of
 	# fails already, or is skipped, would give the same answer after the
 	# mutation, and that answer would be about the machine and not the assertion.
 	plan="$(unmutated "$test_file" "$filter" "$3")"
-	if ! printf '%s\n' "$plan" | grep -q '^1\.\.[1-9]'; then
+	if ! has '^1\.\.[1-9]' "$plan"; then
 		if [ -z "$ON_A_MAC" ] && [ "$(bats --count "$test_file" --filter "$filter" 2>/dev/null || echo 0)" -gt 0 ]; then
 			verdict="n/a"; why="its test needs a Mac"
 		else
 			verdict="BROKEN"; why="no test matches \"$filter\" in $test_file"
 		fi
-	elif printf '%s\n' "$plan" | grep -q '^not ok '; then
+	elif has '^not ok ' "$plan"; then
 		verdict="BROKEN"; why="\"$filter\" fails before anything is broken"
 		# With what the test said, or a red run gives nothing to go on.
 		why="$why
-$(printf '%s\n' "$plan" | grep '^#' | head -n 12 | sed 's/^/        /')"
-	elif ! printf '%s\n' "$plan" | grep '^ok ' | grep -qv ' # skip'; then
+$(awk '/^#/ && ++said <= 12 { print "        " $0 }' <<< "$plan")"
+	elif ! has '^ok ' "$(grep -v ' # skip' <<< "$plan")"; then
 		verdict="n/a"; why="its test is skipped on this machine"
 	fi
 	if [ "$verdict" = "n/a" ]; then
