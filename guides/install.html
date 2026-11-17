@@ -72,7 +72,7 @@
           <li class="seq tone-violet">
             <div>
               <h3>Apply macOS settings <span class="who">script/macos</span></h3>
-              <p>First it records the current values and writes a script that can put them back. Then it applies one table of settings: Dock, Finder, sounds, Touch ID for <code>sudo</code>, and the Gotham theme for Terminal.</p>
+              <p>First it records the current values and writes a script that can put them back. Then it applies one table of settings: Dock, Finder, sounds, Touch ID for <code>sudo</code>, and the Gotham theme for Terminal. The first run on a Mac also clears the apps pinned to the Dock, which on a new one are the row Apple put there. Later runs leave the Dock's icons alone unless asked to with <code>script/macos --reset-dock</code>.</p>
             </div>
           </li>
           <li class="seq tone-yellow">
@@ -186,7 +186,7 @@
           <tr><td>Homebrew</td><td>Found, so the installer is skipped.</td></tr>
           <tr><td>Dotfiles</td><td>Pulled instead of cloned. Local edits are stashed and put back.</td></tr>
           <tr><td>Links</td><td>Each one already points into the repository, so it is reported as unchanged.</td></tr>
-          <tr><td>macOS settings</td><td>Each setting is read first and only written if it differs. The record of the original values is never overwritten.</td></tr>
+          <tr><td>macOS settings</td><td>Each setting is read first and only written if it differs. The record of the original values is never overwritten, and the Dock's icons are not cleared a second time.</td></tr>
           <tr><td>Brewfile</td><td>Checked first. Nothing is installed if nothing is missing.</td></tr>
           <tr><td>Login shell</td><td>Already Homebrew's zsh, so it is left alone.</td></tr>
           <tr><td>macOS settings, second look</td><td>Nothing is left to apply, so nothing runs, and the Dock and Finder are not restarted.</td></tr>

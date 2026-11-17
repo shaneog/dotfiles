@@ -89,6 +89,12 @@ done
 say "the macOS defaults were applied"
 [ "$(defaults read com.apple.dock tilesize)" = "48" ] || die "script/macos did not apply"
 
+# A new machine comes with a row of Apple's apps pinned, and the first run is
+# the one that clears it.
+say "the Dock was cleared of the apps Apple pins"
+pinned="$(defaults read com.apple.dock persistent-apps | tr -d '[:space:]')"
+[ "$pinned" = "()" ] || die "the Dock still has apps pinned: $pinned"
+
 # The plugins too: they are Homebrew's files, so the first shell has them
 # without fetching anything.
 say "a first login shell is fully wired"

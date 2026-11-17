@@ -5,7 +5,8 @@
 #
 #   script/macos                apply the settings
 #   script/macos --check        report which are not applied, change nothing
-#   script/macos --reset-dock   also clear the Dock's pinned icons
+#   script/macos --reset-dock   also clear the Dock's pinned icons, which
+#                               otherwise happens on the first run only
 #
 # The settings live in one table, so applying them, checking them and testing
 # them are the same list -- CI runs --check after applying, which is why nothing
@@ -23,7 +24,8 @@
 set -uo pipefail
 #
 # Worth knowing before re-running on a machine you have since set up by hand:
-# the Dock's icons are wiped, but only with --reset-dock.
+# the Dock's icons are wiped on the first run and never again, unless
+# --reset-dock asks for it.
 #
 # Settings marked (relaunch) need the owning app restarted, which the killall at
 # the bottom handles. Settings marked (logout) need a full logout or restart.
@@ -31,6 +33,7 @@ set -uo pipefail
 
 CHECK_ONLY=""
 RESET_DOCK=""
+FIRST_RUN=""
 for arg in "$@"; do
 	case "$arg" in
 		--check)      CHECK_ONLY="1" ;;
@@ -183,6 +186,7 @@ if [ -n "$CHECK_ONLY" ]; then
 elif [ -d "$BACKUP_DIR" ]; then
 	echo "Previous values already recorded in $BACKUP_DIR"
 else
+	FIRST_RUN="1"
 	echo "Recording the current values in $BACKUP_DIR:"
 	mkdir -p "$BACKUP_DIR"
 	# Not a defaults domain, so copied rather than exported. Reading it needs no
@@ -397,9 +401,11 @@ echo "$changed changed, $applied already applied, $failed failed"
 ###############################################################################
 
 # Not in the table because it is destructive rather than declarative: it clears
-# whatever you have pinned since. Opt in, because re-running bootstrap is cheap
-# now and losing the Dock every time is not a fair price for that.
-if [ -n "$RESET_DOCK" ]; then
+# whatever is pinned. So it happens once, on the run that has just recorded the
+# Dock as it was -- on a new machine that is the row of apps Apple pins, and
+# the restore script puts them back. Any later run would be clearing what you
+# have pinned since, and has to be asked.
+if [ -n "$RESET_DOCK" ] || [ -n "$FIRST_RUN" ]; then
 	echo "Clearing the Dock's pinned icons"
 	defaults write com.apple.dock persistent-apps -array
 	relaunch="1"
