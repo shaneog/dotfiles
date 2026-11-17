@@ -79,7 +79,11 @@ while IFS="$TAB" read -r file expr test_file filter note; do
 done < test/mutations.tsv
 
 # Runs a function once for each line of a list, on so many workers. A worker
-# takes a line by making a directory named for it, which only one of them can.
+# takes a line by creating a file named for it, which only one of them can:
+# with noclobber set, the shell opens the file itself and asks for it to be new.
+# Not mkdir. That is a program, and the one in Ubuntu's Rust coreutils looks
+# first and makes second, then reports success when the directory has appeared
+# in between, so two workers starting together could both take the first line.
 # The list is read on a descriptor of its own and the function is given no
 # input, so that nothing a test starts can read the lines meant for the worker.
 turn=0
@@ -94,7 +98,7 @@ share() {  # the function, the list, how many workers, the rows it is for
 			n=0
 			while IFS= read -r item <&9; do
 				n=$((n + 1))
-				mkdir "$claims/$n" 2>/dev/null || continue
+				( set -C; : > "$claims/$n" ) 2>/dev/null || continue
 				"$fn" "$turn.$n" "$item" "$rows" 9<&- < /dev/null
 			done 9< "$list"
 		) &
