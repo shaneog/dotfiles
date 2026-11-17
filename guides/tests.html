@@ -103,7 +103,7 @@
       </li>
     </ul>
 
-    <p>Both want every change committed first: one tests the last commit, and the other edits files where they are and then puts them back. Both run on Linux too. There, a test that needs a Mac is reported as <code>NOT CHECKED</code>, never as having noticed.</p>
+    <p>Both want every change committed first: one tests the last commit, and the other edits files where they are and then puts them back. Both run on Linux too. There, a test that needs a Mac is reported as <code>NOT CHECKED</code>, never as having noticed. On GitHub the rows are checked on Linux, which is quicker, and the few whose tests need a Mac are checked on one. Once a week a Mac checks them all.</p>
 
     <h2 id="outside">Watching the outside world</h2>
     <p>Dotfiles depend on things other people maintain: Homebrew packages, shell plugins, macOS itself. Those change without warning, so one script keeps an eye on them, and two more look at the Mac in front of you.</p>
@@ -131,7 +131,7 @@
       <table>
         <thead><tr><th>Workflow</th><th>When</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td><code>test</code></td><td>Every pull request, every push to <code>main</code>, and Mondays</td><td>Runs the static, unit and integration tiers on a Mac, against both the built-in zsh and Homebrew's, then the mutation list. A Linux machine runs every test that does not need a Mac.</td></tr>
+          <tr><td><code>test</code></td><td>Every pull request, every push to <code>main</code>, and Mondays</td><td>Runs the static, unit and integration tiers on a Mac, against both the built-in zsh and Homebrew's. A Linux machine runs every test that does not need a Mac, and the mutation list; the Mac checks the few rows that need one.</td></tr>
           <tr><td><code>provision</code></td><td>Mondays, or on demand</td><td>Runs the install scripts for real: <code>setup</code>, the Brewfile, <code>macos</code>, <code>remove</code>, and <code>bootstrap</code> from start to finish.</td></tr>
           <tr><td><code>audit</code></td><td>Mondays, or on demand</td><td>Runs <code>make audit</code>.</td></tr>
         </tbody>

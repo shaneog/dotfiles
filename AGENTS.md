@@ -150,14 +150,16 @@ passing.
   bug, not a candidate for the tag.
 - **A test that needs a tool asks with `skip_unless_ci`**, which says
   `NOT CHECKED` on a laptop or in a container and fails on a runner, where what
-  is installed is the workflow's decision. The Linux job in `test.yml` is the
+  is installed is the workflow's decision. `.github/actions/linux-tools` is the
   list of what Linux needs: zsh, bats, tmux and the small tools from the
   distribution, and starship, fzf, gitleaks, Neovim, mise and tree-sitter-cli
   from somewhere newer, because Ubuntu either lacks them or packages a version
   older than this config is written for.
 - **`make mutate` and `make sweep` run on Linux.** A row whose test is tagged,
   or skipped for want of a tool, is listed as `NOT CHECKED` there and not as
-  caught.
+  caught. CI's mutation job is on Linux, where it is quicker. A row whose
+  tests are all tagged is run by the macOS static job instead, with
+  `script/mutate --needs-a-mac`, and every row is run on macOS once a week.
 - **No test on Linux reaches** anything that calls Homebrew, `launchctl` or
   `defaults` for real: `make audit`, `make brew-drift`, `make update`,
   `make doctor`, and `script/macos` and `script/bootstrap` outside their

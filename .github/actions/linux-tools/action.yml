@@ -1,0 +1,29 @@
+name: Install the tools on Linux
+description: What the tests that need no Mac use, on an Ubuntu runner.
+
+# From two places, as a Linux container is set up, so that passing here means
+# passing there. The distribution has zsh, bats, tmux and the small tools. It
+# has no starship, mise or tree-sitter-cli, and its fzf, gitleaks and Neovim
+# are older than this config is written for, so those six are Homebrew's, which
+# the runner image ships off PATH. They are linked in one by one: with
+# Homebrew's directory on PATH, the next thing installed there would replace a
+# distribution tool without anyone choosing that. git, jq, python3, ssh and
+# docker are part of the image; its yq is replaced by the distribution's, which
+# reads a filter a little differently from the one Homebrew gives the macOS
+# jobs.
+
+runs:
+  using: composite
+  steps:
+    - name: Install tooling
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          zsh bats tmux shellcheck ripgrep direnv fd-find hyperfine yq
+        sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
+        brew=/home/linuxbrew/.linuxbrew/bin
+        "$brew/brew" install fzf gitleaks mise neovim starship tree-sitter-cli
+        for tool in fzf gitleaks mise nvim starship tree-sitter; do
+          sudo ln -sf "$brew/$tool" "/usr/local/bin/$tool"
+        done

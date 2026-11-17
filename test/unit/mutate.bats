@@ -24,6 +24,10 @@ setup() {
 |@test "a tool this machine lacks" { skip "not installed"; }
 |# bats test_tags=macos
 |@test "only on a mac" { grep -q green "$BATS_TEST_DIRNAME/../settings"; }
+|# One filter, two tests: the second fails anywhere but on a Mac.
+|@test "green to anyone" { grep -q green "$BATS_TEST_DIRNAME/../settings"; }
+|# bats test_tags=macos
+|@test "green to anyone with a Mac" { [ "$(uname -s)" = Darwin ] && grep -q green "$BATS_TEST_DIRNAME/../settings"; }
 |@test "in no hurry" { [ -z "${DOTFILES_TEST_PATIENCE:-}" ]; }
 |# bats test_tags=timing
 |@test "quick enough" { grep -q green "$BATS_TEST_DIRNAME/../settings"; }
@@ -95,10 +99,10 @@ row() {  # test filter
 # The platform is whatever the stand-in uname says, so both answers are
 # checked wherever this runs. The patience is taken out of the environment:
 # script/mutate runs this file for its own rows, and hands it down.
-mutate() {  # what uname reports
+mutate() {  # what uname reports, then anything for script/mutate itself
   printf '#!/bin/sh\necho %s\n' "$1" > "$STUBS/uname"
   chmod +x "$STUBS/uname"
-  PATH="$STUBS:$PATH" _timeout 120 env -u DOTFILES_TEST_PATIENCE bash "$WORK/script/mutate"
+  PATH="$STUBS:$PATH" _timeout 120 env -u DOTFILES_TEST_PATIENCE bash "$WORK/script/mutate" "${@:2}"
 }
 
 @test "mutate: a mutation the test notices is caught, and the file is put back" {
@@ -137,6 +141,44 @@ mutate() {  # what uname reports
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   assert_contains "$output" "NOT CHECKED, its test needs a Mac"
   assert_contains "$output" "0 caught, 0 missed"
+  assert_contains "$output" "1 NOT CHECKED on this machine"
+}
+
+@test "mutate: off a Mac, a row with a test of each kind is judged by the one that needs none" {
+  # The tagged test fails here before anything is broken. Left in, the row
+  # would be reported as broken on every machine but a Mac.
+  row "green to anyone"
+  run mutate Linux
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "1 caught, 0 missed"
+  refute_contains "$output" "NOT CHECKED"
+}
+
+@test "mutate: asked for the rows that need a Mac, a Mac runs those and says what it left" {
+  # CI's split: Linux runs every row it can, and a Mac is asked for the rest.
+  # A row with a test of each kind is Linux's.
+  manifest 's|green|blue|' test/sample.bats "only on a mac" \
+           's|green|blue|' test/sample.bats "colour is green" \
+           's|green|blue|' test/sample.bats "green to anyone"
+  run mutate Darwin --needs-a-mac
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "1 caught, 0 missed"
+  assert_contains "$output" "2 left out"
+  refute_contains "$output" "NOT CHECKED"
+}
+
+@test "mutate: every row is run by a Mac that was asked for those needing one, or off a Mac" {
+  # The two halves of CI's split, over one manifest: no row is run by both, and
+  # none by neither.
+  manifest 's|green|blue|' test/sample.bats "only on a mac" \
+           's|green|blue|' test/sample.bats "colour is green" \
+           's|green|blue|' test/sample.bats "green to anyone"
+  run mutate Darwin --needs-a-mac
+  local mac linux
+  mac="$(printf '%s\n' "$output" | grep -c '^  ok ')"
+  run mutate Linux
+  linux="$(printf '%s\n' "$output" | grep -c '^  ok ')"
+  assert_equal "$mac and $linux" "1 and 2" "rows run on a Mac and off one"
   assert_contains "$output" "1 NOT CHECKED on this machine"
 }
 
