@@ -61,6 +61,11 @@
     <p>Most of the tests only need a shell, so they run on Linux too. A few cannot: they ask Homebrew something, or open Ghostty, or read a file that only macOS has. Each of those carries a label, <code>macos</code>, with the reason written beside it.</p>
     <p>On a Mac <code>make test</code> runs everything. Anywhere else it leaves the labelled tests out, tells you how many, and the rest still has to pass. So a change made on a Linux machine gets a real pass or fail, and GitHub runs the labelled tests on a Mac before the change is merged.</p>
 
+    <h3 id="vm">Why the last tier is a virtual machine</h3>
+    <p>GitHub's Macs are not new Macs. Homebrew, Apple's Command Line Tools and several language managers are already on them, so a mistake that only bites a Mac with nothing installed passes every check there. <code>make test-vm</code> starts a copy of macOS with nothing else on it, runs the <a href="install.html#command">one command</a> against the branch you are working on, checks the result and throws the machine away. It refuses an image that already has Homebrew.</p>
+    <p>It has caught two things nothing else could. One script spent two minutes of every run waiting for an answer that a Mac with no screen can never give. Another could stop forever at a “Press ENTER” prompt, and only sometimes, which GitHub never saw because its machines answer every prompt with nothing.</p>
+    <p>It needs an Apple Silicon Mac, a lot of free disk for the image, and <a href="https://tart.run">Tart</a>. The script checks all three before it starts and says what is missing. <code>test/vm/run --keep</code> leaves the machine running to look around in, and <code>VM_IMAGE</code> picks a different release of macOS. <a href="install.html#timing">How long it takes</a> has the timings from the last run.</p>
+
     <h2 id="fail">A test has to be able to fail</h2>
     <p>Most of the real bugs in this repository hid behind a test that could not fail. It passed when the feature worked and it passed when the feature was broken, which makes it worse than no test at all. Two scripts hunt for exactly that.</p>
 
@@ -98,6 +103,8 @@
       </li>
     </ul>
 
+    <p>Both want every change committed first: one tests the last commit, and the other edits files where they are and then puts them back. Both run on Linux too. There, a test that needs a Mac is reported as <code>NOT CHECKED</code>, never as having noticed.</p>
+
     <h2 id="outside">Watching the outside world</h2>
     <p>Dotfiles depend on things other people maintain: Homebrew packages, shell plugins, macOS itself. Those change without warning, so one script keeps an eye on them, and two more look at the Mac in front of you.</p>
 
@@ -118,7 +125,7 @@
     </div>
 
     <h2 id="ci">Robots on GitHub</h2>
-    <p>Four workflows run on GitHub's disposable machines, nearly all of them Macs, so problems show up as a notification and not as a broken shell.</p>
+    <p>Three workflows run on GitHub's disposable machines, nearly all of them Macs, so problems show up as a notification and not as a broken shell.</p>
 
     <div class="table-wrap">
       <table>
@@ -131,13 +138,13 @@
       </table>
     </div>
 
-    <p>A fifth workflow, <code>pages</code>, is not a test: it publishes these guides whenever a change to them reaches <code>main</code>.</p>
+    <p>A fourth workflow, <code>pages</code>, is not a test: it publishes these guides whenever a change to them reaches <code>main</code>.</p>
 
     <p>The Macs install their tools from the same <code>Brewfile</code> a real Mac uses, leaving out the apps. There is no second list to keep in step.</p>
 
     <p>The Monday runs matter because Homebrew packages are not pinned. A tool can change on a Tuesday, and the following Monday's run is what notices.</p>
 
-    <p>The shell plugins are Homebrew packages too, so the same Monday run is what notices a new release of one. tmux's plugins install at whatever is newest.</p>
+    <p>The shell plugins are Homebrew packages too, so the same Monday run is what notices a new release of one. tmux's plugins install at whatever is newest. The one thing with a version written down is the set of actions the workflows themselves use, and once a month Dependabot offers the newer ones in a single pull request.</p>
 
     <h2 id="habit">The habit</h2>
     <p>Before committing a change, both of these should come back clean.</p>
@@ -146,6 +153,8 @@
 make audit</code></pre>
 
     <p>And when a change claims to make something faster, the claim comes with a measurement. The startup time has <a href="shell.html#speed">a test of its own</a> for that reason.</p>
+
+    <p>These guides explain. The rules for changing the repository are written once, in <a href="https://github.com/shaneog/dotfiles/blob/main/AGENTS.md"><code>AGENTS.md</code></a>.</p>
 
     <nav class="pager" aria-label="Previous and next guide"></nav>
   </main>

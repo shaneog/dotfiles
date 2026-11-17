@@ -42,12 +42,11 @@ loads afterwards and wins where it should.
   tier fails when the second has no first.
 - **Runtimes are mise's**, and no tools are declared globally: a base layer's
   wrappers are shell functions, found before anything mise adds to `PATH`.
-- **Startup cost is a feature**: about 60ms for this repo alone on the fastest
-  Mac it is used on, which is the number the perf tier measures and gates. A
-  machine with a managed base layer beneath it was ~330ms where this repo alone
-  was ~146ms — the base layer costs more than this repo does, and that half is
-  not ours to fix, so quote the isolated number when talking about this repo.
-  Cache tool init with `cached_init`, and measure before claiming a win.
+- **Startup cost is a feature.** The perf tier times this repo alone and fails
+  when it goes over budget. A managed base layer beneath it costs more than
+  this repo does, and that half is not ours to fix, so quote the isolated
+  number when talking about this repo. Cache tool init with `cached_init`, and
+  measure before claiming a win.
 
 ## Tests must be able to fail
 
@@ -81,8 +80,9 @@ The fourth line is the suite as **bash 3.2** runs it, which is the bash a stock
 Mac and the CI runners have, and on a new Mac the one the scripts run under. It
 has no associative arrays, no `${var,,}` and no `mapfile`, and it ends a `$( )`
 at the first unbalanced `)` in a heredoc inside it. `make test-vm`,
-`make sweep` and `make brew-drift` are slow or local only; the README's Tests
-section says what each is for.
+`make sweep` and `make brew-drift` are slow or local only; `guides/tests.html`
+says what each is for, and the comment at the top of each script lists its
+flags.
 
 ## What the static tier rejects
 
@@ -116,9 +116,23 @@ section says what each is for.
   line there, and the two lists of what a home holds afterwards need it too:
   `test/integration/setup.bats` ("links the three things it names") and
   `.github/workflows/provision.yml` ("Nothing else from the repo reaches home").
-- **A change in behaviour updates `README.md` and the matching page under
-  `guides/`** in the same pull request. The guides are published, and no test
-  compares them with the code.
+- **A change in behaviour updates the page under `guides/` that describes it**,
+  in the same pull request. `README.md` changes only when installing, updating,
+  removing or the by-hand steps do. The guides are published, and
+  `test/static/guides.bats` compares only three things in them with the code:
+  the git aliases on the cheat sheet, each page's "Guide N of" line, and the
+  tools marked `data-brew`. Mark a tool that way when a page names it because
+  the `Brewfile` installs it. Nothing checks the rest.
+- **A fact has one home, and everything else links to it.** `README.md` says
+  how to install, update and remove. The guides explain how it works. This
+  file holds the rules. A script's flags are in the comment at its top. Before
+  writing something down, find where it already is.
+- **A measured figure is written in one place.** Startup time is in
+  `guides/shell.html#speed`, the install timings are in
+  `guides/install.html#timing`, and a CI runner's startup time is beside the
+  budget it justifies in `test.yml`. Anywhere else, round it ("well under a
+  tenth of a second") or link to it. Counts of tests are written nowhere:
+  `bats --count` knows.
 
 ## Working away from a Mac
 
@@ -189,7 +203,7 @@ dependency that "must" have been inert wasn't.
   Back it up with `cp` before mutating it for a test.
 - `make test` and `make audit` before committing; both must be clean.
 - `~/.gitconfig-user` is required and untracked — git ignores a missing include
-  silently, so signing breaks with no error anywhere. It is the only file a new
+  silently, so nothing says so until a commit fails to sign. It is the only file a new
   machine has to be given, by hand or by `make identity` from 1Password:
   `script/setup` writes `~/.ssh/config-local` when it is absent, and
   `~/.zshrc.local` is sourced only if it exists.

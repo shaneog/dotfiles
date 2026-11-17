@@ -134,6 +134,8 @@
       <p>If <code>~/.gitconfig-user</code> is missing, git has no key to sign with and commits cannot be signed. It is the only file a new Mac has to be given, and <a href="install.html#identity"><code>make identity</code></a> can write it from 1Password.</p>
     </div>
 
+    <p>There is another way to choose the key. Setting <code>gpg.ssh.defaultKeyCommand</code> to <code>ssh-add -L</code> signs with whichever key the agent lists first. It saves naming one, but it quietly follows the agent's order, which is why the file names a key.</p>
+
     <p>Checking works the other way round. <code>config/git/allowed_signers</code> lists the public keys this repository trusts, so <code>git log --show-signature</code> can say whether each commit was signed by one of them. Public keys are safe to publish, which is why that file is tracked.</p>
 
     <h2 id="sudo">Touch ID for sudo</h2>

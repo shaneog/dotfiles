@@ -191,6 +191,11 @@ config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integrat
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
 config/zsh/lib/git.zsh	s|^alias gco=.*|# gone|	test/integration/startup.bats	git aliases in daily use	a git alias in daily use disappears
 config/zsh/lib/git.zsh	s|--force-with-lease|--force|	test/integration/startup.bats	git aliases in daily use	gpf force-pushes without checking the remote first
+config/zsh/lib/git.zsh	s|^alias gfr=.*|alias gfr='git pull'|	test/static/guides.bats	cheat sheet lists the git aliases	the cheat sheet goes on showing what an alias used to run
+guides/tools.html	s|<td><code>gr</code></td><td><code>git rebase</code></td>|<td></td><td></td>|	test/static/guides.bats	cheat sheet lists the git aliases	an alias in daily use is missing from the cheat sheet
+guides/assets/guide.js	s|^  { file: "keys.html".*|  // gone|	test/static/guides.bats	numbered by its place	a page drops out of the navigation, and every page after it is misnumbered
+guides/tests.html	s|Guide 7 of 7|Guide 7 of 8|	test/static/guides.bats	numbered by its place	a page's Guide N line disagrees with the list of pages
+README.md	s|^. \[Toolbox\](.*||	test/static/guides.bats	READMEs point at every guide	the README stops linking to a guide
 config/zsh/lib/alias.zsh	s|commands\[ls\] == /bin/ls|commands[ls] == *|	test/unit/guards.bats	any other ls	GNU ls is given -G, which hides the group column and colours nothing
 config/zsh/lib/alias.zsh	s|^  alias ls='ls -G'|  :|	test/unit/guards.bats	ls macOS ships	ls on a Mac is one colour
 config/zsh/lib/alias.zsh	s|^alias find='noglob find'|:|	test/integration/startup.bats	everyday commands	find . -name *.md finds nothing once a file here matches
@@ -199,6 +204,7 @@ config/zsh/lib/alias.zsh	s|^(( $+commands\[open\] )) \&\& ||	test/unit/guards.ba
 config/zsh/lib/alias.zsh	s|^  \&\& source $HOMEBREW_PREFIX/share/zsh-you-should-use/.*|  \&\& :|	test/integration/startup.bats	gets a reminder	no reminder when a command has an alias
 config/zsh/lib/alias.zsh	s|^\[\[ -r $HOMEBREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh \]\] \\$|true \\|	test/unit/guards.bats	skipped without a word	a machine without the formula gets an error from every shell
 Brewfile	s|^brew 'zsh-you-should-use'$|# gone|	test/static/lint.bats	is a formula the Brewfile installs	a plugin the shell reads is installed by nothing, and silently absent
+Brewfile	s|^brew 'fd'$|# gone|	test/static/guides.bats	mark as installed is in the Brewfile	the cheat sheet promises a tool nothing installs
 .github/workflows/test.yml	s|bats --print-output-on-failure test/unit|bats --print-output-on-failure --filter-tags '!macos' test/unit|	test/static/lint.bats	only the Linux job leaves any out	a macOS job leaves out the tests that need a Mac, so they run nowhere
 .github/workflows/test.yml	s|--filter-tags '!macos' ||	test/static/lint.bats	only the Linux job leaves any out	the Linux job runs tests that cannot pass there
 .github/workflows/provision.yml	s|- uses: ./.github/actions/tools|- run: brew install direnv fzf starship|	test/static/lint.bats	through one shared step	a job goes back to a tool list of its own

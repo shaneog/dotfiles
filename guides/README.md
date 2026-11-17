@@ -23,6 +23,23 @@ open guides/index.html
 The pages describe the repo as it is on `main`. A change to behavior a page
 describes should change the page in the same commit.
 
+The guides are where the repo is explained, so the top-level `README.md` and
+`AGENTS.md` link here instead of explaining it again. Two sets of measurements
+are kept here and nowhere else: startup time in `shell.html#speed`, and the
+install timings in `install.html#timing`.
+
+`test/static/guides.bats` compares what it can with the code:
+
+- the git aliases in the first table under `tools.html#git`, against
+  `config/zsh/lib/git.zsh`;
+- each page's "Guide N of 7" line, against the `PAGES` list in
+  `assets/guide.js`;
+- every tool wrapped in `<span data-brew="formula-name">`, against the
+  `Brewfile`. Wrap a tool that way when a page names it because the `Brewfile`
+  installs it.
+
+Nothing checks the rest.
+
 Diagrams are ordinary HTML driven by `assets/guide.css`, not drawings with
 coordinates, so updating one is editing a list:
 
@@ -40,7 +57,9 @@ coordinates, so updating one is editing a list:
 Adding a page is a new HTML file copied from an existing one, plus one line in
 the `PAGES` list at the top of `assets/guide.js`, which builds the navigation
 and the previous/next links. The "Guide N of 7" line at the top of each page is
-written by hand.
+written by hand, and a test fails until every page's line agrees with the list.
+Add the page to the table above and to the top-level `README.md` too; the same
+test asks for both.
 
 Colors are tokens defined once at the top of `assets/guide.css` with
 `light-dark()`, so a diagram never names a color of its own and both themes

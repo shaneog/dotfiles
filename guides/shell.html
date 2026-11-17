@@ -26,7 +26,7 @@
     <section class="hero">
       <p class="eyebrow">Guide 4 of 7 · Opening a terminal</p>
       <h1>What happens when you open a terminal</h1>
-      <p class="lede">Between the window appearing and the prompt blinking, zsh reads four files in a fixed order. On a recent Mac it takes about 70 milliseconds. Here is every step.</p>
+      <p class="lede">Between the window appearing and the prompt blinking, zsh reads four files in a fixed order. On a recent Mac it takes well under a tenth of a second. Here is every step.</p>
     </section>
 
     <h2 id="order">Four files, always in this order</h2>
@@ -157,7 +157,7 @@
           <tr><td><code>direnv.zsh</code></td><td>Per-folder environment variables.</td></tr>
           <tr><td><code>editor.zsh</code></td><td>What the keys do at the prompt: moving by word, <code>....</code> for three folders up, quoting a pasted URL.</td></tr>
           <tr><td><code>fzf.zsh</code></td><td>The fuzzy finder and its keys.</td></tr>
-          <tr><td><code>git.zsh</code></td><td>Nine git shortcuts. They are listed in the <a href="tools.html#git">Toolbox</a>.</td></tr>
+          <tr><td><code>git.zsh</code></td><td>The git shortcuts. They are listed in the <a href="tools.html#git">Toolbox</a>.</td></tr>
           <tr><td><code>history.zsh</code></td><td>A large history shared between all open shells, without duplicates or throwaway commands like a bare <code>ls</code>.</td></tr>
           <tr><td><code>homebrew.zsh</code></td><td>Homebrew shortcuts, including <code>brewup</code> for the whole maintenance run.</td></tr>
           <tr><td><code>mise.zsh</code></td><td>Language runtimes, chosen per project.</td></tr>
@@ -207,10 +207,16 @@
         </ul>
       </div>
       <figcaption>
-        <span>Time to start an interactive login shell. Today's figure is from the fastest Mac these dotfiles run on. The 2022 figures are from the README's historical log on an older Mac, so compare the shape, not the decimals.</span>
+        <span>Time to start an interactive login shell. Today's figure is from the fastest Mac these dotfiles run on. The 2022 figures were taken on an older Mac with a cruder stopwatch, so compare the shape, not the decimals.</span>
         <button class="btn" type="button" data-replay>Replay</button>
       </figcaption>
     </figure>
+
+    <p>Today's figure is for this repository by itself, and about 10 ms of it is the three plugins. A shared machine on GitHub takes two to three times as long. On a Mac with a base layer underneath, the last measurement was about 330 ms for everything, against about 146 ms for this repository alone on the same Mac. The base layer costs more than the layer on top of it, and that half is not this repository's to speed up.</p>
+
+    <p>This section is the one place those measurements are kept. To take one yourself:</p>
+
+    <pre data-copy><code>hyperfine --warmup 3 'zsh -lic exit'</code></pre>
 
     <p>Two habits get it there, and a third keeps it there.</p>
 
@@ -231,6 +237,8 @@
         <p>A test times real shell startups with <code>hyperfine</code> and fails if the fastest one is over 200 ms. A slow change cannot slip in unnoticed.</p>
       </li>
     </ul>
+
+    <p>Measuring also says what not to bother with. Compiling the shell's own files ahead of time sounded like a saving, and the stopwatch found none, so it is not done.</p>
 
     <figure class="fig" data-animate>
       <div class="fig-body">

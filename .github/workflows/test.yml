@@ -123,8 +123,8 @@ jobs:
       # fired.
       #
       # A runner's mean lands between about 120 and 185ms, on either zsh and
-      # varying from run to run, against 60ms on the fastest Mac this repo is
-      # used on: slower, but not the several-times-slower a loose ceiling here
+      # varying from run to run: two to three times the fastest Mac this repo
+      # is used on, but not the several-times-slower a loose ceiling here
       # assumed. 400ms leaves room for a shared runner's noise without waving
       # through a real regression. The non-interactive ceiling needs no override
       # at all -- under 25ms measured here against a 50ms default.

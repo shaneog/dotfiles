@@ -284,7 +284,7 @@ STUB
 }
 
 @test "a local zshrc is sourced, and loads late enough to override" {
-  # Documented in the README as the local override for .zshrc. The point of an
+  # Documented in the guides as the local override for .zshrc. The point of an
   # override is that it wins, so assert ordering rather than mere sourcing:
   # lib/alias.zsh aliases vim to nvim, and the local file must beat it.
   local home; home="$(make_home)"
