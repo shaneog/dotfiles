@@ -201,6 +201,21 @@ mutate() {  # what uname reports
   [ -e "$MEET/met" ] || { echo "the two rows never ran at the same time"; return 1; }
 }
 
+@test "mutate: a row is taken by one worker, even where mkdir succeeds twice" {
+  # Regression: a Linux runner's mkdir can exit 0 for a directory another
+  # process made a moment earlier. Taking a row was a mkdir, so both workers
+  # took the first one, and the pair above never met. This mkdir says yes
+  # every time, which is that race with the luck taken out.
+  printf '#!/bin/sh\nexec %s -p "$@"\n' "$(command -v mkdir)" > "$STUBS/mkdir"
+  chmod +x "$STUBS/mkdir"
+  manifest 's|green|blue|' test/sample.bats "colour is green" \
+           's|green|grey|' test/sample.bats "colour is green"
+  export MUTATE_JOBS=2
+  run mutate Darwin
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_equal "$(printf '%s\n' "$output" | grep -c '^  ok ')" 2 "how many times a row was run"
+}
+
 @test "mutate: a row never sees what the row beside it broke" {
   # Two rows for one file, each checked by a test that only the other row's
   # breakage would fail. Run in one tree at once, at least one is "caught".

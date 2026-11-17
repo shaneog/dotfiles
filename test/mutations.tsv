@@ -35,6 +35,7 @@ script/mutate	s|^\[ "$(uname -s)" = "Darwin" \] && ON_A_MAC=1|:|	test/unit/mutat
 script/mutate	s/grep -q "$1" <<< "$2"/printf '%s\\n' "$2" | grep -q "$1"/	test/unit/mutate.bats	however much the tests of its file print	a row is said to name no test when its test's output is still being written as grep leaves
 script/mutate	s|\[\[ "$name" =~ $2 \]\] && ours=1|ours=1|	test/unit/mutate.bats	judged by its own test	a row answers for every test its file ran, not only its own
 script/mutate	s|share row "$WORK/rows" "$JOBS"|share row "$WORK/rows" 1|	test/unit/mutate.bats	side by side	the rows go back to one at a time
+script/mutate	s|( set -C; : > "$claims/$n" ) 2>/dev/null|mkdir "$claims/$n" 2>/dev/null|	test/unit/mutate.bats	taken by one worker	two workers both take a row where mkdir says yes to a directory that is already there
 script/mutate	s|cd "$WORK/tree.$w"|cd "$WORK/tree.1"|	test/unit/mutate.bats	the row beside it broke	every worker breaks things in the same copy of the tree
 script/mutate	s|export DOTFILES_TEST_PATIENCE="$PATIENCE"; ||	test/unit/mutate.bats	told to hurry	a broken row waits out the whole of every wait in its test
 script/mutate	s|then list="$WORK/rows.alone"; fi|then list="$WORK/rows"; fi|	test/unit/mutate.bats	measures time	a test that measures time is run among busy workers, and fails whatever the row did
