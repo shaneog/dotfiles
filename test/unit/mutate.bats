@@ -41,8 +41,25 @@ setup() {
 |@test "second of a pair" {
 |  grep -q green "$BATS_TEST_DIRNAME/../settings" || { meet second first; false; }
 |}
-|@test "the size, after a moment" { sleep 1; grep -q small "$BATS_TEST_DIRNAME/../settings"; }
-|@test "the colour, after a moment" { sleep 1; grep -q green "$BATS_TEST_DIRNAME/../settings"; }
+|# Each of these two, in a row's run, looks only once the other is running, and
+|# ends only once the other has looked: both rows are then broken while either
+|# looks, however late one worker was to start.
+|beside() {  # this test, the other, what the settings must say
+|  local tries=0 said=0
+|  if [ -z "${DOTFILES_TEST_PATIENCE:-}" ]; then
+|    grep -q "$3" "$BATS_TEST_DIRNAME/../settings"
+|    return
+|  fi
+|  touch "$MEET/$1.here"
+|  until [ -e "$MEET/$2.here" ] || [ "$((tries += 1))" -gt 100 ]; do sleep 0.1; done
+|  grep -q "$3" "$BATS_TEST_DIRNAME/../settings" || said=1
+|  touch "$MEET/$1.looked"
+|  tries=0
+|  until [ -e "$MEET/$2.looked" ] || [ "$((tries += 1))" -gt 100 ]; do sleep 0.1; done
+|  return "$said"
+|}
+|@test "the size, beside the colour" { beside size colour small; }
+|@test "the colour, beside the size" { beside colour size green; }
 |# The second prints, before its own result, more than a pipe will hold.
 |@test "green, and nothing more" { grep -q green "$BATS_TEST_DIRNAME/../settings"; }
 |@test "green, and a great deal more" {
@@ -188,8 +205,8 @@ mutate() {  # what uname reports
   # Two rows for one file, each checked by a test that only the other row's
   # breakage would fail. Run in one tree at once, at least one is "caught".
   printf 'colour = green\nsize = small\n' > "$WORK/settings"
-  manifest 's|green|blue|' test/sample.bats "the size, after a moment" \
-           's|small|big|'  test/sample.bats "the colour, after a moment"
+  manifest 's|green|blue|' test/sample.bats "the size, beside the colour" \
+           's|small|big|'  test/sample.bats "the colour, beside the size"
   export MUTATE_JOBS=2
   run mutate Darwin
   refute_contains "$output" "BROKEN"
