@@ -36,12 +36,12 @@
       <li class="card">
         <span class="card-num">brew</span>
         <h3>Command-line tools</h3>
-        <p>zsh, git, Neovim, tmux, fzf, ripgrep, fd, Starship, mise, direnv, the GitHub CLI, <code>jq</code> and <code>yq</code>, and the tools the tests need.</p>
+        <p><span data-brew="zsh">zsh</span>, <span data-brew="git">git</span>, <span data-brew="neovim">Neovim</span>, <span data-brew="tmux">tmux</span>, <span data-brew="fzf">fzf</span>, <span data-brew="ripgrep">ripgrep</span>, <span data-brew="fd">fd</span>, <span data-brew="starship">Starship</span>, <span data-brew="mise">mise</span>, <span data-brew="direnv">direnv</span>, <span data-brew="gh">the GitHub CLI</span>, <span data-brew="jq"><code>jq</code></span> and <span data-brew="yq"><code>yq</code></span>, and the tools the tests need.</p>
       </li>
       <li class="card tone-cyan">
         <span class="card-num">cask</span>
         <h3>Apps</h3>
-        <p>1Password, Ghostty, Alfred, Rectangle, Karabiner-Elements, OrbStack, Visual Studio Code and the rest of the everyday apps.</p>
+        <p><span data-brew="1password">1Password</span>, <span data-brew="ghostty">Ghostty</span>, <span data-brew="alfred">Alfred</span>, <span data-brew="rectangle">Rectangle</span>, <span data-brew="karabiner-elements">Karabiner-Elements</span>, <span data-brew="orbstack">OrbStack</span>, <span data-brew="visual-studio-code">Visual Studio Code</span> and the rest of the everyday apps.</p>
       </li>
       <li class="card tone-violet">
         <span class="card-num">cask</span>
@@ -90,7 +90,7 @@
     <p>The arrow is green after a command that worked and red after one that failed. Inside a git repository the prompt adds the branch, a <code>*</code> when files have changed, and arrows when you are ahead of or behind the remote. A helper also speaks up when you type a long command that already has a shortcut.</p>
 
     <h2 id="git">Git</h2>
-    <p>Nine shell shortcuts cover the commands typed most often. They are defined in <code>config/zsh/lib/git.zsh</code>, and adding one is a single line there.</p>
+    <p>A few shell shortcuts cover the commands typed most often. They are defined in <code>config/zsh/lib/git.zsh</code>. Adding one is a line there and a row here, and a test fails when the two disagree.</p>
 
     <div class="table-wrap">
       <table>
@@ -127,7 +127,7 @@
       <li>Pulls and merges only fast-forward, so history never gains a surprise merge commit.</li>
       <li>Rebasing with unsaved changes stashes them and puts them back afterwards.</li>
       <li>Fetching removes branches that were deleted on the remote.</li>
-      <li>New repositories start on <code>main</code>, and diffs are shown through <code>diff-so-fancy</code>.</li>
+      <li>New repositories start on <code>main</code>, and diffs are shown through <span data-brew="diff-so-fancy"><code>diff-so-fancy</code></span>.</li>
       <li>A new commit message opens with a template that reminds you to say why.</li>
     </ul>
 
@@ -234,13 +234,19 @@
     </ul>
 
     <h2 id="knobs">Switches</h2>
+    <p>Environment variables that change how something behaves. Each script lists its own flags in the comment at its top.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Variable</th><th>Effect when set</th></tr></thead>
         <tbody>
           <tr><td><code>ZSH_NO_TMUX_AUTOSTART</code></td><td>This shell does not step into tmux.</td></tr>
           <tr><td><code>ZSH_NO_ZCOMPILE</code></td><td>Skips the background compile of the completion index.</td></tr>
-          <tr><td><code>DOTFILES_URL</code>, <code>DOTFILES_REF</code></td><td>Where <code>script/bootstrap</code> installs from.</td></tr>
+          <tr><td><code>DOTFILES_URL</code>, <code>DOTFILES_REF</code>, <code>GITHUB_USER</code></td><td>Where <code>script/bootstrap</code> <a href="install.html#again">installs from</a>.</td></tr>
+          <tr><td><code>DOTFILES_IDENTITY_ITEM</code></td><td>The 1Password item <code>make identity</code> reads, when it is not called <code>Git identity</code>.</td></tr>
+          <tr><td><code>SKIP_PERF</code></td><td>The tests leave out the startup timing.</td></tr>
+          <tr><td><code>DOTFILES_STARTUP_BUDGET_MS</code></td><td>The limit the startup timing test enforces, in place of its <a href="shell.html#speed">default</a>. A lower one suits a fast Mac.</td></tr>
+          <tr><td><code>MUTATE_JOBS</code></td><td>How many rows <code>make mutate</code> runs at once.</td></tr>
+          <tr><td><code>VM_IMAGE</code></td><td>Which macOS image <code>make test-vm</code> boots.</td></tr>
         </tbody>
       </table>
     </div>

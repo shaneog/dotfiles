@@ -157,7 +157,7 @@
     <p>It is optional, and careful. If 1Password is not signed in, or has no such item, it tells you and writes nothing. If the file is already there it leaves it alone, unless you run <code>script/identity --replace</code>. It refuses a private key. To read a different item, name it: <code>script/identity "Another item"</code>.</p>
 
     <h2 id="timing">How long it takes</h2>
-    <p>These numbers come from the virtual machine test, which installs onto a completely fresh copy of macOS. The first bar includes Apple's Command Line Tools, which Homebrew installs before anything else. Apps are left out because their download time depends on your connection.</p>
+    <p>These numbers come from the virtual machine test, which installs onto a completely fresh copy of macOS. The first bar includes Apple's Command Line Tools, which Homebrew installs before anything else. Apps are left out because their download time depends on your connection. This chart is the one place these timings are kept.</p>
 
     <figure class="fig" data-animate>
       <div class="fig-body">
@@ -169,7 +169,7 @@
         </ul>
       </div>
       <figcaption>
-        <span>Measured on macOS 27 in a Tart virtual machine. The whole run, image already downloaded: 187 seconds.</span>
+        <span>Measured on macOS 27 in a Tart virtual machine. The whole run, image already downloaded: 187 seconds. What the bars leave out is starting the virtual machine and opening the first shell.</span>
         <button class="btn" type="button" data-replay>Replay</button>
       </figcaption>
     </figure>
@@ -195,10 +195,13 @@
     </div>
 
     <h3>Installing from somewhere else</h3>
-    <p>Two variables change where the dotfiles come from. That is handy for trying a branch, or for a Mac that has no GitHub login yet and gets the repository from a USB stick.</p>
+    <p>Three variables change where the dotfiles come from. That is handy for trying a branch or a fork, or for a Mac that has no GitHub login yet and gets the repository from a USB stick.</p>
 
     <pre><code>DOTFILES_REF=some-branch ./script/bootstrap
-DOTFILES_URL=/Volumes/stick/dotfiles ./script/bootstrap</code></pre>
+DOTFILES_URL=/Volumes/stick/dotfiles ./script/bootstrap
+GITHUB_USER=someone ./script/bootstrap    <span class="dim"># github.com/someone/dotfiles</span></code></pre>
+
+    <p><code>DOTFILES_REF</code> only counts for a fresh copy. When <code>~/.dotfiles</code> is already there, it is pulled on whichever branch it has checked out.</p>
 
     <h2 id="update">Keeping a Mac up to date</h2>
     <p>Once a Mac is set up, two commands look after it. Run them from <code>~/.dotfiles</code>.</p>
@@ -227,8 +230,9 @@ make doctor</code></pre>
           <li>Are <code>~/.gitconfig-user</code> and the 1Password agent there?</li>
           <li>Has a macOS setting drifted, or is something in the Brewfile not installed?</li>
           <li>Has a shell file that another tool manages changed?</li>
+          <li>Has the <a href="tests.html#vm">virtual machine test</a> passed lately?</li>
         </ul>
-        <p>It only reports. A missing signpost, file or agent is a failure. Everything else is a warning.</p>
+        <p>It only reports. A missing signpost, file or agent is a failure. Everything else is a warning. To see whether this copy is behind, it asks GitHub and downloads nothing.</p>
       </li>
     </ul>
 
