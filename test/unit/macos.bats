@@ -193,6 +193,13 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   if grep -q "^killall" "$LOG"; then
     echo "a run that changed nothing restarted: $(grep "^killall" "$LOG")"; return 1
   fi
+  # One setting drifts, on a run that is not the first: the first also clears
+  # the Dock, which restarts it whatever the settings did.
+  echo "com.apple.dock tilesize=32" >> "$STATE"
+  run macos
+  grep -q "^killall Dock" "$LOG" \
+    || { echo "a changed Dock setting did not restart the Dock: $output"; return 1; }
+  : > "$LOG"
   # Clearing the Dock is a change it has to be restarted to show.
   run macos --reset-dock
   grep -q "^killall Dock" "$LOG" || { echo "--reset-dock did not restart the Dock"; return 1; }
@@ -243,10 +250,24 @@ writes() { grep -c "^defaults write" "$LOG" 2>/dev/null || true; }
   return 0
 }
 
-@test "macos: the Dock's icons are only cleared when asked" {
+@test "macos: the Dock's icons are cleared on the first run, and after that only when asked" {
+  # Regression: clearing was only ever done with --reset-dock, which nothing
+  # passes on a new machine, so it kept the row of apps Apple pins.
   run macos
-  grep -q "persistent-apps" "$LOG" && { echo "the Dock was cleared without --reset-dock"; return 1; }
+  local recorded cleared
+  recorded="$(grep -n '^defaults export com.apple.dock ' "$LOG" | head -1 | cut -d: -f1)"
+  cleared="$(grep -n '^defaults write com.apple.dock persistent-apps -array' "$LOG" | head -1 | cut -d: -f1)"
+  [ -n "$cleared" ] || { echo "the first run left the Dock as it was"; cat "$LOG"; return 1; }
+  # The restore script is the only way back to the Dock that was there.
+  [ -n "$recorded" ] && [ "$recorded" -lt "$cleared" ] \
+    || { echo "the Dock was cleared before it was recorded (line ${recorded:-none} against $cleared)"; return 1; }
+
   : > "$LOG"
+  run macos
+  if grep -q "persistent-apps" "$LOG"; then
+    echo "a later run cleared the Dock without --reset-dock"; return 1
+  fi
+
   run macos --reset-dock
   grep -q "persistent-apps -array" "$LOG" \
     || { echo "--reset-dock did not clear the Dock"; return 1; }
