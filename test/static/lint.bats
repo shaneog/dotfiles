@@ -269,9 +269,25 @@ load '../helpers/common'
     printf '%s\n' "$macos" | grep -q "bats .*test/$tier" \
       || { echo "no macOS job runs test/$tier"; return 1; }
   done
-  assert_contains "$macos" "script/mutate" "what the macOS jobs run"
   refute_contains "$macos" "filter-tags" "what the macOS jobs run"
   assert_contains "$linux" "--filter-tags '!macos'" "what the Linux job runs"
+}
+
+@test "every mutation row is checked on a pull request: on Linux, or on a Mac where it needs one" {
+  command -v yq >/dev/null || skip_unless_ci "yq is not installed"
+  # Linux reports a row whose tests all need a Mac as not checked. If no macOS
+  # job were asked for those rows they would be checked nowhere, and every job
+  # would still be green.
+  local wf="$REPO/.github/workflows/test.yml" macos linux
+  macos="$(yq -r '.jobs[] | select(.["runs-on"] | test("macos")) | .steps[] | .run // ""' "$wf")"
+  linux="$(yq -r '.jobs[] | select(.["runs-on"] | test("ubuntu")) | .steps[] | .run // ""' "$wf")"
+  printf '%s\n' "$linux" | grep -qx 'script/mutate' \
+    || { echo "no Linux job runs every row it can"; return 1; }
+  printf '%s\n' "$macos" | grep -q "^script/mutate .*'--needs-a-mac'" \
+    || { echo "no macOS job runs the rows that need a Mac"; return 1; }
+  # The weekly run is the one that still watches every row fail on macOS.
+  printf '%s\n' "$macos" | grep -q "^script/mutate .*github.event_name != 'schedule' &&" \
+    || { echo "no run checks every row on a Mac"; return 1; }
 }
 
 @test "runners get their tools from the Brewfile, through one shared step" {
@@ -289,7 +305,7 @@ load '../helpers/common'
   jobs="$(yq -r '.jobs[] | select(.["runs-on"] | test("macos")) | .name' "$wf" | grep -c .)"
   uses="$(yq -r '.jobs[] | select(.["runs-on"] | test("macos")) | .steps[] | .uses // ""' "$wf" \
     | grep -c '^\./\.github/actions/tools$')"
-  [ "$jobs" -ge 4 ] || { echo "only found $jobs macOS jobs, the search did not work"; return 1; }
+  [ "$jobs" -ge 3 ] || { echo "only found $jobs macOS jobs, the search did not work"; return 1; }
   assert_equal "$uses" "$jobs" "macOS jobs in test.yml that use the shared step"
   grep -q 'brew bundle install --file Brewfile' "$REPO/.github/actions/tools/action.yml" \
     || { echo "the shared step no longer installs from the Brewfile"; return 1; }

@@ -8,6 +8,10 @@
 # two rows never see each other's breakage and this tree is never edited.
 # MUTATE_JOBS says how many workers; the default is one a processor, up to four.
 #
+# With --needs-a-mac, only the rows whose tests are all tagged macos are run:
+# the ones no other machine can check. CI asks a Mac for those and Linux for
+# the rest, because a Linux runner has more processors and no queue.
+#
 # Refuses to run against a dirty tree: what is not committed is not in the
 # copies, so the answer would be about some other code than the code in front
 # of you.
@@ -22,22 +26,22 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
 fi
 
 # A test tagged macos needs a Mac, and anywhere else bats is told to leave it
-# out. Its rows are then reported as not checked: such a test fails here with or
-# without the mutation, and a failure is what a row counts as caught.
+# out. A row with no other test is then reported as not checked: such a test
+# fails here with or without the mutation, and a failure is what a row counts
+# as caught.
 ON_A_MAC=""
 [ "$(uname -s)" = "Darwin" ] && ON_A_MAC=1
 run_bats() {
 	if [ -n "$ON_A_MAC" ]; then bats "$@"; else bats --filter-tags '!macos' "$@"; fi
 }
 
-# A test that measures time is tagged timing, and its rows are run after the
-# others with nothing beside them. Next to busy workers it is slow whatever the
-# row did: that reads as broken before the mutation, and as caught after it.
-timed_tests() {  # a test file: its tests that measure time, a line each
-	awk '
-		/^# bats file_tags=/ && /[=, ]timing([, ]|$)/ { all = 1 }
-		/^# bats test_tags=/ && /[=, ]timing([, ]|$)/ { tagged = 1; next }
-		/^@test / { if (all || tagged) print; tagged = 0 }
+# The tests of a file that carry a tag, a line each, or the tests that do not.
+tests_tagged() {  # a test file, a tag, "without" for the others
+	awk -v tag="$2" -v others="${3:-}" '
+		BEGIN { like = "[=, ]" tag "([, ]|$)" }
+		/^# bats file_tags=/ && $0 ~ like { all = 1 }
+		/^# bats test_tags=/ { if ($0 ~ like) tagged = 1; next }
+		/^@test / { if ((all || tagged) == (others == "")) print; tagged = 0 }
 	' "$1"
 }
 
@@ -48,6 +52,8 @@ timed_tests() {  # a test file: its tests that measure time, a line each
 # it is written.
 PATIENCE=100
 
+ONLY_MAC=""
+if [ "${1:-}" = "--needs-a-mac" ]; then ONLY_MAC=1; shift; fi
 FILTER="${1:-}"
 TAB="$(printf '\t')"
 
@@ -58,19 +64,45 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
-mkdir "$WORK/timed" "$WORK/results"
+mkdir "$WORK/timed" "$WORK/mac" "$WORK/rest" "$WORK/results"
 
 # test/integration/startup.bats, as a name for one file.
 key() { printf '%s' "$1" | tr '/' '_'; }
 
 # The rows asked for, in two lists: those that can share the machine and those
 # that cannot. Beside each list, for each test file, the filters its rows name.
+#
+# A row needs a Mac when every test its filter names is tagged macos. Off a
+# Mac it is not checked, and says so. With --needs-a-mac it is the only kind
+# that is run. Both are decided here, from the same reading of the test file,
+# so a row cannot be left out by both.
+#
+# A test that measures time is tagged timing, and its rows are run after the
+# others with nothing beside them. Next to busy workers it is slow whatever the
+# row did: that reads as broken before the mutation, and as caught after it.
 : > "$WORK/rows" ; : > "$WORK/rows.alone"
+unrun=0
+left=0
 while IFS="$TAB" read -r file expr test_file filter note; do
 	case "${file:-#}" in ''|'#'*) continue ;; esac
 	if [ -n "$FILTER" ] && [ "${file#*"$FILTER"}" = "$file" ]; then continue; fi
 	timed="$WORK/timed/$(key "$test_file")"
-	[ -e "$timed" ] || timed_tests "$test_file" > "$timed" 2>/dev/null
+	mac="$WORK/mac/$(key "$test_file")"
+	rest="$WORK/rest/$(key "$test_file")"
+	if [ ! -e "$timed" ]; then
+		tests_tagged "$test_file" timing > "$timed" 2>/dev/null
+		tests_tagged "$test_file" macos > "$mac" 2>/dev/null
+		tests_tagged "$test_file" macos without > "$rest" 2>/dev/null
+	fi
+	needs_mac=""
+	if grep -Eq -e "$filter" "$mac" && ! grep -Eq -e "$filter" "$rest"; then needs_mac=1; fi
+	if [ -n "$needs_mac" ] && [ -z "$ON_A_MAC" ]; then
+		unrun=$((unrun + 1))
+		printf '  n/a   %-28s NOT CHECKED, its test needs a Mac: %s\n' "$file" "$note" \
+			| tee "$WORK/results/mac.$unrun.unchecked"
+		continue
+	fi
+	if [ -z "$needs_mac" ] && [ -n "$ONLY_MAC" ]; then left=$((left + 1)); continue; fi
 	list="$WORK/rows"
 	if grep -Eq -e "$filter" "$timed"; then list="$WORK/rows.alone"; fi
 	printf '%s\t%s\t%s\t%s\t%s\n' "$file" "$expr" "$test_file" "$filter" "$note" >> "$list"
@@ -160,11 +192,7 @@ row() {  # a name for the result, the row, the rows it is one of
 	# mutation, and that answer would be about the machine and not the assertion.
 	plan="$(unmutated "$test_file" "$filter" "$3")"
 	if ! has '^1\.\.[1-9]' "$plan"; then
-		if [ -z "$ON_A_MAC" ] && [ "$(bats --count "$test_file" --filter "$filter" 2>/dev/null || echo 0)" -gt 0 ]; then
-			verdict="n/a"; why="its test needs a Mac"
-		else
-			verdict="BROKEN"; why="no test matches \"$filter\" in $test_file"
-		fi
+		verdict="BROKEN"; why="no test matches \"$filter\" in $test_file"
 	elif has '^not ok ' "$plan"; then
 		verdict="BROKEN"; why="\"$filter\" fails before anything is broken"
 		# With what the test said, or a red run gives nothing to go on.
@@ -238,5 +266,7 @@ fi
 
 printf '\n  %s caught, %s missed\n' "$caught" "$missed"
 [ "$unchecked" -eq 0 ] \
-	|| printf '  %s NOT CHECKED on this machine. CI checks every row on macOS.\n' "$unchecked"
+	|| printf '  %s NOT CHECKED on this machine. CI checks every row: on Linux, or on macOS where its test needs a Mac.\n' "$unchecked"
+[ "$left" -eq 0 ] \
+	|| printf '  %s left out: their tests need no Mac, and --needs-a-mac asks for the others.\n' "$left"
 [ "$missed" -eq 0 ] || exit 1

@@ -30,7 +30,11 @@ script/sweep	s#sed "${n}s|^|$prefix |" "$backup" > "$file"#:#	test/unit/sweep.ba
 script/mutate	s|sed "$expr" "$backup" > "$file"|:|	test/unit/mutate.bats	is caught, and the file is put back	no mutation is ever applied
 script/mutate	s|has '^not ok '|has '^never '|	test/unit/mutate.bats	fails before anything is broken	a test that fails anyway counts as catching the mutation
 script/mutate	s|grep -v ' # skip'|cat|	test/unit/mutate.bats	this machine skips	a skipped test is reported as an assertion that missed
-script/mutate	s|bats --filter-tags '!macos' "$@"; fi|bats "$@"; fi|	test/unit/mutate.bats	not checked anywhere else	off a Mac, the tests that need one are run and their failures counted as caught
+script/mutate	s|bats --filter-tags '!macos' "$@"; fi|bats "$@"; fi|	test/unit/mutate.bats	judged by the one that needs none	off a Mac, the tests that need one are run and their failures counted as caught
+script/mutate	s|then needs_mac=1; fi|then needs_mac=; fi|	test/unit/mutate.bats	not checked anywhere else	off a Mac, a row whose test needs one is run, finds no test and is called broken
+script/mutate	s| && ! grep -Eq -e "$filter" "$rest"||	test/unit/mutate.bats	judged by the one that needs none	a row with a test that needs no Mac is left for a Mac, and Linux stops checking it
+script/mutate	s|ONLY_MAC=1; shift|shift|	test/unit/mutate.bats	says what it left	a Mac asked for the rows that need one runs every row
+script/mutate	s|if \[ -z "$needs_mac" \] && \[ -n "$ONLY_MAC" \]; then|if [ -n "$ONLY_MAC" ]; then|	test/unit/mutate.bats	or off a Mac	the rows that need a Mac are left out by the Mac too, and run nowhere
 script/mutate	s|^\[ "$(uname -s)" = "Darwin" \] && ON_A_MAC=1|:|	test/unit/mutate.bats	on a Mac the same test is run	a Mac leaves out the tests only it can run
 script/mutate	s/grep -q "$1" <<< "$2"/printf '%s\\n' "$2" | grep -q "$1"/	test/unit/mutate.bats	however much the tests of its file print	a row is said to name no test when its test's output is still being written as grep leaves
 script/mutate	s|\[\[ "$name" =~ $2 \]\] && ours=1|ours=1|	test/unit/mutate.bats	judged by its own test	a row answers for every test its file ran, not only its own
@@ -209,6 +213,9 @@ Brewfile	s|^brew 'zsh-you-should-use'$|# gone|	test/static/lint.bats	is a formul
 Brewfile	s|^brew 'fd'$|# gone|	test/static/guides.bats	mark as installed is in the Brewfile	the cheat sheet promises a tool nothing installs
 .github/workflows/test.yml	s|bats --print-output-on-failure test/unit|bats --print-output-on-failure --filter-tags '!macos' test/unit|	test/static/lint.bats	only the Linux job leaves any out	a macOS job leaves out the tests that need a Mac, so they run nowhere
 .github/workflows/test.yml	s|--filter-tags '!macos' ||	test/static/lint.bats	only the Linux job leaves any out	the Linux job runs tests that cannot pass there
+.github/workflows/test.yml	s|script/mutate ${{.*$|true|	test/static/lint.bats	on a Mac where it needs one	no job is asked for the rows that need a Mac, so they are checked nowhere
+.github/workflows/test.yml	s|^        run: script/mutate$|        run: true|	test/static/lint.bats	on a Mac where it needs one	the mutation job stops running the rows
+.github/workflows/test.yml	s#github.event_name != 'schedule' && '--needs-a-mac' || ''#'--needs-a-mac'#	test/static/lint.bats	on a Mac where it needs one	no run watches every row fail on macOS any more
 .github/workflows/provision.yml	s|- uses: ./.github/actions/tools|- run: brew install direnv fzf starship|	test/static/lint.bats	through one shared step	a job goes back to a tool list of its own
 .github/workflows/test.yml	s|^      - uses: ./.github/actions/tools$|      - run: true|	test/static/lint.bats	through one shared step	the macOS jobs stop installing the tools
 config/zsh/lib/editor.zsh	s|^bindkey -e$|:|	test/integration/editor.bats	still edits with the emacs keys	a tmux pane edits with the vi keys, because EDITOR is nvim

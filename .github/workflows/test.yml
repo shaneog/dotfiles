@@ -34,27 +34,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      # From two places, as a Linux container is set up, so that passing here
-      # means passing there. The distribution has zsh, bats, tmux and the
-      # small tools. It has no starship, mise or tree-sitter-cli, and its fzf,
-      # gitleaks and Neovim are older than this config is written for, so
-      # those six are Homebrew's, which the runner image ships off PATH. They
-      # are linked in one by one: with Homebrew's directory on PATH, the next
-      # thing installed there would replace a distribution tool without anyone
-      # choosing that. git, jq, python3, ssh and docker are part of the image;
-      # its yq is replaced by the distribution's, which reads a filter a
-      # little differently from the one Homebrew gives the macOS jobs.
-      - name: Install tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            zsh bats tmux shellcheck ripgrep direnv fd-find hyperfine yq
-          sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
-          brew=/home/linuxbrew/.linuxbrew/bin
-          "$brew/brew" install fzf gitleaks mise neovim starship tree-sitter-cli
-          for tool in fzf gitleaks mise nvim starship tree-sitter; do
-            sudo ln -sf "$brew/$tool" "/usr/local/bin/$tool"
-          done
+      - uses: ./.github/actions/linux-tools
       - name: Every test not tagged macos
         env:
           SKIP_PERF: ${{ github.event_name == 'push' && '1' || '' }}
@@ -72,6 +52,13 @@ jobs:
       - uses: ./.github/actions/tools
       - name: Lint and parse every config
         run: bats --print-output-on-failure test/static
+      # The mutation job is on Linux, and a row whose tests all need a Mac is
+      # not checked there. Those few are run here, in the shortest macOS job.
+      # A sixth macOS job would wait for one of the other five to finish.
+      # Monday's run checks every row here, so that each is still watched
+      # failing on macOS once a week.
+      - name: The mutations only a Mac can check
+        run: script/mutate ${{ github.event_name != 'schedule' && '--needs-a-mac' || '' }}
 
   unit:
     name: unit (${{ matrix.zsh }} zsh)
@@ -137,14 +124,18 @@ jobs:
   # Breaks each thing in test/mutations.tsv and checks the named assertion
   # notices. Runs on every push and pull request, not weekly: the moment an
   # assertion is worth re-checking is the change that touches it, and finding out
-  # on Monday that a test went blind on Tuesday is most of the value gone. It is
-  # deterministic and takes about as long as the integration tier.
+  # on Monday that a test went blind on Tuesday is most of the value gone.
+  #
+  # On Linux, because the rows are run side by side and a Linux runner has more
+  # processors than a macOS one, and because GitHub runs only so many macOS jobs
+  # at once. The rows whose tests need a Mac are reported here as not checked;
+  # the static job runs those.
   mutate:
     name: mutation manifest
-    runs-on: macos-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/tools
-      - name: Every mutation must be caught
+      - uses: ./.github/actions/linux-tools
+      - name: Every mutation whose test needs no Mac must be caught
         run: script/mutate
