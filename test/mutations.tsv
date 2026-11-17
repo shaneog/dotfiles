@@ -21,6 +21,11 @@ config/zsh/lib/node.zsh	s|^if (( \$+functions\[nvm\]|if false \&\& (( $+function
 config/zsh/lib/completion.zsh	s|^zstyle ':completion:\*:\*:\*:\*:\*' menu select|# removed|	test/integration/startup.bats	completion styling is ours	the completion styling disappears
 script/audit	s|^strip_comments() { grep -vE "\^\[\[:space:\]\]\*#"; }|strip_comments() { cat; }|	test/unit/audit.bats	prose mentioning	the audit reads comments as invocations
 script/audit	s|^trap 'rm -rf "$SCRATCH"' EXIT|:|	test/unit/audit.bats	TMPDIR says	each audit leaves its working directory behind
+script/audit	s|^  shell_word "$tool" \&\& continue|  :|	test/unit/audit.bats	shell builtin needs no package	an alias for a builtin is reported as a tool nothing installs
+script/audit	s|^  shell_word "$tool" \&\& continue|  :|	test/unit/audit.bats	this repo's config invokes	the audit fails on this repo for the builtins its aliases name
+script/audit	s@^    \*": builtin".*@    *) return 0 ;;@	test/unit/audit.bats	modifier does not hide	every word counts as the shell's own, so no missing tool is reported
+script/audit	s@ -e "s/.((noglob.*@@	test/unit/audit.bats	not the modifier before it	noglob is read as the command an alias runs
+script/audit	s|completion editor history|completion history|	test/unit/audit.bats	every lib in this repo	a lib named for what it does is reported as config for a dropped tool
 script/brew-drift	s|comm -13 "\$WORK/installed-formulae"|comm -13 "$WORK/requested-formulae"|	test/unit/brew-drift.bats	not called absent	dependencies get reported as missing
 script/brew-drift	s|comm -23 "\$WORK/installed-casks" "\$WORK/known-casks"|comm -23 "$WORK/installed-casks" "$WORK/declared-casks"|	test/unit/brew-drift.bats	not an undeclared extra	opt-in casks get reported as undeclared
 script/brew-drift	s|comm -13 "\$WORK/installed-casks" "\$WORK/declared-casks"|comm -13 "$WORK/installed-casks" "$WORK/known-casks"|	test/unit/brew-drift.bats	not absent where it was never installed	opt-in casks get reported as missing
