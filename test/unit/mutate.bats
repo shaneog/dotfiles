@@ -43,6 +43,13 @@ setup() {
 |}
 |@test "the size, after a moment" { sleep 1; grep -q small "$BATS_TEST_DIRNAME/../settings"; }
 |@test "the colour, after a moment" { sleep 1; grep -q green "$BATS_TEST_DIRNAME/../settings"; }
+|# The second prints, before its own result, more than a pipe will hold.
+|@test "green, and nothing more" { grep -q green "$BATS_TEST_DIRNAME/../settings"; }
+|@test "green, and a great deal more" {
+|  local line=0
+|  while [ "$((line += 1))" -le 4000 ]; do echo "# line $line of a great many" >&3; done
+|  grep -q green "$BATS_TEST_DIRNAME/../settings"
+|}
 BATS
   git -C "$WORK" init -q
   export MEET="$BATS_TEST_TMPDIR/meet"
@@ -140,6 +147,17 @@ mutate() {  # what uname reports
   run mutate Linux
   [ "$status" -ne 0 ] || { echo "$output"; return 1; }
   assert_contains "$output" "no test matches"
+}
+
+@test "mutate: a row is judged by its tests, however much the tests of its file print" {
+  # Regression: what the unmutated run printed was piped to `grep -q`, which
+  # leaves at its first match with the rest still being written. pipefail
+  # called that no match, so on a busy machine a row now and then "named no
+  # test". Here the rest is more than a pipe holds, and it is every time.
+  row "green, and"
+  run mutate Darwin
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "1 caught, 0 missed"
 }
 
 @test "mutate: a row is judged by its own test, not by another row's in the same file" {

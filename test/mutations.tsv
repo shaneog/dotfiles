@@ -28,16 +28,17 @@ script/audit	s|Brewfile Brewfile.desk|Brewfile|	test/unit/audit.bats	opt-in Brew
 script/sweep	s|still_current < "$OUT" > "$OUT.new"|cp "$OUT" "$OUT.new"|	test/unit/sweep.bats	has moved	sweep resumes on line numbers alone and skips lines nothing has swept
 script/sweep	s#sed "${n}s|^|$prefix |" "$backup" > "$file"#:#	test/unit/sweep.bats	commented out while the tests run	sweep runs the tests against a file it never edited, and records every line as noticed
 script/mutate	s|sed "$expr" "$backup" > "$file"|:|	test/unit/mutate.bats	is caught, and the file is put back	no mutation is ever applied
-script/mutate	s|grep -q '^not ok '|grep -q '^never '|	test/unit/mutate.bats	fails before anything is broken	a test that fails anyway counts as catching the mutation
-script/mutate	s|grep -qv ' # skip'|grep -q .|	test/unit/mutate.bats	this machine skips	a skipped test is reported as an assertion that missed
+script/mutate	s|has '^not ok '|has '^never '|	test/unit/mutate.bats	fails before anything is broken	a test that fails anyway counts as catching the mutation
+script/mutate	s|grep -v ' # skip'|cat|	test/unit/mutate.bats	this machine skips	a skipped test is reported as an assertion that missed
 script/mutate	s|bats --filter-tags '!macos' "$@"; fi|bats "$@"; fi|	test/unit/mutate.bats	not checked anywhere else	off a Mac, the tests that need one are run and their failures counted as caught
 script/mutate	s|^\[ "$(uname -s)" = "Darwin" \] && ON_A_MAC=1|:|	test/unit/mutate.bats	on a Mac the same test is run	a Mac leaves out the tests only it can run
+script/mutate	s/grep -q "$1" <<< "$2"/printf '%s\\n' "$2" | grep -q "$1"/	test/unit/mutate.bats	however much the tests of its file print	a row is said to name no test when its test's output is still being written as grep leaves
 script/mutate	s|\[\[ "$name" =~ $2 \]\] && ours=1|ours=1|	test/unit/mutate.bats	judged by its own test	a row answers for every test its file ran, not only its own
 script/mutate	s|share row "$WORK/rows" "$JOBS"|share row "$WORK/rows" 1|	test/unit/mutate.bats	side by side	the rows go back to one at a time
 script/mutate	s|cd "$WORK/tree.$w"|cd "$WORK/tree.1"|	test/unit/mutate.bats	the row beside it broke	every worker breaks things in the same copy of the tree
 script/mutate	s|export DOTFILES_TEST_PATIENCE="$PATIENCE"; ||	test/unit/mutate.bats	told to hurry	a broken row waits out the whole of every wait in its test
 script/mutate	s|then list="$WORK/rows.alone"; fi|then list="$WORK/rows"; fi|	test/unit/mutate.bats	measures time	a test that measures time is run among busy workers, and fails whatever the row did
-script/mutate	s|grep '^#'|grep '^never'|	test/unit/mutate.bats	fails before anything is broken	a test that fails with nothing broken is named and not explained
+script/mutate	s|/^#/|/^never/|	test/unit/mutate.bats	fails before anything is broken	a test that fails with nothing broken is named and not explained
 script/macos	s|if \[ -n "\$CHECK_ONLY" \]; then|if [ -n "$CHECK_ONLY" ] \&\& false; then|	test/unit/macos.bats	writes nothing	--check starts writing
 script/macos	s|^if \[ -z "\$CHECK_ONLY" \]; then$|if true; then|	test/unit/macos.bats	leaves System Settings open	--check closes System Settings on whoever has it open
 script/macos	s|^elif \[ -d "\$BACKUP_DIR" \]; then|elif false; then|	test/unit/macos.bats	does not overwrite	a re-run overwrites the recorded values
