@@ -175,7 +175,12 @@ fi
 # Install from local Brewfile
 if [ -f "$HOME/.Brewfile" ]; then
   log "Installing from user Brewfile:"
-  brew bundle check --global || brew bundle --global
+  # --verbose, because without it this looks like a hang. Homebrew names every
+  # entry it is about to install, then installs them all in one go and keeps
+  # the output of that to itself until the last one is in. With the apps in the
+  # Brewfile that is many minutes of a terminal showing nothing, straight after
+  # a list that ends at the fonts.
+  brew bundle check --global || brew bundle --global --verbose
   logk
 fi
 

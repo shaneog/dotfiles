@@ -199,6 +199,7 @@ script/update	s|^    DOTFILES_UPDATE_FROM="$before" exec .*|    :|	test/unit/upd
 script/update	s@^      || abort "The pull failed.*@      || true@	test/unit/update.bats	stops when the pull fails	a failed pull is followed by linking and installing
 script/update	s|^set -euo pipefail|set -uo pipefail|	test/unit/update.bats	link step that fails	a failed link step is followed by an install
 script/update	s|^    not_done="$not_done brewfile"|    :|	test/unit/update.bats	without brew	a skipped Brewfile is not named at the end
+script/update	s|/Brewfile" --verbose$|/Brewfile"|	test/unit/update.bats	only when something in it is missing	an update installs from the Brewfile in silence, which looks like a hang
 config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
 config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integration/startup.bats	twice is a no-op	the double-source guard goes
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell
@@ -247,6 +248,7 @@ script/bootstrap	s|printf '%s\\n' "$2" > "$1.secret"|eval "echo \\"$2\\"" > "$1.
 script/remove	s|printf '%s\\n' "$2" > "$1.secret"|eval "echo \\"$2\\"" > "$1.secret"|	test/unit/install-scripts.bats	exactly as it was typed	remove's askpass helper expands the password as shell
 script/bootstrap	s|( umask 077; printf|( printf|	test/unit/install-scripts.bats	readable only by its owner	the sudo password is left readable by other users
 script/bootstrap	s|abort "Cannot reach|: "Cannot reach|	test/unit/install-scripts.bats	cannot be fetched	bootstrap reports success without any dotfiles
+script/bootstrap	s/brew bundle --global --verbose$/brew bundle --global/	test/static/lint.bats	shows Homebrew's own output	a new machine installs its apps in silence, which looks like a hang
 script/bootstrap	s|^  run_dotfile_scripts script/macos$|  :|	test/unit/install-scripts.bats	again once the Brewfile	Touch ID inside tmux goes back to needing a second run by hand
 script/bootstrap	s|^  && ! "$HOME/.dotfiles/script/macos" --check >/dev/null 2>&1; then|  ; then|	test/unit/install-scripts.bats	when its check is clean	every bootstrap applies the macOS settings twice
 script/bootstrap	s|^if \[ ! -f "$HOME/.gitconfig-user" \]; then|if false; then|	test/unit/install-scripts.bats	naming what is still missing	bootstrap ends without saying git has no identity to sign with
