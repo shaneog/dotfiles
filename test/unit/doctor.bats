@@ -33,7 +33,8 @@ setup() {
   echo "# ours" > "$FIX/ssh/config"
   printf "brew 'fzf'\ncask '1password'\n" > "$FIX/Brewfile"
   printf '#!/bin/sh\necho "33 of 33 settings applied, 0 not"\n' > "$FIX/script/macos"
-  chmod +x "$FIX/script/macos"
+  printf '#!/bin/sh\necho "  Rectangle: has settings"\n' > "$FIX/script/apps"
+  chmod +x "$FIX/script/macos" "$FIX/script/apps"
 
   fix_git init -q
   fix_git add -A
@@ -277,6 +278,22 @@ MACOS
   assert_contains "$output" "0 failures, 3 warnings"
 }
 
+@test "doctor: an app still waiting for its settings warns, by name" {
+  cat > "$FIX/script/apps" <<'APPS'
+#!/bin/sh
+[ "$1" = "--check" ] || exit 2
+echo "  iStat Menus: no settings yet"
+echo "  Rectangle: has settings"
+exit 1
+APPS
+  run doctor
+  [ "$status" -eq 0 ] || { echo "an app not set up is a warning: $output"; return 1; }
+  assert_contains "$output" "warn  iStat Menus: no settings yet: make apps"
+  refute_contains "$output" "warn  Rectangle"
+  assert_contains "$output" "0 failures, 1 warnings"
+  refute_contains "$output" "every app make apps knows has settings"
+}
+
 @test "doctor: what the Brewfile declares and this machine lacks warns, by name" {
   : > "$BREW_STATE/formulae"
   : > "$BREW_STATE/casks"
@@ -323,7 +340,7 @@ MACOS
   local path; path="$(bare_path)"
   run env -i HOME="$DHOME" PATH="$path" "$FIX/script/doctor"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  assert_contains "$output" "NOT CHECKED: clone macos homebrew vm-tier"
+  assert_contains "$output" "NOT CHECKED: clone macos apps homebrew vm-tier"
   assert_contains "$output" "0 failures, 0 warnings"
   refute_contains "$output" "level with origin/main"
   refute_contains "$output" "settings applied"

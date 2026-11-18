@@ -95,6 +95,17 @@ make identity
 switch on "Use the SSH agent". SSH and commit signing both go through it.
 [Keys, 1Password and a fingerprint][keys] explains how.
 
+The apps are a third step, and an optional one. Those that keep their settings
+in 1Password get them back from there, and the same command then walks through
+what each still needs from you, a permission or a licence:
+
+```sh
+make apps
+```
+
+[Give the apps their settings][apps] says which apps, and how the settings get
+into 1Password in the first place.
+
 Two more files are yours to fill in on a machine that needs them, and neither
 is required: `~/.ssh/config-local` and `~/.zshrc.local`.
 [Where the files live][local] says what each is for.
@@ -155,6 +166,7 @@ the script.
 
 [install]: https://ogrady.ie/dotfiles/install.html
 [identity]: https://ogrady.ie/dotfiles/install.html#identity
+[apps]: https://ogrady.ie/dotfiles/install.html#apps
 [update]: https://ogrady.ie/dotfiles/install.html#update
 [remove]: https://ogrady.ie/dotfiles/install.html#remove
 [keys]: https://ogrady.ie/dotfiles/keys.html

@@ -185,6 +185,7 @@ script/doctor	s|^    note "$shown noted as it is now.*|    warn "$shown is new"|
 script/doctor	s|^    "$DOTFILESDIR"/\*) return 0 ;;|    /nowhere/*) return 0 ;;|	test/unit/doctor.bats	this repo's own is not watched	the repo's own shell files are watched as if something else owned them
 script/doctor	s|^  git hash-object --no-filters "$HOME/$1" 2>/dev/null|  tr -d " \\n" < "$HOME/$1"; echo|	test/unit/doctor.bats	a hash and a name	what a managed shell file says is copied into the note
 script/doctor	s|^    not_checked "shell-files".*|    :|	test/unit/doctor.bats	note that cannot be written	a note that cannot be written makes every run a first run, silently
+script/doctor	s@warn "${line#  }: make apps"@:@	test/unit/doctor.bats	still waiting for its settings	an app with no settings is found and not reported
 script/identity	s|^if \[ -e "$TARGET" \] && \[ -z "$REPLACE" \]; then|if false; then|	test/unit/identity.bats	already there is left alone	an existing ~/.gitconfig-user is written over without being asked
 script/identity	s|^\[ ! -f "$TARGET" \] \|\| cat "$TARGET" > "$scratch".*|:|	test/unit/identity.bats	keeps the rest of the file	--replace drops whatever else the file held
 script/identity	s|^scratch="$(mktemp "$TARGET.XXXXXX")".*|scratch="$TARGET"|	test/unit/identity.bats	write that fails partway	the file is written in place, so a failure leaves half of one
@@ -195,6 +196,18 @@ script/identity	s|^{ one_line "$key" && \[\[ "$key" =~ $public_key \]\]; } \\|tr
 script/identity	s|^one_line "$name"  \|\| by_hand.*|:|	test/unit/identity.bats	more than one line is refused	a name of several lines is written into the file
 script/identity	s|^git config --file "$scratch" user.name "$name" \\|printf "[user]\\n\\tname = %s\\n" "$name" >> "$scratch" \\|	test/unit/identity.bats	git's format would misread	the name is written as text, and git reads back part of it
 script/identity	s|^    -\*)        usage ;;|    -*)        : ;;|	test/unit/identity.bats	does not know is refused	a mistyped option is ignored and the run goes ahead
+script/apps	s|^.*elif has_settings .. \[ -z "$REPLACE" \]; then| elif false; then|	test/unit/apps.bats	already has settings is left alone	an app that was already set up has its settings written over
+script/apps	s|^running() { .*|running() { false; }|	test/unit/apps.bats	beneath an app that is running	settings are imported beneath a running app, which writes its own back
+script/apps	s|^.*defaults export "$domain" "$BACKUP_DIR/$domain.plist"|:|	test/unit/apps.bats	keeps what was there	--replace keeps no copy of what it replaced
+script/apps	s|^person() { .*|person() { true; }|	test/unit/apps.bats	such an app is left for later	an app is opened to import with nobody there to confirm it
+script/apps	s|^person() { .*|person() { true; }|	test/unit/apps.bats	by-hand step is said and nothing is opened	apps and panes are opened with nobody there
+script/apps	s|^.*if \[ "$count" -gt 1 \]; then|if false; then|	test/unit/apps.bats	two documents of the same name	one of two documents is used without saying which
+script/apps	s@defaults import \(.*\) .. failed=1@defaults import \1@	test/unit/apps.bats	could not be written are not called restored	an import that failed is reported as restored
+script/apps	s|^.*defaults read "$domain" >/dev/null 2>&1 .. return 0|return 0|	test/unit/apps.bats	names an installed app with no settings	every installed app counts as set up
+script/apps	s|^.*tar -xzf "$SCRATCH/stored.tgz" -C "$SCRATCH/stored" .. {|false \&\& {|	test/unit/apps.bats	keeps what is stored for an app this Mac does not have	saving from one Mac drops the apps it does not have
+script/apps	s|^.*\*".$EXPORT") ;;|*) ;;|	test/unit/apps.bats	not the app's export	any file at all is stored as an app's export
+script/apps	s|^trap '\[ -z "$SCRATCH" \] .. rm -rf "$SCRATCH"' EXIT|:|	test/unit/apps.bats	given the stored ones	every app's settings are left behind in a temporary directory
+script/apps	s|^.*open -a "$APPS_DIR/$APP" "$SCRATCH/stored/$NAME/export.$EXPORT"|open -a "$APPS_DIR/$APP"|	test/unit/apps.bats	is handed its file	the app is opened without the file it was meant to import
 script/update	s|^    DOTFILES_UPDATE_FROM="$before" exec .*|    :|	test/unit/update.bats	pulled is the one	the old script finishes a run that pulled a new one
 script/update	s@^      || abort "The pull failed.*@      || true@	test/unit/update.bats	stops when the pull fails	a failed pull is followed by linking and installing
 script/update	s|^set -euo pipefail|set -uo pipefail|	test/unit/update.bats	link step that fails	a failed link step is followed by an install
@@ -252,6 +265,7 @@ script/bootstrap	s/brew bundle --global --verbose$/brew bundle --global/	test/st
 script/bootstrap	s|^  run_dotfile_scripts script/macos$|  :|	test/unit/install-scripts.bats	again once the Brewfile	Touch ID inside tmux goes back to needing a second run by hand
 script/bootstrap	s|^  && ! "$HOME/.dotfiles/script/macos" --check >/dev/null 2>&1; then|  ; then|	test/unit/install-scripts.bats	when its check is clean	every bootstrap applies the macOS settings twice
 script/bootstrap	s|^if \[ ! -f "$HOME/.gitconfig-user" \]; then|if false; then|	test/unit/install-scripts.bats	naming what is still missing	bootstrap ends without saying git has no identity to sign with
+script/bootstrap	s@^  .. ! "$HOME/.dotfiles/script/apps" --check >/dev/null 2>&1; then@  \&\& false; then@	test/unit/install-scripts.bats	naming what is still missing	bootstrap ends without saying the apps have no settings
 script/remove	s|if \[ -L "$link" \] && \[ -e "$link" \]; then|if [ -L "$link" ]; then|	test/unit/install-scripts.bats	leaves other dangling links alone	remove deletes dangling links it never made
 script/remove	s|^  \[ "$dir" = "/Library/Developer/CommandLineTools" \] \|\| return 1|  :|	test/unit/install-scripts.bats	Command Line Tools for deletion	remove --everything deletes Xcode's own directory
 config/tmux/tmux.conf	s|^set -g set-clipboard on|set -g set-clipboard off|	test/integration/tmux.bats	OSC 52 copy reaches the terminal	a copy from a remote program never reaches the Mac's pasteboard

@@ -1,6 +1,6 @@
 BATS ?= bats
 
-.PHONY: test test-static test-unit test-integration test-vm lint audit brew-drift mutate sweep update doctor identity
+.PHONY: test test-static test-unit test-integration test-vm lint audit brew-drift mutate sweep update doctor identity apps apps-save
 
 # A test tagged macos needs a Mac. Anywhere else those are left out, and each
 # tier says how many, so a green run on Linux is not read as the whole suite.
@@ -40,6 +40,16 @@ doctor:
 # there alone. DOTFILES_IDENTITY_ITEM names the item.
 identity:
 	./script/identity
+
+# Gives the apps that have no settings yet the ones stored in 1Password, then
+# walks through what only a person can do for each. Leaves an app that has
+# settings alone. DOTFILES_APPS_ITEM names the document.
+apps:
+	./script/apps
+
+# Stores this Mac's app settings in that document, for the next new Mac.
+apps-save:
+	./script/apps --save
 
 # Upstream rot: renamed, deprecated or archived packages, tools the config
 # invokes that no Brewfile installs, and a Neovim lockfile nobody has moved in

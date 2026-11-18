@@ -122,7 +122,9 @@ printf 'macos %s\n' "$*" >> "$CALL_LOG"
 if [ "$1" = "--check" ] && [ -e "$HOME/settings-left" ]; then exit 1; fi
 exit 0
 MACOS
-  chmod +x "$FIXTURE/script/setup" "$FIXTURE/script/macos"
+  # An app is waiting for its settings for as long as $HOME/apps-left exists.
+  printf '#!/bin/sh\n[ "$1" = "--check" ] && [ ! -e "$HOME/apps-left" ]\n' > "$FIXTURE/script/apps"
+  chmod +x "$FIXTURE/script/setup" "$FIXTURE/script/macos" "$FIXTURE/script/apps"
   local git=(env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
     git -C "$FIXTURE" -c user.name=t -c user.email=t@example.invalid
     -c commit.gpgsign=false -c init.defaultBranch=main)
@@ -153,12 +155,16 @@ MACOS
 @test "bootstrap ends by naming what is still missing, and only that" {
   # ~/.gitconfig-user and 1Password's agent are the two things no script here
   # can supply. Git says nothing at all when the first is absent.
+  # An app with no settings is not one of those two, and waits on the same
+  # thing they do, so it is named in the same place.
   make_dotfiles_fixture
+  : > "$IHOME/apps-left"
   DOTFILES_URL="$FIXTURE" run run_script bootstrap
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   assert_contains "$output" "create ~/.gitconfig-user"
   assert_contains "$output" "make -C ~/.dotfiles identity"
   assert_contains "$output" "1Password's SSH agent"
+  assert_contains "$output" "make -C ~/.dotfiles apps"
 
   # A socket's path has a short limit, and the test directory is already long,
   # so the home moves somewhere short for the half where both are present.

@@ -231,3 +231,10 @@ if [ ! -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
   echo "    Still to do: switch on 1Password's SSH agent, under Settings > Developer."
   echo "    SSH and commit signing both go through it."
 fi
+# Not about who you are, but waiting on the same thing: 1Password signed in.
+if [ -x "$HOME/.dotfiles/script/apps" ] \
+  && ! "$HOME/.dotfiles/script/apps" --check >/dev/null 2>&1; then
+  echo "    Still to do: give the apps their settings. Once you have signed in to the"
+  echo "    1Password app, 'make -C ~/.dotfiles apps' restores what is stored there and"
+  echo "    walks through the rest."
+fi

@@ -1,0 +1,397 @@
+#!/usr/bin/env bash
+#
+# Gives the apps on a new Mac the settings they have on one that is already set
+# up, and walks through what is left for a person: a permission to tick, a
+# licence to enter.
+#
+#   script/apps [--replace] [app...]    restore, then walk through the rest
+#   script/apps --save [app...]         store this Mac's settings
+#   script/apps --check                 say which apps have no settings yet
+#   script/apps --walk [app...]         the by-hand steps alone
+#
+# A step for after script/bootstrap, like script/identity and for the same
+# reason: the settings are kept in 1Password, and on a new machine its app has
+# to be opened and signed in to before its command line tool can read anything.
+#
+# They are kept there and not in this repo because the repo is public, and an
+# app's settings hold whatever the app knows: a licence, an email address, where
+# the weather is for. Everything is one document, called "Mac app settings"
+# unless DOTFILES_APPS_ITEM names another, holding one folder per app.
+#
+# Restoring is for an app that has no settings yet, which is what one is on a
+# new machine before it is first opened. An app that has some is left alone
+# unless --replace is given, and then what it had is copied to
+# ~/.local/share/dotfiles/apps first. When nothing needs restoring, 1Password
+# is not asked for anything.
+#
+# Saving replaces what is stored for the apps it could read here, and keeps
+# what is stored for the rest, so a Mac without one of them does not lose it
+# for the others.
+#
+# Exits 0 when there was nothing left undone, 1 otherwise. --check exits 1 when
+# an installed app has no settings.
+
+set -uo pipefail
+
+ITEM="${DOTFILES_APPS_ITEM:-Mac app settings}"
+BACKUP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/apps"
+# Overridable for the tests, which have no /Applications and no keyboard.
+APPS_DIR="${APPS_DIR:-/Applications}"
+APPS_ASK="${APPS_ASK:-}"
+
+# name|app|process|domains|export|pane|by hand
+#
+#   name     the cask in the Brewfile, and the folder in the stored document
+#   app      the bundle under /Applications
+#   process  what its running processes have in their command lines, helpers
+#            included
+#   domains  where it keeps its settings, space separated. One that exists
+#            means the app has been set up.
+#   export   empty when the domains are the settings, and are copied whole.
+#            Otherwise the extension of the file the app's own Export Settings
+#            writes, for an app whose domains also hold what must not travel: a
+#            licence tied to a machine, an identifier for the hardware. Then
+#            the app does both halves itself, and a person confirms each.
+#   pane     the Privacy & Security pane to open beside the by-hand step
+#   by hand  what no script can do, said when the app has just been restored
+APPS=(
+	"istat-menus|iStat Menus.app|iStat Menus|com.bjango.istatmenus.menubar.7|ismp7||Let it install its helper when it asks, and enter the licence, which 1Password holds."
+	"rectangle|Rectangle.app|Rectangle.app|com.knollsoft.Rectangle||Privacy_Accessibility|Tick Rectangle under Accessibility, and check Launch on login in its settings."
+)
+
+MODE="restore"
+REPLACE=""
+WANTED=()
+
+usage() {
+	echo "usage: script/apps [--replace | --save | --check | --walk] [app...]" >&2
+	exit 2
+}
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--replace) REPLACE=1 ;;
+		--save)    MODE="save" ;;
+		--check)   MODE="check" ;;
+		--walk)    MODE="walk" ;;
+		-*)        usage ;;
+		*)         WANTED+=("$1") ;;
+	esac
+	shift
+done
+
+# The fields of one row, as globals: bash 3.2 has nothing better to return
+# seven values in.
+row() {
+	IFS="|" read -r NAME APP PROCESS DOMAINS EXPORT PANE BY_HAND <<< "$1"
+	TITLE="${APP%.app}"
+}
+
+known() {  # name
+	local entry
+	for entry in "${APPS[@]}"; do
+		[ "${entry%%|*}" = "$1" ] && return 0
+	done
+	return 1
+}
+
+for name in ${WANTED[@]+"${WANTED[@]}"}; do
+	known "$name" && continue
+	echo "!!! $name is not an app this knows. It knows:" >&2
+	for entry in "${APPS[@]}"; do echo "      ${entry%%|*}" >&2; done
+	exit 2
+done
+
+wanted() {  # name
+	local name
+	[ "${#WANTED[@]}" -gt 0 ] || return 0
+	for name in "${WANTED[@]}"; do
+		[ "$name" = "$1" ] && return 0
+	done
+	return 1
+}
+
+command -v defaults >/dev/null 2>&1 || {
+	echo "!!! There is no defaults command, so this is not macOS. Nothing was done." >&2
+	exit 1
+}
+
+installed() { [ -d "$APPS_DIR/$APP" ]; }
+
+# `defaults read` fails for a domain nothing has written to. Used rather than
+# looking for a file under ~/Library/Preferences, which is where most of them
+# are and not where all of them are.
+has_settings() {
+	local domain
+	for domain in $DOMAINS; do
+		defaults read "$domain" >/dev/null 2>&1 && return 0
+	done
+	return 1
+}
+
+running() { pgrep -f "$PROCESS" >/dev/null 2>&1; }
+
+# Somebody to press Return, or to confirm a dialog in the app.
+person() { [ -n "$APPS_ASK" ] || [ -t 0 ]; }
+
+LEFT=0
+left() { printf '  %s: %s\n' "$TITLE" "$1"; LEFT=$((LEFT + 1)); }
+say() { printf '  %s: %s\n' "$TITLE" "$1"; }
+
+# ------------------------------------------------------------------------ check
+
+if [ "$MODE" = "check" ]; then
+	for entry in "${APPS[@]}"; do
+		row "$entry"
+		{ wanted "$NAME" && installed; } || continue
+		if has_settings; then
+			say "has settings"
+		else
+			left "no settings yet"
+		fi
+	done
+	[ "$LEFT" -eq 0 ] || exit 1
+	exit 0
+fi
+
+# -------------------------------------------------------------------- by hand
+
+# After the settings, because an app asks for less once it has them, and the
+# app is opened here for the first time so that it reads them.
+by_hand() {
+	printf '  %s: by hand: %s\n' "$TITLE" "$BY_HAND"
+	person || return 0
+	open -a "$APPS_DIR/$APP"
+	[ -z "$PANE" ] || open "x-apple.systempreferences:com.apple.preference.security?$PANE"
+	printf '      Press Return when that is done. '
+	IFS= read -r _ || true
+}
+
+if [ "$MODE" = "walk" ]; then
+	for entry in "${APPS[@]}"; do
+		row "$entry"
+		{ wanted "$NAME" && installed; } || continue
+		by_hand
+	done
+	exit 0
+fi
+
+# -------------------------------------------------------------------- 1Password
+
+SCRATCH=""
+trap '[ -z "$SCRATCH" ] || rm -rf "$SCRATCH"' EXIT
+
+refused() {  # what could not be done, what op said
+	cat <<TEXT >&2
+!!! $1 It said:
+      $2
+    Nothing was changed. On a new machine, open the 1Password app, sign in, and
+    switch on Settings > Developer > Integrate with 1Password CLI.
+TEXT
+	exit 1
+}
+
+# Finds the document and unpacks it into $SCRATCH/stored. Its id is left in
+# DOCUMENT, empty when there is none yet.
+#
+# Found by listing, not by asking for it by name: a name op does not have and a
+# session op does not have both come back as a failure, told apart only by
+# wording that is op's to change.
+fetch() {
+	local answer count
+	command -v op >/dev/null 2>&1 || {
+		echo "!!! 1Password's command line tool, op, is not installed. The Brewfile installs it." >&2
+		exit 1
+	}
+	command -v jq >/dev/null 2>&1 || {
+		echo "!!! jq is not installed, and op's answer is read with it. The Brewfile installs it." >&2
+		exit 1
+	}
+	SCRATCH="$(mktemp -d)" || { echo "!!! Could not create a scratch directory." >&2; exit 1; }
+	mkdir -p "$SCRATCH/stored" "$SCRATCH/new"
+
+	answer="$(op item list --categories Document --format json 2>&1)" \
+		|| refused "1Password did not list its documents." "$answer"
+	count="$(printf '%s' "$answer" | jq --arg title "$ITEM" '[.[] | select(.title == $title)] | length' 2>/dev/null)" \
+		|| refused "1Password's list of its documents could not be read." "$answer"
+	DOCUMENT=""
+	[ "$count" -gt 0 ] || return 0
+	if [ "$count" -gt 1 ]; then
+		echo "!!! 1Password has $count documents called \"$ITEM\". Keep one, and run this again." >&2
+		exit 1
+	fi
+	DOCUMENT="$(printf '%s' "$answer" | jq -r --arg title "$ITEM" '.[] | select(.title == $title) | .id')"
+
+	answer="$(op document get "$DOCUMENT" --out-file "$SCRATCH/stored.tgz" 2>&1)" \
+		|| refused "1Password did not hand over \"$ITEM\"." "$answer"
+	tar -xzf "$SCRATCH/stored.tgz" -C "$SCRATCH/stored" || {
+		echo "!!! \"$ITEM\" is not an archive this wrote. Nothing was changed." >&2
+		exit 1
+	}
+}
+
+# ------------------------------------------------------------------------- save
+
+if [ "$MODE" = "save" ]; then
+	fetch
+	saved=""
+	for entry in "${APPS[@]}"; do
+		row "$entry"
+		wanted "$NAME" || continue
+		if ! installed; then
+			say "not installed here, so what is stored for it is kept"
+			continue
+		fi
+		if ! has_settings; then
+			say "has no settings here, so what is stored for it is kept"
+			continue
+		fi
+		mkdir -p "$SCRATCH/new/$NAME"
+		if [ -n "$EXPORT" ]; then
+			if ! person; then
+				left "its export takes a person. Run this in a terminal."
+				continue
+			fi
+			printf '  %s: choose Export Settings in it, then drag the .%s file here and press Return.\n' "$TITLE" "$EXPORT"
+			printf '      Return alone keeps what is stored. '
+			# No -r: a path dragged into a terminal arrives with its spaces
+			# escaped, and read takes the backslashes back out. Some terminals
+			# quote it instead, and most leave a space after it.
+			# shellcheck disable=SC2162
+			IFS= read file || file=""
+			file="${file%"${file##*[! ]}"}"
+			file="${file#\'}"
+			file="${file%\'}"
+			if [ -z "$file" ]; then
+				say "what is stored for it is kept"
+				continue
+			fi
+			case "$file" in
+				*".$EXPORT") ;;
+				*) left "$file is not a .$EXPORT file. What is stored for it is kept."; continue ;;
+			esac
+			cp "$file" "$SCRATCH/new/$NAME/export.$EXPORT" 2>/dev/null \
+				|| { left "$file could not be read. What is stored for it is kept."; continue; }
+		else
+			failed=""
+			for domain in $DOMAINS; do
+				defaults read "$domain" >/dev/null 2>&1 || continue
+				defaults export "$domain" "$SCRATCH/new/$NAME/$domain.plist" || failed=1
+			done
+			if [ -n "$failed" ]; then
+				left "its settings could not be read. What is stored for it is kept."
+				continue
+			fi
+		fi
+		# Whole, so that a domain the app has stopped using does not linger.
+		rm -rf "$SCRATCH/stored/$NAME"
+		mv "$SCRATCH/new/$NAME" "$SCRATCH/stored/$NAME"
+		saved="$saved $TITLE,"
+	done
+
+	if [ -z "$saved" ]; then
+		echo "Nothing was stored: \"$ITEM\" is as it was."
+		[ "$LEFT" -eq 0 ] || exit 1
+		exit 0
+	fi
+
+	# COPYFILE_DISABLE: macOS tar otherwise adds a ._ file beside each one that
+	# has extended attributes, which an exported file dragged from Finder has.
+	COPYFILE_DISABLE=1 tar -czf "$SCRATCH/apps.tgz" -C "$SCRATCH/stored" . \
+		|| { echo "!!! Could not pack the settings. Nothing was stored." >&2; exit 1; }
+	if [ -n "$DOCUMENT" ]; then
+		answer="$(op document edit "$DOCUMENT" "$SCRATCH/apps.tgz" 2>&1)" \
+			|| refused "1Password did not take the new \"$ITEM\"." "$answer"
+	else
+		answer="$(op document create "$SCRATCH/apps.tgz" --title "$ITEM" --file-name apps.tgz 2>&1)" \
+			|| refused "1Password did not create \"$ITEM\"." "$answer"
+	fi
+	saved="${saved# }"
+	echo "Stored in \"$ITEM\": ${saved%,}"
+	[ "$LEFT" -eq 0 ] || exit 1
+	exit 0
+fi
+
+# ---------------------------------------------------------------------- restore
+
+# Decided before 1Password is asked for anything: a machine that is already set
+# up has nothing to restore, and should not be shown a fingerprint prompt to be
+# told so.
+TODO=()
+for entry in "${APPS[@]}"; do
+	row "$entry"
+	wanted "$NAME" || continue
+	if ! installed; then
+		say "not installed"
+	elif has_settings && [ -z "$REPLACE" ]; then
+		say "left alone, it already has settings. To replace them: script/apps --replace $NAME"
+	else
+		TODO+=("$entry")
+	fi
+done
+[ "${#TODO[@]}" -gt 0 ] || exit 0
+
+fetch
+if [ -z "$DOCUMENT" ]; then
+	cat <<TEXT >&2
+!!! 1Password has no document called "$ITEM", so there is nothing to restore.
+    On a Mac that is set up the way you want: make -C ~/.dotfiles apps-save
+TEXT
+	exit 1
+fi
+
+for entry in "${TODO[@]}"; do
+	row "$entry"
+	if [ ! -d "$SCRATCH/stored/$NAME" ]; then
+		left "nothing is stored for it yet. On a Mac that has it set up: script/apps --save $NAME"
+		continue
+	fi
+
+	if [ -n "$EXPORT" ]; then
+		# The app imports its own file, and asks before it does, so there is
+		# nothing to do here without somebody to answer it.
+		if ! person; then
+			left "its import takes a person. Run this in a terminal."
+			continue
+		fi
+		if [ ! -f "$SCRATCH/stored/$NAME/export.$EXPORT" ]; then
+			left "what is stored for it has no .$EXPORT file. Save it again: script/apps --save $NAME"
+			continue
+		fi
+		# Under the scratch directory, so the copy goes when this ends: the
+		# wait is what keeps it there for as long as the app is reading it.
+		open -a "$APPS_DIR/$APP" "$SCRATCH/stored/$NAME/export.$EXPORT"
+		printf '  %s: confirm the import in it, then press Return. ' "$TITLE"
+		IFS= read -r _ || true
+		say "settings handed to it"
+	else
+		# A running app holds its settings in memory and writes them back over
+		# whatever is imported beneath it.
+		if running; then
+			left "it is running, and would write its own settings back. Quit it, and run this again."
+			continue
+		fi
+		if has_settings; then
+			mkdir -p "$BACKUP_DIR"
+			for domain in $DOMAINS; do
+				defaults read "$domain" >/dev/null 2>&1 || continue
+				defaults export "$domain" "$BACKUP_DIR/$domain.plist"
+			done
+			echo "  $TITLE: what it had is in ~${BACKUP_DIR#"$HOME"}"
+		fi
+		failed=""
+		for domain in $DOMAINS; do
+			[ -f "$SCRATCH/stored/$NAME/$domain.plist" ] || continue
+			defaults import "$domain" "$SCRATCH/stored/$NAME/$domain.plist" || failed=1
+		done
+		if [ -n "$failed" ]; then
+			left "its settings could not be written."
+			continue
+		fi
+		say "settings restored"
+	fi
+	by_hand
+done
+
+[ "$LEFT" -eq 0 ] || exit 1
+exit 0
