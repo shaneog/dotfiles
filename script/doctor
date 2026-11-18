@@ -3,7 +3,8 @@
 # Reports on this machine, where script/audit reports on the repo: whether the
 # links script/setup makes are intact, whether the clone is level with
 # origin/main, whether the two things only a person can supply are in place,
-# and what script/macos --check and script/brew-drift have to say.
+# what script/macos --check and script/brew-drift have to say, and whether an
+# app is still waiting for its settings.
 #
 #   script/doctor [--accept]
 #
@@ -250,6 +251,27 @@ else
       warn "${line#  not applied: }"
     done <<< "$(printf '%s\n' "$drift_output" | grep 'not applied:')"
     warn "$(printf '%s' "$drift_output" | tail -1): script/macos"
+  fi
+fi
+
+# ------------------------------------------------------------------------- apps
+
+head2 "App settings"
+# An app the Brewfile installed and nobody has set up yet. script/apps --check
+# asks macOS and not 1Password, so this raises no prompt.
+if [ ! -x script/apps ]; then
+  not_checked "apps" "script/apps is not here"
+elif ! command -v defaults >/dev/null 2>&1; then
+  not_checked "apps" "there is no defaults command, so this is not macOS"
+else
+  apps_output="$(script/apps --check 2>&1)"
+  if [ $? -eq 0 ]; then
+    ok "every app make apps knows has settings"
+  else
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      warn "${line#  }: make apps"
+    done <<< "$(printf '%s\n' "$apps_output" | grep 'no settings yet')"
   fi
 fi
 

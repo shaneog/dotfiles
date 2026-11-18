@@ -156,6 +156,38 @@
 
     <p>It is optional, and careful. If 1Password is not signed in, or has no such item, it tells you and writes nothing. If the file is already there it leaves it alone, unless you run <code>script/identity --replace</code>. It refuses a private key. To read a different item, name it: <code>script/identity "Another item"</code>.</p>
 
+    <h2 id="apps">Give the apps their settings</h2>
+    <p>Bootstrap installs the apps and leaves them as new. Their settings stay out of this repository, because it is public and an app's settings hold whatever the app knows: a licence, an email address, the town the weather is for. They are kept in 1Password as one document, called <code>Mac app settings</code>, and two commands move them.</p>
+
+    <ul class="cards">
+      <li class="card tone-cyan">
+        <span class="card-num">make apps-save</span>
+        <h3>Store them, on a Mac that is set up</h3>
+        <p>Replaces what is stored for the apps this Mac has, and keeps what is stored for the ones it does not. Run it again whenever you change something worth keeping.</p>
+      </li>
+      <li class="card tone-cyan">
+        <span class="card-num">make apps</span>
+        <h3>Restore them, on a new Mac</h3>
+        <p>Once 1Password is signed in. Gives each app that has no settings yet the stored ones, then opens it and says what is left for you to do.</p>
+      </li>
+    </ul>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>App</th><th>How its settings travel</th><th>Left to you</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span data-brew="istat-menus">iStat Menus</span></td><td>Its own Export Settings file. Saving asks you to export one and drag it into the terminal. Restoring opens that file in the app, which asks before it imports.</td><td>Letting it install its helper, and the licence.</td></tr>
+          <tr><td><span data-brew="rectangle">Rectangle</span></td><td>Its preferences, copied whole in both directions with no questions.</td><td>Ticking it under Accessibility, which opens beside the step, and Launch on login.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>An app goes the first way when its preferences also hold what must not move to another Mac, such as a licence tied to a machine. Some things no script can do for any app: macOS only lets a person grant a privacy permission, and a licence has to be entered by its owner.</p>
+
+    <p>Like <code>make identity</code>, it is optional and careful. An app that already has settings is left alone, and then 1Password is not asked for anything. <code>script/apps --replace rectangle</code> replaces them anyway, after copying what was there to <code>~/.local/share/dotfiles/apps</code>. Nothing is imported beneath an app that is running, because it would write its own settings back. An app that is not installed is passed over. <code>script/apps --walk</code> goes through the by-hand steps alone, and <code>make doctor</code> names any app still waiting.</p>
+
     <h2 id="timing">How long it takes</h2>
     <p>These numbers come from the virtual machine test, which installs onto a completely fresh copy of macOS. The first bar includes Apple's Command Line Tools, which Homebrew installs before anything else. Apps are left out because their download time depends on your connection. This chart is the one place these timings are kept.</p>
 
@@ -229,6 +261,7 @@ make doctor</code></pre>
           <li>Is this copy behind the one on GitHub?</li>
           <li>Are <code>~/.gitconfig-user</code> and the 1Password agent there?</li>
           <li>Has a macOS setting drifted, or is something in the Brewfile not installed?</li>
+          <li>Is an app still <a href="#apps">waiting for its settings</a>?</li>
           <li>Has a shell file that another tool manages changed?</li>
           <li>Has the <a href="tests.html#vm">virtual machine test</a> passed lately?</li>
         </ul>
