@@ -229,6 +229,7 @@ config/zsh/lib/alias.zsh	s|^alias find='noglob find'|:|	test/integration/startup
 config/zsh/lib/alias.zsh	s|^alias mkdir='mkdir -p'|:|	test/integration/startup.bats	everyday commands	mkdir a/b/c fails where it used to make all three
 config/zsh/lib/alias.zsh	s|^(( $+commands\[open\] )) \&\& ||	test/unit/guards.bats	o opens things	o names a command that is not there
 config/zsh/lib/alias.zsh	s|^  \&\& source $HOMEBREW_PREFIX/share/zsh-you-should-use/.*|  \&\& :|	test/integration/startup.bats	gets a reminder	no reminder when a command has an alias
+config/zsh/lib/alias.zsh	s|^  \&\& functions\[_check_aliases\]=.*|  \&\& :|	test/integration/startup.bats	typed as its alias	gfr is told to use g, and so is any git alias as long as the word git
 config/zsh/lib/alias.zsh	s|^\[\[ -r $HOMEBREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh \]\] \\$|true \\|	test/unit/guards.bats	skipped without a word	a machine without the formula gets an error from every shell
 Brewfile	s|^brew 'zsh-you-should-use'$|# gone|	test/static/lint.bats	is a formula the Brewfile installs	a plugin the shell reads is installed by nothing, and silently absent
 Brewfile	s|^brew 'fd'$|# gone|	test/static/guides.bats	mark as installed is in the Brewfile	the cheat sheet promises a tool nothing installs

@@ -309,6 +309,28 @@ STUB
   assert_contains "$output" "gp"
 }
 
+# The plugin is read from Homebrew's prefix.
+# bats test_tags=macos
+@test "a command typed as its alias gets no reminder" {
+  # Regression: `gfr` was told to use `g`. The plugin is handed what an alias
+  # expands to, finds that both `g` and the alias itself cover it, and has to
+  # keep the one that covers more. Which aliases it got wrong followed the order
+  # zsh happened to list them in, so every git alias is asked, and so is the
+  # same choice the other way round: a command typed out in full is offered its
+  # own alias and not the shorter one.
+  needs_plugin zsh-you-should-use
+  run run_login_shell "$HOME_WITHOUT" 'asked=0 reminded=()
+    for name in ${(ok)aliases[(R)git *]}; do
+      (( asked++ ))
+      [[ -n "$(_check_aliases $name $aliases[$name] 2>&1)" ]] && reminded+=($name)
+    done
+    print -r -- "asked=$asked reminded=${(j:,:)reminded}."
+    print -r -- "typed out: $(_check_aliases "git pull --rebase" "git pull --rebase" 2>&1)"'
+  refute_contains "$output" "asked=0 "
+  assert_contains "$output" "reminded=."
+  assert_contains "$output" '"gfr"'
+}
+
 # zsh-patina comes from Homebrew and nowhere else.
 # bats test_tags=macos
 @test "zsh-patina is the only syntax highlighter" {

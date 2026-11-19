@@ -4,6 +4,13 @@
 [[ -r $HOMEBREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh ]] \
   && source $HOMEBREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh
 
+# The plugin's latest release picks which alias to name by comparing the length
+# of a command with the length of an alias's name, so `gfr` is told to use `g`:
+# "git" is as long as "gfr". This is upstream's own correction, which no
+# release carries yet, and it changes nothing in a plugin that has it.
+(( $+functions[_check_aliases] )) \
+  && functions[_check_aliases]=${functions[_check_aliases]/'-eq "${#best_match}"'/'-eq "${#best_match_value}"'}
+
 ##
 # Standard commands, with the flags that are always wanted
 ##
