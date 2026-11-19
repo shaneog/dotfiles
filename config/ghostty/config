@@ -41,6 +41,17 @@ palette = 13=#888ca6
 palette = 14=#599cab
 palette = 15=#d3ebe9
 
+# ----------------------------------------------------------------- window
+
+# See-through, with macOS's own glass behind it instead of a plain blur. The
+# glass needs macOS 26: before that Ghostty draws no blur for this value, and
+# the window is see-through and nothing else.
+#
+# Only the window's own background is affected. A cell a program colours
+# itself stays solid, which background-opacity-cells would change.
+background-opacity = 0.75
+background-blur = macos-glass-regular
+
 # ------------------------------------------------------------------ shell
 
 # Off. Ghostty injects it by pointing ZDOTDIR at its own directory for the first
