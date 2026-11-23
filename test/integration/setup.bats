@@ -380,7 +380,10 @@ snapshot() {
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   [ "$FAKE_HOME/.claude/skills/tidy" -ef "$CLONE/claude/skills/tidy" ] \
     || { echo "tidy leads to $(readlink "$FAKE_HOME/.claude/skills/tidy")"; return 1; }
-  assert_contains "$output" "$FAKE_HOME/.claude/skills/tidy already leads to $CLONE/claude/skills/tidy, leaving it alone"
+  # The clone's own path is the resolved one, which on a Mac is not how a
+  # temporary directory is spelled. So: the link, and where in the clone.
+  assert_contains "$output" "$FAKE_HOME/.claude/skills/tidy already leads to "
+  assert_contains "$output" "/.dotfiles/claude/skills/tidy, leaving it alone"
   [ "$FAKE_HOME/.claude/skills/voice" -ef "$PRIVATE/claude/skills/voice" ]
 }
 
