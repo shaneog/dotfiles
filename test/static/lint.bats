@@ -74,6 +74,19 @@ load '../helpers/common'
   [ "$status" -eq 0 ]
 }
 
+@test "the Claude Code settings parse, and leave a commit and a pull request unsigned" {
+  # AGENTS.md: no attribution, anywhere, whatever a tool's own settings say.
+  # These are the tool's own settings, so they say the same, on every machine
+  # and in every repo. An empty string is how Claude Code is told to add
+  # nothing; a missing key means its default, which is a trailer.
+  command -v jq >/dev/null || skip_unless_ci "jq is not installed"
+  local settings="$REPO/claude/settings.json"
+  run jq -e . "$settings"
+  [ "$status" -eq 0 ] || { echo "claude/settings.json does not parse: $output"; return 1; }
+  assert_equal "$(jq -c '.attribution | [.commit, .pr, .sessionUrl]' "$settings")" '["","",false]' \
+    "the attribution Claude Code is asked for"
+}
+
 @test "starship config is valid toml" {
   run python3 -c "import tomllib,sys; tomllib.load(open(sys.argv[1],'rb'))" \
     "$REPO/config/starship.toml"
@@ -364,16 +377,33 @@ load '../helpers/common'
     config/gh/hosts.yml config/homebrew/trust.json config/homebrew/trust.json.lock \
     config/karabiner/automatic_backups/karabiner_20260101.json \
     config/tmux/plugins/tpm/tpm config/zsh/.zcompdump config/zsh/.zcmpdump-host \
-    config/zsh/lib/git.zsh.zwc config/zsh/.zshrc.zwc.old
+    config/zsh/lib/git.zsh.zwc config/zsh/.zshrc.zwc.old \
+    claude/.claude.json claude/.credentials.json claude/history.jsonl \
+    claude/settings.local.json claude/projects/some-project/session.jsonl \
+    claude/plugins/installed_plugins.json claude/shell-snapshots/snapshot.sh \
+    claude/skills/some-skill/settings.local.json
   do
     git -C "$REPO" check-ignore -q --no-index "$path" \
       || { echo "$path is not ignored"; return 1; }
   done
   # ...and the rules that do that do not reach what is ours.
-  for path in $(git -C "$REPO" ls-files -- ssh config); do
+  for path in $(git -C "$REPO" ls-files -- ssh config claude) \
+    claude/skills/some-new-skill/SKILL.md claude/agents/some-new-agent.md \
+    claude/commands/some-new-command.md claude/rules/some-new-rule.md
+  do
     run git -C "$REPO" check-ignore -q --no-index "$path"
     [ "$status" -eq 1 ] || { echo "$path is tracked and ignored"; return 1; }
   done
+}
+
+@test "nothing under claude/ says whose machine it was written on" {
+  # Claude Code writes through the link at ~/.claude/settings.json, so what it
+  # saves there turns up in the clone: a marketplace added from a folder, a
+  # directory it was allowed into. Those are paths inside one person's home on
+  # one machine, and this repo is public.
+  local found
+  found="$(cd "$REPO" && git ls-files -z -- claude | xargs -0 grep -nE '/(Users|home)/[^/[:space:]"]+' || true)"
+  [ -z "$found" ] || { echo "a home directory is named under claude/:"; echo "$found"; return 1; }
 }
 
 @test "no secrets in the history" {

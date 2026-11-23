@@ -27,14 +27,33 @@ run_setup() {
 make_clone() {
   CLONE="$FAKE_HOME/.dotfiles"
   mkdir -p "$CLONE/script" "$CLONE/config/zsh" "$CLONE/config/nvim" "$CLONE/ssh"
+  mkdir -p "$CLONE/claude/skills/tidy" "$CLONE/claude/agents"
   cp "$REPO/script/setup" "$CLONE/script/setup"
   echo "# ours" > "$CLONE/config/zsh/.zshenv"
   echo "-- ours" > "$CLONE/config/nvim/init.lua"
   echo "# ours" > "$CLONE/config/starship.toml"
   echo "# ours" > "$CLONE/ssh/config"
   echo "# ours" > "$CLONE/Brewfile"
+  echo "# ours" > "$CLONE/claude/CLAUDE.md"
+  echo '{"ours": true}' > "$CLONE/claude/settings.json"
+  echo "# ours" > "$CLONE/claude/skills/tidy/SKILL.md"
+  echo "# ours" > "$CLONE/claude/agents/reviewer.md"
   git -C "$CLONE" init -q
   git -C "$CLONE" add -A
+}
+
+# A second clone, as a machine that keeps one has it: ~/.dotfiles-private,
+# holding a skill that is not for publishing.
+make_private() {
+  PRIVATE="$FAKE_HOME/.dotfiles-private"
+  mkdir -p "$PRIVATE/claude/skills/voice"
+  echo "# not for publishing" > "$PRIVATE/claude/skills/voice/SKILL.md"
+  git -C "$PRIVATE" init -q
+  git -C "$PRIVATE" add -A
+}
+
+setup_output() {
+  ( cd "$CLONE" && HOME="$FAKE_HOME" ./script/setup ) 2>&1
 }
 
 # The home an earlier script/setup left behind: ~/.config and ~/.ssh as links
@@ -53,11 +72,12 @@ make_whole_directory_home() {
 
 mode_of() { ls -ld "$1" | cut -c1-10; }
 
-# Normalised snapshot of the home directory, and of the two directories setup
+# Normalised snapshot of the home directory, and of the directories setup
 # links into: name plus symlink target.
 snapshot() {
   local f
-  for f in "$FAKE_HOME"/.* "$FAKE_HOME"/* "$FAKE_HOME"/.config/* "$FAKE_HOME"/.ssh/*; do
+  for f in "$FAKE_HOME"/.* "$FAKE_HOME"/* "$FAKE_HOME"/.config/* "$FAKE_HOME"/.ssh/* \
+           "$FAKE_HOME"/.claude/* "$FAKE_HOME"/.claude/*/*; do
     [ -e "$f" ] || [ -L "$f" ] || continue
     case "${f##*/}" in .|..) continue ;; esac
     if [ -L "$f" ]; then echo "${f#"$FAKE_HOME"/} -> $(readlink "$f")"
@@ -133,7 +153,7 @@ snapshot() {
     "the clone's config directory"
 }
 
-@test "links the three things it names, and nothing else at the top of the clone" {
+@test "links the four things it names, and nothing else at the top of the clone" {
   # Regression: setup linked every top-level entry that a skip pattern did not
   # name, so a file added to the repo turned up in home as ~/.<name> until
   # somebody remembered the pattern.
@@ -147,7 +167,7 @@ snapshot() {
   run_setup
   # .dotfiles is the clone itself, which make_clone keeps in the home.
   assert_equal "$(ls -A "$FAKE_HOME" | LC_ALL=C sort | tr '\n' ' ')" \
-    ".Brewfile .config .dotfiles .ssh .zshenv " "what setup left in the home"
+    ".Brewfile .claude .config .dotfiles .ssh .zshenv " "what setup left in the home"
 }
 
 @test "does not link what git does not track" {
@@ -225,6 +245,167 @@ snapshot() {
   [ ! -L "$FAKE_HOME/.ssh/config" ] || { echo "setup replaced a managed ssh config"; return 1; }
   [ "$(cat "$FAKE_HOME/.ssh/id_ed25519")" = "PRIVATE KEY" ]
   [ "$(cat "$FAKE_HOME/.ssh/config")" = "managed elsewhere" ]
+}
+
+# ------------------------------------------------------------------ ~/.claude
+
+@test "links what git tracks under claude, inside a real ~/.claude" {
+  run_setup
+  [ -d "$FAKE_HOME/.claude" ]
+  [ ! -L "$FAKE_HOME/.claude" ] || { echo "~/.claude is a link"; return 1; }
+  local entry linked=0
+  for entry in $(git -C "$REPO" ls-files -- claude | cut -d/ -f2 | sort -u); do
+    [ -f "$REPO/claude/$entry" ] || continue
+    [ -L "$FAKE_HOME/.claude/$entry" ] || { echo "$entry is not linked"; return 1; }
+    [ "$FAKE_HOME/.claude/$entry" -ef "$REPO/claude/$entry" ] \
+      || { echo "$entry points somewhere else"; return 1; }
+    linked=$((linked + 1))
+  done
+  # The two files Claude Code reads in every session, whatever else is added.
+  [ "$FAKE_HOME/.claude/CLAUDE.md" -ef "$REPO/claude/CLAUDE.md" ]
+  [ "$FAKE_HOME/.claude/settings.json" -ef "$REPO/claude/settings.json" ]
+  [ "$linked" -ge 2 ] || { echo "only $linked files were linked"; return 1; }
+}
+
+@test "a folder under claude is a real folder, holding a link for each entry" {
+  make_clone
+  run_setup
+  local dir
+  for dir in skills agents; do
+    [ -d "$FAKE_HOME/.claude/$dir" ]
+    [ ! -L "$FAKE_HOME/.claude/$dir" ] || { echo "~/.claude/$dir is a link"; return 1; }
+  done
+  [ -L "$FAKE_HOME/.claude/skills/tidy" ]
+  [ "$FAKE_HOME/.claude/skills/tidy" -ef "$CLONE/claude/skills/tidy" ]
+  [ -L "$FAKE_HOME/.claude/agents/reviewer.md" ]
+  [ "$FAKE_HOME/.claude/agents/reviewer.md" -ef "$CLONE/claude/agents/reviewer.md" ]
+}
+
+@test "what is written into ~/.claude afterwards stays out of the clone" {
+  # ~/.claude is where Claude Code keeps its sessions, its history and the
+  # sign-in, and where a skill written on one machine goes. A link to the whole
+  # directory, or to the whole of skills/, would put all of it in the working
+  # tree of a public repo.
+  make_clone
+  run_setup
+  echo '{"prompt": "private"}' > "$FAKE_HOME/.claude/history.jsonl"
+  mkdir -p "$FAKE_HOME/.claude/projects/some-project" "$FAKE_HOME/.claude/skills/for-one-machine"
+  echo "private" > "$FAKE_HOME/.claude/projects/some-project/session.jsonl"
+  echo "# private" > "$FAKE_HOME/.claude/skills/for-one-machine/SKILL.md"
+  echo "# private" > "$FAKE_HOME/.claude/agents/for-one-machine.md"
+  assert_equal "$(cd "$CLONE" && find claude | LC_ALL=C sort | tr '\n' ' ')" \
+    "claude claude/CLAUDE.md claude/agents claude/agents/reviewer.md claude/settings.json claude/skills claude/skills/tidy claude/skills/tidy/SKILL.md " \
+    "the clone's claude directory"
+}
+
+@test "a name that is taken in ~/.claude is left as it is" {
+  # Claude Code writes settings.json itself and reads no second file for one
+  # machine. Moved aside, a machine's own settings would be moved aside again
+  # on every run, with nowhere to keep them.
+  make_clone
+  mkdir -p "$FAKE_HOME/.claude/skills/tidy"
+  echo '{"this machine": true}' > "$FAKE_HOME/.claude/settings.json"
+  echo "# this machine's" > "$FAKE_HOME/.claude/skills/tidy/SKILL.md"
+  run bash -c 'cd "$1" && HOME="$2" ./script/setup' _ "$CLONE" "$FAKE_HOME"
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+
+  [ ! -L "$FAKE_HOME/.claude/settings.json" ] || { echo "settings.json was replaced by a link"; return 1; }
+  assert_equal "$(cat "$FAKE_HOME/.claude/settings.json")" '{"this machine": true}'
+  [ ! -L "$FAKE_HOME/.claude/skills/tidy" ] || { echo "the skill was replaced by a link"; return 1; }
+  assert_equal "$(cat "$FAKE_HOME/.claude/skills/tidy/SKILL.md")" "# this machine's"
+  run ls -d "$FAKE_HOME"/.claude/*.bak.* "$FAKE_HOME"/.claude/skills/*.bak.*
+  [ "$status" -ne 0 ] || { echo "moved aside: $output"; return 1; }
+
+  # ...said out loud, and what is not taken is linked all the same.
+  run bash -c 'cd "$1" && HOME="$2" ./script/setup' _ "$CLONE" "$FAKE_HOME"
+  assert_contains "$output" "$FAKE_HOME/.claude/settings.json is this machine's own, leaving it alone"
+  assert_contains "$output" "$FAKE_HOME/.claude/skills/tidy is this machine's own, leaving it alone"
+  [ "$FAKE_HOME/.claude/CLAUDE.md" -ef "$CLONE/claude/CLAUDE.md" ]
+  [ "$FAKE_HOME/.claude/agents/reviewer.md" -ef "$CLONE/claude/agents/reviewer.md" ]
+}
+
+@test "the repo's copy takes over once the machine's own is out of the way" {
+  make_clone
+  mkdir -p "$FAKE_HOME/.claude"
+  echo '{"this machine": true}' > "$FAKE_HOME/.claude/settings.json"
+  run_setup
+  mv "$FAKE_HOME/.claude/settings.json" "$FAKE_HOME/.claude/settings.json.mine"
+  run_setup
+  [ "$FAKE_HOME/.claude/settings.json" -ef "$CLONE/claude/settings.json" ]
+  assert_equal "$(cat "$FAKE_HOME/.claude/settings.json.mine")" '{"this machine": true}'
+}
+
+@test "a link in ~/.claude that leads nowhere is replaced" {
+  # What a clone that has since moved leaves behind. There is nothing at the
+  # end of it to keep.
+  make_clone
+  mkdir -p "$FAKE_HOME/.claude"
+  ln -s "$FAKE_HOME/an-older-clone/claude/CLAUDE.md" "$FAKE_HOME/.claude/CLAUDE.md"
+  run_setup
+  [ "$FAKE_HOME/.claude/CLAUDE.md" -ef "$CLONE/claude/CLAUDE.md" ] \
+    || { echo "still: $(readlink "$FAKE_HOME/.claude/CLAUDE.md")"; return 1; }
+}
+
+@test "a skill nobody has added is not linked" {
+  make_clone
+  mkdir -p "$CLONE/claude/skills/not-added-yet"
+  echo "# a draft" > "$CLONE/claude/skills/not-added-yet/SKILL.md"
+  run_setup
+  [ ! -e "$FAKE_HOME/.claude/skills/not-added-yet" ] \
+    || { echo "an untracked skill was linked"; return 1; }
+  [ -L "$FAKE_HOME/.claude/skills/tidy" ]
+}
+
+# ------------------------------------------------------- ~/.dotfiles-private
+
+@test "a private clone's skill is linked beside the public ones" {
+  make_clone
+  make_private
+  run_setup
+  [ -L "$FAKE_HOME/.claude/skills/voice" ] || { echo "the private skill is not linked"; return 1; }
+  [ "$FAKE_HOME/.claude/skills/voice" -ef "$PRIVATE/claude/skills/voice" ]
+  [ "$FAKE_HOME/.claude/skills/tidy" -ef "$CLONE/claude/skills/tidy" ]
+  [ "$FAKE_HOME/.claude/settings.json" -ef "$CLONE/claude/settings.json" ]
+  # The whole point of the second clone: none of it is in the first.
+  assert_equal "$(ls -A "$CLONE/claude/skills" | tr '\n' ' ')" "tidy " "the public clone's skills"
+}
+
+@test "a name both clones have stays with the public one, and setup says so" {
+  make_clone
+  make_private
+  mkdir -p "$PRIVATE/claude/skills/tidy"
+  echo "# the private one" > "$PRIVATE/claude/skills/tidy/SKILL.md"
+  git -C "$PRIVATE" add -A
+  run setup_output
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  [ "$FAKE_HOME/.claude/skills/tidy" -ef "$CLONE/claude/skills/tidy" ] \
+    || { echo "tidy leads to $(readlink "$FAKE_HOME/.claude/skills/tidy")"; return 1; }
+  # The clone's own path is the resolved one, which on a Mac is not how a
+  # temporary directory is spelled. So: the link, and where in the clone.
+  assert_contains "$output" "$FAKE_HOME/.claude/skills/tidy already leads to "
+  assert_contains "$output" "/.dotfiles/claude/skills/tidy, leaving it alone"
+  [ "$FAKE_HOME/.claude/skills/voice" -ef "$PRIVATE/claude/skills/voice" ]
+}
+
+@test "what the private clone does not track is not linked" {
+  make_clone
+  make_private
+  mkdir -p "$PRIVATE/claude/skills/a-draft"
+  echo "# a draft" > "$PRIVATE/claude/skills/a-draft/SKILL.md"
+  run_setup
+  [ ! -e "$FAKE_HOME/.claude/skills/a-draft" ] || { echo "an untracked skill was linked"; return 1; }
+  [ -L "$FAKE_HOME/.claude/skills/voice" ]
+}
+
+@test "a ~/.dotfiles-private that is not a clone links nothing, and setup says so" {
+  # Its list of what to link is git's. A folder of loose files has no list.
+  make_clone
+  mkdir -p "$FAKE_HOME/.dotfiles-private/claude/skills/voice"
+  echo "# loose" > "$FAKE_HOME/.dotfiles-private/claude/skills/voice/SKILL.md"
+  run setup_output
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "$FAKE_HOME/.dotfiles-private is not a git clone, so nothing is linked from it"
+  [ ! -e "$FAKE_HOME/.claude/skills/voice" ] || { echo "a loose folder was linked"; return 1; }
 }
 
 # ------------------------------------------------- from the whole-directory layout

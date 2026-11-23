@@ -190,6 +190,15 @@ MACOS
   ln -s "$IHOME/.dotfiles/config/zsh" "$IHOME/.config/zsh"
   ln -s "$IHOME/.dotfiles/ssh/config" "$IHOME/.ssh/config"
   ln -s "$IHOME/.dotfiles/Brewfile" "$IHOME/.Brewfile"
+  # ~/.claude: a file, and a skill one level further down, beside what Claude
+  # Code and this machine keep there.
+  mkdir -p "$IHOME/.dotfiles/claude/skills/tidy" "$IHOME/.claude/skills/for-one-machine"
+  : > "$IHOME/.dotfiles/claude/CLAUDE.md"
+  ln -s "$IHOME/.dotfiles/claude/CLAUDE.md" "$IHOME/.claude/CLAUDE.md"
+  ln -s "$IHOME/.dotfiles/claude/skills/tidy" "$IHOME/.claude/skills/tidy"
+  ln -s "$BATS_TEST_TMPDIR/not-mounted/skill" "$IHOME/.claude/skills/not-ours"
+  echo "keep me" > "$IHOME/.claude/history.jsonl"
+  echo "keep me" > "$IHOME/.claude/skills/for-one-machine/SKILL.md"
   # Through .config rather than straight into the clone, as older installs have it.
   ln -s "$IHOME/.config/zsh/.zshenv" "$IHOME/.zshenv"
   ln -s "$IHOME/elsewhere" "$IHOME/.kept"
@@ -204,9 +213,12 @@ MACOS
 
   [ ! -e "$IHOME/.dotfiles" ]
   local link
-  for link in .zshenv .Brewfile .config/zsh .ssh/config; do
+  for link in .zshenv .Brewfile .config/zsh .ssh/config .claude/CLAUDE.md .claude/skills/tidy; do
     [ ! -L "$IHOME/$link" ] || { echo "$link survived as a dangling link"; return 1; }
   done
+  [ -L "$IHOME/.claude/skills/not-ours" ] || { echo "someone else's dangling link was removed"; return 1; }
+  assert_equal "$(cat "$IHOME/.claude/history.jsonl")" "keep me"
+  assert_equal "$(cat "$IHOME/.claude/skills/for-one-machine/SKILL.md")" "keep me"
   [ -L "$IHOME/.kept" ]             || { echo "a link to somewhere else was removed"; return 1; }
   [ -L "$IHOME/nas" ]               || { echo "someone else's dangling link was removed"; return 1; }
   [ -L "$IHOME/.config/not-ours" ]  || { echo "someone else's dangling link was removed"; return 1; }

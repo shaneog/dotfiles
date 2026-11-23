@@ -86,21 +86,40 @@ script/setup	s|^link_into "$DOTFILESDIR/config/zsh/.zshenv" "$HOME/.zshenv"|&; l
 script/setup	s|^    if \[ "$1" = "ssh" \] && ls "$target"/id_\* >/dev/null 2>&1|    if false|	test/integration/setup.bats	leaves an ssh directory holding a private key alone	a managed ssh config is moved aside and replaced by ours
 script/setup	s|^    move_aside "$2"|    true|	test/integration/setup.bats	moves aside an entry of the same name	an existing entry is not moved aside before linking
 script/setup	s|^  if \[ -L "$2" \] && \[ "$2" -ef "$1" \]|  if false|	test/integration/setup.bats	is idempotent	a correct link is moved aside and rebuilt on every run
-script/setup	s|git -C "$DOTFILESDIR" ls-files -- "$1" \| cut -d/ -f2|ls -A "$DOTFILESDIR/$1"|	test/integration/setup.bats	does not link what git does not track	whatever is lying in the clone gets linked, tracked or not
+script/setup	s|git -C "${2:-$DOTFILESDIR}" ls-files -- "$1" \| while|ls -A "${2:-$DOTFILESDIR}/$1" \| while|	test/integration/setup.bats	does not link what git does not track	whatever is lying in the clone gets linked, tracked or not
+script/setup	s|git -C "${2:-$DOTFILESDIR}" ls-files -- "$1" \| while|ls -A "${2:-$DOTFILESDIR}/$1" \| while|	test/integration/setup.bats	a skill nobody has added is not linked	a skill still being drafted in the clone is linked for Claude Code to load
+script/setup	s|git -C "${2:-$DOTFILESDIR}" ls-files -- "$1" \| while|ls -A "${2:-$DOTFILESDIR}/$1" \| while|	test/integration/setup.bats	what the private clone does not track is not linked	a draft lying in the private clone is linked for Claude Code to load
 script/setup	s|^    mv -v "$entry" "$staging/$name"|    true|	test/integration/setup.bats	gets its files back	other tools' files are left behind in the clone
 script/setup	s|^    if printf '%s\\n' "$3" \| grep -qxF -- "$name"|    if false|	test/integration/setup.bats	gets its files back	our own tracked entries are moved out of the clone
 script/setup	s|local staging="$2.migrating"|local staging="$2.migrating.$$"|	test/integration/setup.bats	picked up where it stopped	an interrupted run strands the files it had already moved
 script/setup	s|^    chmod 700 "$target"|    true|	test/integration/setup.bats	private to its owner	a new ssh directory is left readable by everyone
 script/setup	s|^link_directory ssh$|&; for f in *; do if [ -f "$f" ]; then link_into "$DOTFILESDIR/$f" "$HOME/.$f"; fi; done|	test/integration/setup.bats	nothing else at the top of the clone	every file at the top of the clone is linked into home again
 script/setup	s|^link_into "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"|true|	test/integration/setup.bats	links each entry git tracks under config	the Brewfile is not linked, so brew bundle --global has nothing to read
+script/setup	s|^link_claude "$DOTFILESDIR"$|true|	test/integration/setup.bats	links what git tracks under claude	nothing is linked into ~/.claude, so Claude Code never reads the repo's settings
+script/setup	s|^    if \[ ! -d "$source/$entry" \]$|    if true|	test/integration/setup.bats	holding a link for each entry	the whole of skills/ is one link, so a skill written on one machine lands in the clone
+script/setup	s|^      link_beside "$source/$entry" "$target/$entry"|      link_into "$source/$entry" "$target/$entry"|	test/integration/setup.bats	a name that is taken in ~/.claude is left as it is	a machine's own Claude Code settings are moved aside on every run
+script/setup	s|^      link_beside "$source/$entry/$inner" "$target/$entry/$inner"|      link_into "$source/$entry/$inner" "$target/$entry/$inner"|	test/integration/setup.bats	a name that is taken in ~/.claude is left as it is	a machine's own skill is moved aside for ours of the same name
+script/setup	s|^  if \[ -L "$2" \]; then rm "$2"; fi|  true|	test/integration/setup.bats	leads nowhere is replaced	a link left by a clone that has moved stays dangling for good
+script/setup	s|^  link_claude "$PRIVATE"$|  true|	test/integration/setup.bats	a private clone's skill is linked beside	nothing is linked from the private clone
+script/setup	s|^link_claude "$DOTFILESDIR"$|link_claude "$HOME/.dotfiles-private"; \&|	test/integration/setup.bats	a name both clones have stays with the public one	the private clone goes first, so it takes a name the public one has
+script/setup	s|^  if \[ -L "$2" \] \&\& \[ -e "$2" \]$|  if false|	test/integration/setup.bats	a name both clones have stays with the public one	a link to the public clone is called this machine's own
+script/setup	s|^if \[ -d "$PRIVATE/.git" \]$|if [ -d "$PRIVATE" ]|	test/integration/setup.bats	that is not a clone links nothing	a folder of loose files is treated as a clone, and nothing says why nothing was linked
 script/remove	s|^  if \[ -L "$HOME/.$dir" \] && \[ "$HOME/.$dir" -ef "$HOME/.dotfiles/$dir" \]; then|  if false; then|	test/unit/install-scripts.bats	remove refuses while	remove deletes every other tool's files along with the clone
 script/remove	s|^            "$HOME"/.config/.\* "$HOME"/.config/\* \\$|            \\|	test/unit/install-scripts.bats	leaves other dangling links alone	the links under the config directory survive as dangling
+script/remove	s| "$HOME"/.claude/\*/\*; do|; do|	test/unit/install-scripts.bats	leaves other dangling links alone	a skill linked into the clone survives it as a dangling link
+script/remove	s|^            "$HOME"/.claude/.\* "$HOME"/.claude/\* "$HOME"/.claude/\*/\*; do|            ; do|	test/unit/install-scripts.bats	leaves other dangling links alone	the links under ~/.claude survive as dangling
 config/git/config	s|^  followTags = true|  followTag = true|	test/static/lint.bats	every git config key	a git config key becomes one git silently ignores
 config/git/config	s|^  gpgSign = true|  gpgSign = false|	test/static/lint.bats	a tag made with this git config is signed	tags go back to being unsigned
 config/git/config	s|conflictStyle = zdiff3|conflictStyle = diff3|	test/static/lint.bats	merge conflict shows only	a conflict repeats the lines both sides agree on
 .gitignore	s|^config/tmux/plugins$|config/*|	test/static/lint.bats	nobody has added shows as untracked	a new tool's config is ignored, so it is never linked and nothing says so
 .gitignore	s|^ssh/\*$|ssh/known_hosts|	test/static/lint.bats	cannot be added by accident	a key copied into ssh/ can be committed to a public repo
 .gitignore	s|^!ssh/config$|# gone|	test/static/lint.bats	cannot be added by accident	an ignore rule swallows a file the repo tracks
+.gitignore	s|^claude/\*$|claude/projects|	test/static/lint.bats	cannot be added by accident	a copy of Claude Code's history or sign-in can be committed to a public repo
+.gitignore	s|^!claude/skills/$|# gone|	test/static/lint.bats	cannot be added by accident	a new skill is ignored, so it is never linked and nothing says so
+.gitignore	s|^claude/\*\*/settings.local.json$|# gone|	test/static/lint.bats	cannot be added by accident	a settings.local.json inside a skill can be committed
+claude/settings.json	s|"commit": "",|"commit": "Co-Authored-By: a tool",|	test/static/lint.bats	leave a commit and a pull request unsigned	Claude Code signs every commit again, on every machine
+claude/settings.json	s|^    "sessionUrl": false$|    "sessionUrl": true|	test/static/lint.bats	leave a commit and a pull request unsigned	a commit made from a remote session carries a link to it
+claude/settings.json	s|^  "attribution": {$|  "permissions": {"additionalDirectories": ["/Users/someone/work"]}, &|	test/static/lint.bats	says whose machine it was written on	a path inside one person's home is published
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format " #I #W "|	test/integration/tmux.bats	a window with activity	an alerting window looks like every other window
 config/tmux/tmux.conf	s|^setw -g window-status-format " #I #W#F "|setw -g window-status-format "#[fg=colour11,bg=colour8] #I #W#F "|	test/integration/tmux.bats	a window with activity	an inline colour shadows the alert style again
 config/tmux/tmux.conf	s|#W#{?window_zoomed_flag, Z,}|#W|	test/integration/tmux.bats	a zoomed pane	a zoomed pane leaves no trace in the status line
@@ -170,6 +189,10 @@ script/doctor	s|^    fail "$(tilde "$2") is not a link to|    : "|	test/unit/doc
 script/doctor	s|^  if \[ -L "$2" \] && \[ "$2" -ef "$1" \]; then|  if [ -e "$2" ]; then|	test/unit/doctor.bats	gone, or points somewhere else	anything at a link path counts as the link
 script/doctor	s|^  if \[ -L "$target" \] && \[ "$target" -ef "$source" \]; then|  if false; then|	test/unit/doctor.bats	whole directory is one failure	a whole-directory link is reported as every entry missing
 script/doctor	s|^  if \[ "$1" = "ssh" \] && ls "$target"/id_\* >/dev/null 2>&1; then|  if false; then|	test/unit/doctor.bats	holds a private key	an ssh directory setup leaves alone is called broken
+script/doctor	s|^check_claude "$DOTFILESDIR"$|:|	test/unit/doctor.bats	Claude Code link that is gone fails	a missing link into ~/.claude goes unreported
+script/doctor	s|^    if \[ ! -d "$source/$entry" \]; then|    if true; then|	test/unit/doctor.bats	Claude Code link that is gone fails	a skill that is not linked goes unreported, because its folder is there
+script/doctor	s|^  elif \[ -e "$2" \]; then|  elif false; then|	test/unit/doctor.bats	keeps of its own in ~/.claude is noted	settings a machine keeps as its own are called a broken link on every run
+script/doctor	s@^\[ ! -d "$PRIVATE/.git" \] || check_claude "$PRIVATE"$@:@	test/unit/doctor.bats	links from a private clone are checked	a private skill that is not linked goes unreported
 script/doctor	s@^remote="$(GIT_TERMINAL_PROMPT=0 git ls-remote origin refs/heads/main 2>/dev/null | cut -f1)"@git fetch -q origin 2>/dev/null; remote="$(git rev-parse origin/main 2>/dev/null)"@	test/unit/doctor.bats	changes nothing	doctor fetches, so it writes to the clone
 script/doctor	s@^  warn "behind origin/main, which has moved to.*@  ok "level"@	test/unit/doctor.bats	warns, without fetching	a clone behind origin reports as level
 script/doctor	s|^if \[ -f "$HOME/.gitconfig-user" \]; then|if true; then|	test/unit/doctor.bats	no ~/.gitconfig-user	a machine git cannot sign on reports as healthy
@@ -213,6 +236,9 @@ script/update	s@^      || abort "The pull failed.*@      || true@	test/unit/upda
 script/update	s|^set -euo pipefail|set -uo pipefail|	test/unit/update.bats	link step that fails	a failed link step is followed by an install
 script/update	s|^    not_done="$not_done brewfile"|    :|	test/unit/update.bats	without brew	a skipped Brewfile is not named at the end
 script/update	s|/Brewfile" --verbose$|/Brewfile"|	test/unit/update.bats	only when something in it is missing	an update installs from the Brewfile in silence, which looks like a hang
+script/update	s|^  if \[ -d "$HOME/.dotfiles-private/.git" \]; then|  if false; then|	test/unit/update.bats	a private clone is pulled too	the private clone is never pulled, so a skill changed on one machine never reaches another
+script/update	s|^    git -C "$HOME/.dotfiles-private" pull --rebase --autostash \\$|    false \\|	test/unit/update.bats	a private clone is pulled too	the private clone is said to be pulled and is not
+script/update	s@^      || not_done="$not_done private-clone"@      || exit 1@	test/unit/update.bats	cannot be pulled is said, and the run goes on	a private remote that wants a sign-in stops the whole update
 config/zsh/.zshrc	s|^tmux_autostart$|: tmux_autostart|	test/integration/startup.bats	autostart is actually called	the shell stops starting tmux at all
 config/zsh/.zshrc	s|^\[\[ -n "$__DOTFILES_ZSHRC" \]\] && return|:|	test/integration/startup.bats	twice is a no-op	the double-source guard goes
 config/zsh/.zshrc	s|^unset custom_lib file|unset custom_lib|	test/integration/startup.bats	leaves nothing behind	the lib loop variable leaks into every shell

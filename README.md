@@ -22,8 +22,8 @@
 > I must master my life. Without me, my dotfiles are useless. Without my
 > dotfiles, I am useless.
 
-zsh, tmux, Neovim, git and Ghostty for macOS on Apple Silicon, with the Homebrew
-packages around them. One command installs everything on a new Mac, and one
+zsh, tmux, Neovim, git, Ghostty and Claude Code for macOS on Apple Silicon, with
+the Homebrew packages around them. One command installs everything on a new Mac, and one
 script takes it out again.
 
 - **Layers over a managed shell.** On a machine where another tool owns
@@ -131,12 +131,13 @@ broken. [Keeping a Mac up to date][update] has the detail of both.
 ~/.dotfiles/script/remove --everything   # and Homebrew, its packages and the Command Line Tools
 ```
 
-It asks before doing anything. Then it removes the links in `~`, `~/.config`
-and `~/.ssh`, the clone at `~/.dotfiles`, and the caches the shell config
-generates, and sets the login shell back to `/bin/zsh`.
+It asks before doing anything. Then it removes the links in `~`, `~/.config`,
+`~/.ssh` and `~/.claude`, the clone at `~/.dotfiles`, and the caches the shell
+config generates, and sets the login shell back to `/bin/zsh`.
 
-It leaves alone your shell history, everything under `~/.config` and `~/.ssh`
-that is not a link into the clone, and the macOS settings `script/macos` wrote.
+It leaves alone your shell history, everything under `~/.config`, `~/.ssh` and
+`~/.claude` that is not a link into the clone, and the macOS settings
+`script/macos` wrote.
 The Gotham profile has to be removed from Terminal.app by hand.
 [Taking it all out again][remove] says how to put the macOS settings back.
 
@@ -150,7 +151,7 @@ from a clone with `open guides/index.html`.
 | --- | --- |
 | [Start here](https://ogrady.ie/dotfiles/index.html) | What dotfiles are, the ideas behind this repo, and a map of it. |
 | [New Mac](https://ogrady.ie/dotfiles/install.html) | Bootstrap step by step, updating, the doctor, and removal. |
-| [Where files live](https://ogrady.ie/dotfiles/layout.html) | What gets linked where, what git ignores, and the per-machine files. |
+| [Where files live](https://ogrady.ie/dotfiles/layout.html) | What gets linked where, what git ignores, the per-machine files, and Claude Code's folder. |
 | [Opening a terminal](https://ogrady.ie/dotfiles/shell.html) | How a shell starts, layering over a managed setup, tmux, and startup time. |
 | [Keys and 1Password](https://ogrady.ie/dotfiles/keys.html) | SSH, commit signing and Touch ID for `sudo`. |
 | [Toolbox](https://ogrady.ie/dotfiles/tools.html) | The cheat sheet: what is installed, aliases, key bindings and switches. |

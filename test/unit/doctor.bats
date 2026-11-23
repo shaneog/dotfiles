@@ -25,12 +25,16 @@ setup() {
   STUBS="$BATS_TEST_TMPDIR/stubs"
   BREW_STATE="$BATS_TEST_TMPDIR/brew"
   mkdir -p "$FIX/script" "$FIX/config/zsh" "$FIX/config/nvim" "$FIX/ssh" "$STUBS" "$BREW_STATE"
+  mkdir -p "$FIX/claude/skills/tidy"
 
   cp "$REPO/script/doctor" "$REPO/script/setup" "$REPO/script/brew-drift" "$FIX/script/"
   echo "# ours" > "$FIX/config/zsh/.zshenv"
   echo "-- ours" > "$FIX/config/nvim/init.lua"
   echo "# ours" > "$FIX/config/starship.toml"
   echo "# ours" > "$FIX/ssh/config"
+  echo "# ours" > "$FIX/claude/CLAUDE.md"
+  echo '{"ours": true}' > "$FIX/claude/settings.json"
+  echo "# ours" > "$FIX/claude/skills/tidy/SKILL.md"
   printf "brew 'fzf'\ncask '1password'\n" > "$FIX/Brewfile"
   printf '#!/bin/sh\necho "33 of 33 settings applied, 0 not"\n' > "$FIX/script/macos"
   printf '#!/bin/sh\necho "  Rectangle: has settings"\n' > "$FIX/script/apps"
@@ -148,7 +152,7 @@ snapshot() {
 @test "doctor: a healthy machine passes, with nothing skipped" {
   run doctor
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
-  assert_contains "$output" "all 6 links point into the clone"
+  assert_contains "$output" "all 9 links point into the clone"
   assert_contains "$output" "level with origin/main"
   assert_contains "$output" "33 of 33 settings applied"
   assert_contains "$output" "everything the Brewfile declares is installed"
@@ -213,6 +217,47 @@ snapshot() {
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   assert_contains "$output" "~/.ssh holds a private key and is managed elsewhere"
   assert_contains "$output" "0 failures"
+}
+
+@test "doctor: a Claude Code link that is gone fails, a level down as well" {
+  rm "$DHOME/.claude/CLAUDE.md" "$DHOME/.claude/skills/tidy"
+  run doctor
+  [ "$status" -eq 1 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "FAIL  ~/.claude/CLAUDE.md is not a link to claude/CLAUDE.md: script/setup"
+  assert_contains "$output" "FAIL  ~/.claude/skills/tidy is not a link to claude/skills/tidy: script/setup"
+  assert_contains "$output" "2 failures"
+}
+
+@test "doctor: what a machine keeps of its own in ~/.claude is noted, not called broken" {
+  # script/setup leaves a name that is taken there alone, so a machine can keep
+  # settings or a skill of its own. Nothing is missing, and it may stay that
+  # way for good, so it is neither a failure nor a warning on every run.
+  rm "$DHOME/.claude/settings.json" "$DHOME/.claude/skills/tidy"
+  echo '{"this machine": true}' > "$DHOME/.claude/settings.json"
+  mkdir "$DHOME/.claude/skills/tidy"
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "note  ~/.claude/settings.json is this machine's own, so the repo's claude/settings.json is not in use here"
+  assert_contains "$output" "note  ~/.claude/skills/tidy is this machine's own, so the repo's claude/skills/tidy is not in use here"
+  assert_contains "$output" "all 7 links point into the clone"
+  assert_contains "$output" "0 failures, 0 warnings"
+}
+
+@test "doctor: the links from a private clone are checked by the same rule" {
+  local private="$DHOME/.dotfiles-private"
+  mkdir -p "$private/claude/skills/voice"
+  echo "# not for publishing" > "$private/claude/skills/voice/SKILL.md"
+  git -C "$private" init -q
+  git -C "$private" add -A
+  ( cd "$FIX" && HOME="$DHOME" ./script/setup ) >/dev/null 2>&1
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "all 10 links point into the clone"
+
+  rm "$DHOME/.claude/skills/voice"
+  run doctor
+  [ "$status" -eq 1 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "FAIL  ~/.claude/skills/voice is not a link to ~/.dotfiles-private/claude/skills/voice: script/setup"
 }
 
 @test "doctor: a clone behind origin/main warns, without fetching" {

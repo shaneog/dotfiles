@@ -35,6 +35,18 @@ loads afterwards and wins where it should.
   `config/` and `ssh/`. Other tools' state stays out of the clone, so the index
   is the list of what is ours: a new tool's config has to be `git add`ed before
   `script/setup` will link it.
+- **`claude/` is Claude Code's `~/.claude`, linked one level further down.** A
+  file is one link, and a folder is a real folder holding a link for each
+  entry, so a skill or an agent that belongs to one machine sits beside ours
+  and never reaches the clone. A name that is already taken there is left
+  alone, not moved aside: Claude Code writes `settings.json` itself and reads
+  no second file for one machine, so that is the only way a machine keeps
+  settings of its own. What Claude Code saves through the link shows as a diff
+  here. Read it before committing it: it can name a folder or a project.
+  `~/.claude.json` is never tracked, because it holds the sign-in beside the
+  MCP servers. A skill that is not for publishing never goes in `claude/`: an
+  optional second clone at `~/.dotfiles-private` is linked by the same rule,
+  after this one, and nothing here names the repository it is a clone of.
 - **zsh plugins are Homebrew formulae.** The `Brewfile` installs them, and the
   lib file that wants one sources it from `$HOMEBREW_PREFIX/share`, guarded on
   the file being there. No shell fetches anything, so a first shell needs no
@@ -112,9 +124,9 @@ flags.
   gives up sooner once a row has been broken. A test that measures time carries
   `# bats test_tags=timing`, and its rows are run alone.
 - **A new top-level file or directory stays out of `$HOME`.** `script/setup`
-  links the three it names: `Brewfile`, `config` and `ssh`. A fourth needs a
-  line there, and the two lists of what a home holds afterwards need it too:
-  `test/integration/setup.bats` ("links the three things it names") and
+  links the four it names: `Brewfile`, `config`, `ssh` and `claude`. A fifth
+  needs a line there, and the two lists of what a home holds afterwards need it
+  too: `test/integration/setup.bats` ("links the four things it names") and
   `.github/workflows/provision.yml` ("Nothing else from the repo reaches home").
 - **A change in behaviour updates the page under `guides/` that describes it**,
   in the same pull request. `README.md` changes only when installing, updating,
