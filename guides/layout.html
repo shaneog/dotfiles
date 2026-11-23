@@ -249,6 +249,18 @@ claude/*
       <p>On a Mac that uses the repository's <code>settings.json</code>, Claude Code writes through the signpost. Switch on a plugin there and <code>git status</code> in <code>~/.dotfiles</code> shows the change. Read it before you commit it, because it can name a folder or a project, and a test refuses a path inside a home folder. <code>git restore claude/settings.json</code> puts it back.</p>
     </div>
 
+    <h3 id="private">A skill that should not be public</h3>
+    <p>This repository is public, and not every skill should be. One that only one Mac needs can stay a real folder in <code>~/.claude/skills</code>. One that several Macs need goes in a second repository, a private one, cloned by hand to <code>~/.dotfiles-private</code>:</p>
+
+    <pre><code>~/.dotfiles-private/
+  claude/
+    skills/
+      a-private-skill/
+        SKILL.md</code></pre>
+
+    <p>Where that folder exists, setup links what it tracks under its own <code>claude/</code> into <code>~/.claude</code> by the same rule, after this repository's. So a name both have stays with this one, and setup says so. <code>make update</code> pulls the second clone before it links, and <code>make doctor</code> checks its signposts too. A Mac without one is missing nothing, and a Mac that cannot reach it still updates: the pull is reported as not done and the rest goes ahead.</p>
+    <p>Nothing in this repository says where the private one lives. Removing these dotfiles leaves it, and the signposts into it, alone.</p>
+
     <p>Two things are deliberately not here. Claude Code keeps its list of MCP servers in <code>~/.claude.json</code>, in the same file as who is signed in, so that file is never tracked. And the Claude desktop app keeps its own settings somewhere else entirely.</p>
 
     <h2 id="local">Three files that belong to one Mac</h2>

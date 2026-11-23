@@ -2,7 +2,8 @@
 #
 # Brings a machine that is already set up level with the repo: pull, link,
 # install what the Brewfile declares, and put Neovim's plugins where the
-# lockfile says.
+# lockfile says. A private clone at ~/.dotfiles-private is pulled as well,
+# where there is one.
 #
 # script/bootstrap does these too, and is still how a new machine starts. This
 # is the part of it that never needs a password: it installs no Homebrew, sets
@@ -32,6 +33,15 @@ main() {
     DOTFILES_UPDATE_FROM="$before" exec "$DOTFILESDIR/script/update"
   fi
   before="$DOTFILES_UPDATE_FROM"
+
+  # The second clone, where a machine has one. It is optional and its remote
+  # may ask for a sign-in this machine does not have, so a pull that fails is
+  # said and the run goes on with the clone as it is.
+  if [ -d "$HOME/.dotfiles-private/.git" ]; then
+    step "Pulling $HOME/.dotfiles-private:"
+    git -C "$HOME/.dotfiles-private" pull --rebase --autostash \
+      || not_done="$not_done private-clone"
+  fi
 
   step "Linking:"
   script/setup

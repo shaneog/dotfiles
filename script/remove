@@ -15,7 +15,8 @@
 # Not undone either way: the settings script/macos wrote, because their previous
 # values are recorded nowhere. Shell history under $XDG_DATA_HOME/zsh is also
 # left alone, being yours rather than ours, and so is everything in ~/.config,
-# ~/.ssh and ~/.claude that is not a link into the clone.
+# ~/.ssh and ~/.claude that is not a link into the clone. That includes a
+# private clone at ~/.dotfiles-private and the links script/setup made into it.
 #
 # What a tool wrote inside a directory that is linked into the clone does go
 # with it: gh's record of the logged-in account, Homebrew's tap trust.

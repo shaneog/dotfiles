@@ -14,6 +14,10 @@
 # one link, ~/.claude/settings.json, and a folder is a real folder holding a
 # link for each entry, ~/.claude/skills/<name>.
 #
+# A second clone at ~/.dotfiles-private is optional, and is for what should
+# not be published: a skill, say. Where there is one, what it tracks under its
+# own claude/ is linked into ~/.claude by the same rule.
+#
 # Anything already at a target path is moved aside rather than deleted, except
 # in ~/.claude, where it is left as it is. The externally managed shell files
 # -- ~/.profile, ~/.bashrc, ~/.zprofile, ~/.zshrc -- are never touched: they are
@@ -51,9 +55,9 @@ link_into() {  # target in the clone, link path
 # The entries git tracks directly under one of the clone's directories. The
 # index is the list of what is ours: a tool's state that turned up beside our
 # files is not in it, and neither is a directory nobody has `git add`ed yet.
-tracked_entries() {  # directory, relative to the clone
+tracked_entries() {  # directory, relative to the clone; the clone, when it is not this one
   local path
-  git -C "$DOTFILESDIR" ls-files -- "$1" | while IFS= read -r path
+  git -C "${2:-$DOTFILESDIR}" ls-files -- "$1" | while IFS= read -r path
   do
     path="${path#"$1"/}"
     echo "${path%%/*}"
@@ -145,6 +149,13 @@ link_beside() {  # target in the clone, link path
     echo "$2 == $1 (unchanged)"
     return 0
   fi
+  # A link that leads somewhere else: one made by hand, or ours to the public
+  # clone's entry of the same name when this is the private clone's turn.
+  if [ -L "$2" ] && [ -e "$2" ]
+  then
+    echo "$2 already leads to $(readlink "$2"), leaving it alone"
+    return 0
+  fi
   if [ -e "$2" ]
   then
     echo "$2 is this machine's own, leaving it alone (move it aside and run this again to use the repo's)"
@@ -160,8 +171,8 @@ link_beside() {  # target in the clone, link path
 # neither are the folders in it. A skill written on one machine, for an
 # employer's work say, sits beside ours as a real folder and never reaches the
 # clone.
-link_claude() {
-  local source="$DOTFILESDIR/claude" target="$HOME/.claude" entry inner
+link_claude() {  # the clone to link from
+  local source="$1/claude" target="$HOME/.claude" entry inner
   [ -d "$source" ] || return 0
 
   if [ -e "$target" ] && [ ! -d "$target" ]
@@ -188,8 +199,8 @@ link_claude() {
     do
       [ -n "$inner" ] || continue
       link_beside "$source/$entry/$inner" "$target/$entry/$inner"
-    done <<< "$(tracked_entries "claude/$entry")"
-  done <<< "$(tracked_entries claude)"
+    done <<< "$(tracked_entries "claude/$entry" "$1")"
+  done <<< "$(tracked_entries claude "$1")"
 }
 
 # What reaches $HOME, by name. Everything else at the top of the clone is the
@@ -199,7 +210,18 @@ link_claude() {
 link_into "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"
 link_directory config
 link_directory ssh
-link_claude
+link_claude "$DOTFILESDIR"
+
+# The public clone first, so a name both have stays with it. The private one
+# is a clone like this one: what git does not track there is not linked either.
+PRIVATE="$HOME/.dotfiles-private"
+if [ -d "$PRIVATE/.git" ]
+then
+  link_claude "$PRIVATE"
+elif [ -e "$PRIVATE" ]
+then
+  echo "$PRIVATE is not a git clone, so nothing is linked from it"
+fi
 
 # .zshenv is the entry point that sets ZDOTDIR, and the only home-level shell
 # file we own. Where something else already manages ~/.profile, ~/.bashrc,

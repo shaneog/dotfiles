@@ -44,7 +44,9 @@ loads afterwards and wins where it should.
   settings of its own. What Claude Code saves through the link shows as a diff
   here. Read it before committing it: it can name a folder or a project.
   `~/.claude.json` is never tracked, because it holds the sign-in beside the
-  MCP servers.
+  MCP servers. A skill that is not for publishing never goes in `claude/`: an
+  optional second clone at `~/.dotfiles-private` is linked by the same rule,
+  after this one, and nothing here names the repository it is a clone of.
 - **zsh plugins are Homebrew formulae.** The `Brewfile` installs them, and the
   lib file that wants one sources it from `$HOMEBREW_PREFIX/share`, guarded on
   the file being there. No shell fetches anything, so a first shell needs no

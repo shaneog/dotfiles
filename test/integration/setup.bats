@@ -42,6 +42,20 @@ make_clone() {
   git -C "$CLONE" add -A
 }
 
+# A second clone, as a machine that keeps one has it: ~/.dotfiles-private,
+# holding a skill that is not for publishing.
+make_private() {
+  PRIVATE="$FAKE_HOME/.dotfiles-private"
+  mkdir -p "$PRIVATE/claude/skills/voice"
+  echo "# not for publishing" > "$PRIVATE/claude/skills/voice/SKILL.md"
+  git -C "$PRIVATE" init -q
+  git -C "$PRIVATE" add -A
+}
+
+setup_output() {
+  ( cd "$CLONE" && HOME="$FAKE_HOME" ./script/setup ) 2>&1
+}
+
 # The home an earlier script/setup left behind: ~/.config and ~/.ssh as links
 # to the clone's whole directories, and so other tools' files inside the clone.
 make_whole_directory_home() {
@@ -340,6 +354,55 @@ snapshot() {
   [ ! -e "$FAKE_HOME/.claude/skills/not-added-yet" ] \
     || { echo "an untracked skill was linked"; return 1; }
   [ -L "$FAKE_HOME/.claude/skills/tidy" ]
+}
+
+# ------------------------------------------------------- ~/.dotfiles-private
+
+@test "a private clone's skill is linked beside the public ones" {
+  make_clone
+  make_private
+  run_setup
+  [ -L "$FAKE_HOME/.claude/skills/voice" ] || { echo "the private skill is not linked"; return 1; }
+  [ "$FAKE_HOME/.claude/skills/voice" -ef "$PRIVATE/claude/skills/voice" ]
+  [ "$FAKE_HOME/.claude/skills/tidy" -ef "$CLONE/claude/skills/tidy" ]
+  [ "$FAKE_HOME/.claude/settings.json" -ef "$CLONE/claude/settings.json" ]
+  # The whole point of the second clone: none of it is in the first.
+  assert_equal "$(ls -A "$CLONE/claude/skills" | tr '\n' ' ')" "tidy " "the public clone's skills"
+}
+
+@test "a name both clones have stays with the public one, and setup says so" {
+  make_clone
+  make_private
+  mkdir -p "$PRIVATE/claude/skills/tidy"
+  echo "# the private one" > "$PRIVATE/claude/skills/tidy/SKILL.md"
+  git -C "$PRIVATE" add -A
+  run setup_output
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  [ "$FAKE_HOME/.claude/skills/tidy" -ef "$CLONE/claude/skills/tidy" ] \
+    || { echo "tidy leads to $(readlink "$FAKE_HOME/.claude/skills/tidy")"; return 1; }
+  assert_contains "$output" "$FAKE_HOME/.claude/skills/tidy already leads to $CLONE/claude/skills/tidy, leaving it alone"
+  [ "$FAKE_HOME/.claude/skills/voice" -ef "$PRIVATE/claude/skills/voice" ]
+}
+
+@test "what the private clone does not track is not linked" {
+  make_clone
+  make_private
+  mkdir -p "$PRIVATE/claude/skills/a-draft"
+  echo "# a draft" > "$PRIVATE/claude/skills/a-draft/SKILL.md"
+  run_setup
+  [ ! -e "$FAKE_HOME/.claude/skills/a-draft" ] || { echo "an untracked skill was linked"; return 1; }
+  [ -L "$FAKE_HOME/.claude/skills/voice" ]
+}
+
+@test "a ~/.dotfiles-private that is not a clone links nothing, and setup says so" {
+  # Its list of what to link is git's. A folder of loose files has no list.
+  make_clone
+  mkdir -p "$FAKE_HOME/.dotfiles-private/claude/skills/voice"
+  echo "# loose" > "$FAKE_HOME/.dotfiles-private/claude/skills/voice/SKILL.md"
+  run setup_output
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "$FAKE_HOME/.dotfiles-private is not a git clone, so nothing is linked from it"
+  [ ! -e "$FAKE_HOME/.claude/skills/voice" ] || { echo "a loose folder was linked"; return 1; }
 }
 
 # ------------------------------------------------- from the whole-directory layout

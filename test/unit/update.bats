@@ -66,6 +66,23 @@ update() {
       BREW_CHECK="${BREW_CHECK:-0}" "$CLONE/script/update" )
 }
 
+# A second clone at ~/.dotfiles-private, of a repository of its own.
+make_private() {
+  PRIVATE_UPSTREAM="$BATS_TEST_TMPDIR/private-upstream"
+  mkdir -p "$PRIVATE_UPSTREAM"
+  echo "# not for publishing" > "$PRIVATE_UPSTREAM/a-skill"
+  private_git init -q
+  private_git add -A
+  private_git commit -qm "fixture"
+  private_git clone -q "$PRIVATE_UPSTREAM" "$UHOME/.dotfiles-private"
+}
+
+private_git() {
+  env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+    git -C "$PRIVATE_UPSTREAM" -c user.name=t -c user.email=t@example.invalid \
+    -c commit.gpgsign=false -c init.defaultBranch=main "$@"
+}
+
 # What ran, in order, without its arguments.
 steps() { cut -d' ' -f1 "$LOG" | tr '\n' ',' ; }
 
@@ -143,6 +160,38 @@ NEWER
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
   assert_contains "$output" "NOT DONE: brewfile"
   assert_equal "$(steps)" "setup,after-setup," "what ran, in order"
+}
+
+@test "update: a private clone is pulled too, before anything is linked" {
+  make_private
+  echo "# newer" > "$PRIVATE_UPSTREAM/a-newer-skill"
+  private_git add -A
+  private_git commit -qm "newer"
+  # A link step that says whether the newer file was there when it ran.
+  cat > "$UPSTREAM/script/setup" <<'SETUP'
+#!/bin/sh
+if [ -f "$HOME/.dotfiles-private/a-newer-skill" ]; then
+  echo "setup after-the-private-pull" >> "$CALL_LOG"
+else
+  echo "setup before-the-private-pull" >> "$CALL_LOG"
+fi
+SETUP
+  upstream_commit "a setup that looks"
+  run update
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$(cat "$LOG")" "setup after-the-private-pull" "what ran"
+  refute_contains "$output" "NOT DONE"
+}
+
+@test "update: a private clone that cannot be pulled is said, and the run goes on" {
+  # Its remote may want a sign-in this machine does not have. That is no
+  # reason to leave the public half of the machine out of date.
+  make_private
+  git -C "$UHOME/.dotfiles-private" remote set-url origin "$BATS_TEST_TMPDIR/no-such-repo"
+  run update
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "NOT DONE: private-clone"
+  assert_equal "$(steps)" "setup,brew,after-setup," "what ran, in order"
 }
 
 @test "update: asks for no password and applies no macOS settings" {

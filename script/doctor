@@ -102,15 +102,24 @@ check_beside() {  # target in the clone, link path
   if [ -L "$2" ] && [ "$2" -ef "$1" ]; then
     LINKED=$((LINKED + 1))
   elif [ -e "$2" ]; then
-    note "$(tilde "$2") is this machine's own, so the repo's ${1#"$DOTFILESDIR"/} is not in use here"
+    note "$(tilde "$2") is this machine's own, so the repo's $(in_clone "$1") is not in use here"
   else
-    fail "$(tilde "$2") is not a link to ${1#"$DOTFILESDIR"/}: script/setup"
+    fail "$(tilde "$2") is not a link to $(in_clone "$1"): script/setup"
     BROKEN=$((BROKEN + 1))
   fi
 }
 
-check_claude() {
-  local source="$DOTFILESDIR/claude" target="$HOME/.claude" entry inner
+# A path in this clone as it is written in the repo, and one in the private
+# clone as it would be typed.
+in_clone() {
+  case "$1" in
+    "$DOTFILESDIR"/*) printf '%s' "${1#"$DOTFILESDIR"/}" ;;
+    *)                tilde "$1" ;;
+  esac
+}
+
+check_claude() {  # the clone that was linked from
+  local source="$1/claude" target="$HOME/.claude" entry inner
   while IFS= read -r entry; do
     [ -n "$entry" ] || continue
     if [ ! -d "$source/$entry" ]; then
@@ -121,10 +130,10 @@ check_claude() {
       [ -n "$inner" ] || continue
       check_beside "$source/$entry/$inner" "$target/$entry/$inner"
     done <<EOF
-$(git ls-files -- "claude/$entry" 2>/dev/null | cut -d/ -f3 | sort -u)
+$(git -C "$1" ls-files -- "claude/$entry" 2>/dev/null | cut -d/ -f3 | sort -u)
 EOF
   done <<EOF
-$(git ls-files -- claude 2>/dev/null | cut -d/ -f2 | sort -u)
+$(git -C "$1" ls-files -- claude 2>/dev/null | cut -d/ -f2 | sort -u)
 EOF
 }
 
@@ -132,7 +141,12 @@ check_link "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"
 check_link "$DOTFILESDIR/config/zsh/.zshenv" "$HOME/.zshenv"
 check_directory config
 check_directory ssh
-check_claude
+check_claude "$DOTFILESDIR"
+# The optional second clone, for what is not published. script/setup links
+# from it by the same rule, so the same check applies. A machine without one
+# is not missing anything.
+PRIVATE="$HOME/.dotfiles-private"
+[ ! -d "$PRIVATE/.git" ] || check_claude "$PRIVATE"
 [ "$BROKEN" -gt 0 ] || ok "all $LINKED links point into the clone"
 
 # ------------------------------------------------------------------------ clone

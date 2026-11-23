@@ -243,6 +243,23 @@ snapshot() {
   assert_contains "$output" "0 failures, 0 warnings"
 }
 
+@test "doctor: the links from a private clone are checked by the same rule" {
+  local private="$DHOME/.dotfiles-private"
+  mkdir -p "$private/claude/skills/voice"
+  echo "# not for publishing" > "$private/claude/skills/voice/SKILL.md"
+  git -C "$private" init -q
+  git -C "$private" add -A
+  ( cd "$FIX" && HOME="$DHOME" ./script/setup ) >/dev/null 2>&1
+  run doctor
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "all 10 links point into the clone"
+
+  rm "$DHOME/.claude/skills/voice"
+  run doctor
+  [ "$status" -eq 1 ] || { echo "$output"; return 1; }
+  assert_contains "$output" "FAIL  ~/.claude/skills/voice is not a link to ~/.dotfiles-private/claude/skills/voice: script/setup"
+}
+
 @test "doctor: a clone behind origin/main warns, without fetching" {
   given_origin_moved
   run doctor
