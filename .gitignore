@@ -1,6 +1,7 @@
-# script/setup links only what git tracks under config/ and ssh/, one entry at a
-# time, so a tool that writes beside those links writes outside the clone. What
-# is listed here is what a tool writes inside a directory that is linked whole.
+# script/setup links only what git tracks under config/, ssh/ and claude/, one
+# entry at a time, so a tool that writes beside those links writes outside the
+# clone. What is listed here is what a tool writes inside a directory that is
+# linked whole.
 #
 # Anything else that turns up under config/ shows as untracked, and the static
 # tier fails on it until it is tracked, ignored here, or named in
@@ -10,6 +11,24 @@
 # passes over a key copied here by mistake.
 ssh/*
 !ssh/config
+
+# claude: what a person writes for Claude Code is ours. Everything else it
+# keeps in ~/.claude is not -- sessions, history, the sign-in, what plugins
+# installed -- and is turned away, so that `git add` passes over a copy of it
+# made here by mistake.
+claude/*
+!claude/CLAUDE.md
+!claude/settings.json
+!claude/keybindings.json
+!claude/agents/
+!claude/commands/
+!claude/output-styles/
+!claude/rules/
+!claude/skills/
+# ...at any depth, since the folders above are let through whole.
+claude/**/.claude.json
+claude/**/.credentials.json
+claude/**/settings.local.json
 
 # tmux: tpm clones the plugins here
 config/tmux/plugins

@@ -102,18 +102,42 @@
             <span class="note">The servers this Mac has met, and its private hosts. They stay here.</span>
           </li>
         </ul>
+
+        <p class="linkmap-group">~/.claude/ <small>a real folder, shared with Claude Code itself</small></p>
+        <ul class="linkmap">
+          <li class="seq">
+            <span class="chip home">~/.claude/settings.json <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/claude/settings.json <small>Claude Code's settings</small></span>
+          </li>
+          <li class="seq">
+            <span class="chip home">~/.claude/CLAUDE.md <small>a signpost</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/claude/CLAUDE.md <small>instructions it reads in every project</small></span>
+          </li>
+          <li class="seq">
+            <span class="chip home">~/.claude/skills/a-skill <small>a signpost for each one</small></span>
+            <span class="wire" role="img" aria-label="points to"></span>
+            <span class="chip">~/.dotfiles/claude/skills/a-skill <small>and the same for agents, commands and rules</small></span>
+          </li>
+          <li class="seq stays">
+            <span class="chip">~/.claude/projects, history.jsonl <small>real files</small></span>
+            <span class="note">Claude Code's own records: your sessions, your history, what it installed. They stay here.</span>
+          </li>
+        </ul>
       </div>
       <figcaption>
-        <span>Two real folders with signposts inside them, plus two signposts in the home folder itself.</span>
+        <span>Three real folders with signposts inside them, plus two signposts in the home folder itself.</span>
         <button class="btn" type="button" data-replay>Replay</button>
       </figcaption>
     </figure>
 
     <h3>The rule behind the map</h3>
-    <p><code>script/setup</code> names three things in the repository, and those are the only three it links.</p>
+    <p><code>script/setup</code> names four things in the repository, and those are the only four it links.</p>
     <ul>
       <li><strong><code>Brewfile</code></strong> becomes a signpost named <code>~/.Brewfile</code>.</li>
       <li><strong><code>config</code> and <code>ssh</code></strong> each become a <em>real</em> folder, <code>~/.config</code> or <code>~/.ssh</code>. Inside it goes one signpost for each thing git tracks directly inside the repository's folder.</li>
+      <li><strong><code>claude</code></strong> becomes the real folder <code>~/.claude</code> in the same way, one level further down. A file such as <code>settings.json</code> gets a signpost. A folder such as <code>skills</code> becomes a real folder too, and the signposts go inside it, one for each skill. <a href="#claude">Claude Code's folder</a> says why.</li>
     </ul>
     <p>Then it adds <code>~/.zshenv</code>, because that one file has to sit in the home folder for zsh to find it. Nothing else at the top of the repository is on the list, so <code>script/</code>, <code>test/</code>, <code>guides/</code>, the <code>Makefile</code> and anything added later never show up in your home folder.</p>
 
@@ -126,7 +150,7 @@
     </div>
 
     <h2 id="existing">What if something is already there?</h2>
-    <p>A Mac that has been used for a day already has files in these places. Setup never deletes what it finds. It picks one of three polite options.</p>
+    <p>A Mac that has been used for a day already has files in these places. Setup never deletes what it finds. It picks one of four polite options.</p>
 
     <figure class="fig" data-animate>
       <div class="fig-body">
@@ -153,6 +177,13 @@
             </div>
             <p>If <code>~/.ssh</code> contains an <code>id_…</code> key file, something else manages SSH on this Mac. Setup leaves the whole folder alone.</p>
           </div>
+          <div class="aside-case">
+            <h3>A name in <code>~/.claude</code> is taken</h3>
+            <div class="slot">
+              <span class="chip tone-orange seq">~/.claude/settings.json <small>left exactly as it is</small></span>
+            </div>
+            <p>A Mac that already has Claude Code settings, or a skill with the same name as one here, keeps its own. Move yours aside and run setup again to use the repository's.</p>
+          </div>
         </div>
       </div>
       <figcaption>
@@ -178,12 +209,47 @@ config/zsh/.zcompdump
 
 <span class="dim"># ssh/ holds one file of ours, and everything else is turned away</span>
 ssh/*
-!ssh/config</code></pre>
+!ssh/config
+
+<span class="dim"># claude/ holds what a person writes for Claude Code, and nothing it keeps for itself</span>
+claude/*
+!claude/CLAUDE.md
+!claude/settings.json
+!claude/skills/</code></pre>
 
     <div class="callout note">
       <p class="callout-title">Good to know</p>
-      <p>Anything new under <code>config/</code> shows up in <code>git status</code>, and a test fails until someone decides what it is: tracked, or ignored by a rule of its own. Names that should not appear in a public repository go in <code>.git/info/exclude</code>, which is never shared. A key copied into <code>ssh/</code> by mistake is ignored, so <code>git add</code> passes over it.</p>
+      <p>Anything new under <code>config/</code> shows up in <code>git status</code>, and a test fails until someone decides what it is: tracked, or ignored by a rule of its own. Names that should not appear in a public repository go in <code>.git/info/exclude</code>, which is never shared. A key copied into <code>ssh/</code> by mistake is ignored, so <code>git add</code> passes over it. So is a copy of Claude Code's history or sign-in that ends up in <code>claude/</code>.</p>
     </div>
+
+    <h2 id="claude">Claude Code's folder</h2>
+    <p>Claude Code keeps everything in <code>~/.claude</code>: the few files a person writes for it, and a great deal it writes for itself. Only the first kind belongs in a public repository.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>In <code>claude/</code></th><th>What it is</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>settings.json</code></td><td>Claude Code's settings on every Mac. It starts with one decision: commits and pull requests carry no “co-authored by” line and no link to the session that wrote them.</td></tr>
+          <tr><td><code>CLAUDE.md</code></td><td>Instructions Claude Code reads in every project, before the project's own.</td></tr>
+          <tr><td><code>skills/</code>, <code>agents/</code>, <code>commands/</code>, <code>rules/</code></td><td>One entry for each skill, agent, command or rule to have on every Mac. A folder appears here when the first one is added.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Why the signposts sit one level further down</h3>
+    <p>A skill written at work, for work, belongs to that Mac. If <code>~/.claude/skills</code> were one signpost to the repository's folder, every skill made anywhere would land in a public repository's working folder. So <code>~/.claude/skills</code> is a real folder, the repository's skills are signposts inside it, and one Mac's own skills sit beside them as real folders. Instructions for one Mac work the same way: put them in a file of their own under <code>~/.claude/rules/</code>.</p>
+
+    <h3>Why a file that is already there is left alone</h3>
+    <p>Claude Code saves its own changes into <code>settings.json</code>, and it reads no second settings file for one Mac. A Mac that needs settings of its own therefore has to keep the real file. If setup moved it aside, it would move it aside again on every run. So in <code>~/.claude</code> setup only adds. <code>make doctor</code> lists what a Mac has kept, as a note and not as a fault.</p>
+
+    <div class="callout note">
+      <p class="callout-title">Good to know</p>
+      <p>On a Mac that uses the repository's <code>settings.json</code>, Claude Code writes through the signpost. Switch on a plugin there and <code>git status</code> in <code>~/.dotfiles</code> shows the change. Read it before you commit it, because it can name a folder or a project, and a test refuses a path inside a home folder. <code>git restore claude/settings.json</code> puts it back.</p>
+    </div>
+
+    <p>Two things are deliberately not here. Claude Code keeps its list of MCP servers in <code>~/.claude.json</code>, in the same file as who is signed in, so that file is never tracked. And the Claude desktop app keeps its own settings somewhere else entirely.</p>
 
     <h2 id="local">Three files that belong to one Mac</h2>
     <p>Some settings are different on every machine and must not be shared. Each tracked file has an untracked partner for exactly that.</p>

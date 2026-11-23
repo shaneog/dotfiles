@@ -911,7 +911,7 @@ th {
 }
 
 /* Each case borrows the grid's rows, so headings, chips and text line up
-   across the three columns however many chips a case holds. */
+   across the columns however many chips a case holds. */
 .aside-case {
   display: grid;
   grid-row: span 3;

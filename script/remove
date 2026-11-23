@@ -3,8 +3,9 @@
 # Remove these dotfiles.
 #
 # By default this undoes what this repo installed and nothing else: the symlinks
-# in $HOME, ~/.config and ~/.ssh, the clone at ~/.dotfiles, the caches its shell
-# config generates, and the login shell that script/bootstrap changed. Homebrew,
+# in $HOME, ~/.config, ~/.ssh and ~/.claude, the clone at ~/.dotfiles, the
+# caches its shell config generates, and the login shell that script/bootstrap
+# changed. Homebrew,
 # everything the Brewfile installed, and the Command Line Tools are left alone:
 # taking those out is a good deal more than "remove these dotfiles" promises.
 #
@@ -13,8 +14,8 @@
 #
 # Not undone either way: the settings script/macos wrote, because their previous
 # values are recorded nowhere. Shell history under $XDG_DATA_HOME/zsh is also
-# left alone, being yours rather than ours, and so is everything in ~/.config
-# and ~/.ssh that is not a link into the clone.
+# left alone, being yours rather than ours, and so is everything in ~/.config,
+# ~/.ssh and ~/.claude that is not a link into the clone.
 #
 # What a tool wrote inside a directory that is linked into the clone does go
 # with it: gh's record of the logged-in account, Homebrew's tap trust.
@@ -151,9 +152,9 @@ done
 # Prevent sleeping during script execution, as long as the machine is on AC power
 caffeinate -s -w $$ &
 
-echo "This removes these dotfiles: the symlinks in \$HOME, \$HOME/.config and"
-echo "\$HOME/.ssh, the clone at \$HOME/.dotfiles, the caches the shell config"
-echo "generates, and the login shell that script/bootstrap set."
+echo "This removes these dotfiles: the symlinks in \$HOME, \$HOME/.config,"
+echo "\$HOME/.ssh and \$HOME/.claude, the clone at \$HOME/.dotfiles, the caches"
+echo "the shell config generates, and the login shell that script/bootstrap set."
 if [ -n "$EVERYTHING" ]; then
   echo
   echo "--everything was given, so this will ALSO uninstall Homebrew, every"
@@ -161,7 +162,8 @@ if [ -n "$EVERYTHING" ]; then
 fi
 echo
 echo "Left alone either way: the macOS settings script/macos wrote, your shell"
-echo "history, and other tools' files under \$HOME/.config and \$HOME/.ssh."
+echo "history, other tools' files under \$HOME/.config and \$HOME/.ssh, and"
+echo "everything Claude Code keeps in \$HOME/.claude."
 echo
 
 read -r -p "Are you sure? [y/N] " response
@@ -189,12 +191,14 @@ log "Removing the clone and the links into it"
 # The links that resolve now and stop resolving once the clone is gone, which is
 # what makes them ours without a list of what was installed. One that is
 # already dangling -- pointing at a volume that is not mounted, say -- is
-# somebody else's, and is left alone. Three places to look, because those are
-# the three script/setup links into.
+# somebody else's, and is left alone. Four places to look, because those are
+# the four script/setup links into, and in ~/.claude one level further down,
+# where a skill or an agent is a link inside a real folder.
 live_links=()
 for link in "$HOME"/.* "$HOME"/* \
             "$HOME"/.config/.* "$HOME"/.config/* \
-            "$HOME"/.ssh/.* "$HOME"/.ssh/*; do
+            "$HOME"/.ssh/.* "$HOME"/.ssh/* \
+            "$HOME"/.claude/.* "$HOME"/.claude/* "$HOME"/.claude/*/*; do
   if [ -L "$link" ] && [ -e "$link" ]; then
     live_links+=("$link")
   fi

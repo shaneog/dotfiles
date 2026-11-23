@@ -57,10 +57,11 @@ days_ago() {  # days
 # ------------------------------------------------------------------------ links
 
 head2 "Links into the clone"
-# The same three things script/setup links, by the same rule: the Brewfile, and
-# each entry git tracks directly under config/ and ssh/. A link is intact when
-# it is a link and resolves to the clone's copy, which is the test setup uses to
-# call one unchanged.
+# The same four things script/setup links, by the same rules: the Brewfile,
+# each entry git tracks directly under config/ and ssh/, and what it tracks
+# under claude/, a level further down. A link is intact when it is a link and
+# resolves to the clone's copy, which is the test setup uses to call one
+# unchanged.
 LINKED=0
 BROKEN=0
 check_link() {  # target in the clone, link path
@@ -93,10 +94,45 @@ $(git ls-files -- "$1" 2>/dev/null | cut -d/ -f2 | sort -u)
 EOF
 }
 
+# script/setup leaves a name in ~/.claude that is taken as it finds it, so that
+# a machine can keep Claude Code settings or a skill of its own. That is a
+# decision too, and worth a line, because the repo's copy is then not what
+# Claude Code reads there.
+check_beside() {  # target in the clone, link path
+  if [ -L "$2" ] && [ "$2" -ef "$1" ]; then
+    LINKED=$((LINKED + 1))
+  elif [ -e "$2" ]; then
+    note "$(tilde "$2") is this machine's own, so the repo's ${1#"$DOTFILESDIR"/} is not in use here"
+  else
+    fail "$(tilde "$2") is not a link to ${1#"$DOTFILESDIR"/}: script/setup"
+    BROKEN=$((BROKEN + 1))
+  fi
+}
+
+check_claude() {
+  local source="$DOTFILESDIR/claude" target="$HOME/.claude" entry inner
+  while IFS= read -r entry; do
+    [ -n "$entry" ] || continue
+    if [ ! -d "$source/$entry" ]; then
+      check_beside "$source/$entry" "$target/$entry"
+      continue
+    fi
+    while IFS= read -r inner; do
+      [ -n "$inner" ] || continue
+      check_beside "$source/$entry/$inner" "$target/$entry/$inner"
+    done <<EOF
+$(git ls-files -- "claude/$entry" 2>/dev/null | cut -d/ -f3 | sort -u)
+EOF
+  done <<EOF
+$(git ls-files -- claude 2>/dev/null | cut -d/ -f2 | sort -u)
+EOF
+}
+
 check_link "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"
 check_link "$DOTFILESDIR/config/zsh/.zshenv" "$HOME/.zshenv"
 check_directory config
 check_directory ssh
+check_claude
 [ "$BROKEN" -gt 0 ] || ok "all $LINKED links point into the clone"
 
 # ------------------------------------------------------------------------ clone

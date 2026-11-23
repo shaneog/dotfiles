@@ -2,17 +2,22 @@
 #
 # Install the dotfiles into the home directory.
 #
-# Three things in the clone are linked, and they are named at the foot of this
-# script: Brewfile, config and ssh. Brewfile becomes ~/.Brewfile. config and ssh
-# become real directories -- ~/.config and ~/.ssh -- holding one link for each
-# entry git tracks directly beneath them: ~/.config/nvim, ~/.config/zsh,
-# ~/.ssh/config. Everything else in those directories belongs to whichever tool
-# wrote it, and stays outside the clone, where deleting or publishing the repo
-# cannot reach it.
+# Four things in the clone are linked, and they are named at the foot of this
+# script: Brewfile, config, ssh and claude. Brewfile becomes ~/.Brewfile. config
+# and ssh become real directories -- ~/.config and ~/.ssh -- holding one link
+# for each entry git tracks directly beneath them: ~/.config/nvim,
+# ~/.config/zsh, ~/.ssh/config. Everything else in those directories belongs to
+# whichever tool wrote it, and stays outside the clone, where deleting or
+# publishing the repo cannot reach it.
 #
-# Anything already at a target path is moved aside rather than deleted, and the
-# externally managed shell files -- ~/.profile, ~/.bashrc, ~/.zprofile, ~/.zshrc
-# -- are never touched: they are sourced as a base layer from ours instead.
+# claude is Claude Code's ~/.claude, linked one level further down: a file is
+# one link, ~/.claude/settings.json, and a folder is a real folder holding a
+# link for each entry, ~/.claude/skills/<name>.
+#
+# Anything already at a target path is moved aside rather than deleted, except
+# in ~/.claude, where it is left as it is. The externally managed shell files
+# -- ~/.profile, ~/.bashrc, ~/.zprofile, ~/.zshrc -- are never touched: they are
+# sourced as a base layer from ours instead.
 set -euo pipefail
 
 DOTFILESDIRREL="$(dirname "$0")"
@@ -47,7 +52,12 @@ link_into() {  # target in the clone, link path
 # index is the list of what is ours: a tool's state that turned up beside our
 # files is not in it, and neither is a directory nobody has `git add`ed yet.
 tracked_entries() {  # directory, relative to the clone
-  git -C "$DOTFILESDIR" ls-files -- "$1" | cut -d/ -f2 | sort -u
+  local path
+  git -C "$DOTFILESDIR" ls-files -- "$1" | while IFS= read -r path
+  do
+    path="${path#"$1"/}"
+    echo "${path%%/*}"
+  done | sort -u
 }
 
 # Earlier versions of this script linked ~/.config and ~/.ssh to the clone's
@@ -123,6 +133,65 @@ link_directory() {  # top-level directory name
   done <<< "$entries"
 }
 
+# In ~/.claude a name that is taken stays taken. Claude Code writes its own
+# settings.json and has no second file to read for one machine, so a machine
+# that needs settings of its own has to be able to keep them, and one that was
+# moved aside would be moved aside again on the next run. The same goes for a
+# skill or an agent a machine already has under a name of ours. The repo's copy
+# is used once the machine's is out of the way.
+link_beside() {  # target in the clone, link path
+  if [ -L "$2" ] && [ "$2" -ef "$1" ]
+  then
+    echo "$2 == $1 (unchanged)"
+    return 0
+  fi
+  if [ -e "$2" ]
+  then
+    echo "$2 is this machine's own, leaving it alone (move it aside and run this again to use the repo's)"
+    return 0
+  fi
+  # What is left is a link that leads nowhere, which holds nothing to keep.
+  if [ -L "$2" ]; then rm "$2"; fi
+  ln -sv "$1" "$2"
+}
+
+# ~/.claude holds what Claude Code reads beside what it writes: its sessions,
+# its history, the plugins it installed. So the directory is never a link, and
+# neither are the folders in it. A skill written on one machine, for an
+# employer's work say, sits beside ours as a real folder and never reaches the
+# clone.
+link_claude() {
+  local source="$DOTFILESDIR/claude" target="$HOME/.claude" entry inner
+  [ -d "$source" ] || return 0
+
+  if [ -e "$target" ] && [ ! -d "$target" ]
+  then
+    echo "$target is not a folder, so nothing is linked into it"
+    return 0
+  fi
+  mkdir -p "$target"
+  while IFS= read -r entry
+  do
+    [ -n "$entry" ] || continue
+    if [ ! -d "$source/$entry" ]
+    then
+      link_beside "$source/$entry" "$target/$entry"
+      continue
+    fi
+    if [ -e "$target/$entry" ] && [ ! -d "$target/$entry" ]
+    then
+      echo "$target/$entry is not a folder, so nothing is linked into it"
+      continue
+    fi
+    mkdir -p "$target/$entry"
+    while IFS= read -r inner
+    do
+      [ -n "$inner" ] || continue
+      link_beside "$source/$entry/$inner" "$target/$entry/$inner"
+    done <<< "$(tracked_entries "claude/$entry")"
+  done <<< "$(tracked_entries claude)"
+}
+
 # What reaches $HOME, by name. Everything else at the top of the clone is the
 # repo's own -- scripts, tests, guides, whatever is added next -- and a script
 # that writes into $HOME should not pick it up by default. A new top-level
@@ -130,6 +199,7 @@ link_directory() {  # top-level directory name
 link_into "$DOTFILESDIR/Brewfile" "$HOME/.Brewfile"
 link_directory config
 link_directory ssh
+link_claude
 
 # .zshenv is the entry point that sets ZDOTDIR, and the only home-level shell
 # file we own. Where something else already manages ~/.profile, ~/.bashrc,
